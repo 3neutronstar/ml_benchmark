@@ -17,19 +17,20 @@ def visualization(configs):
         path=os.path.join(current_path,'drive','MyDrive','grad_data')
     else:
         path=os.path.join(current_path,'grad_data')
+    print(path)
     csvReader=load_csv(path)
     if 'file_name' not in configs.keys():
         CALL_CONFIG=configs
-        CALL_CONFIG['epochs']=len(csvReader)
+        CALL_CONFIG['epochs']=csvReader.line_num
     else:
         CALL_CONFIG=load_params(configs,configs['file_name'])
 
-    if CALL_CONFIG['nn_type']=='lenet5':
-        from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size
     dir_list=['layer_grad_distribution','node_info']
     for dir_name in dir_list:
         if os.path.exists(os.path.join(path,dir_name)) == False:
             os.mkdir(os.path.join(path,dir_name))
+    if CALL_CONFIG['nn_type']=='lenet5':
+        from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size
     # Structure
     # time layer element
     # grad_data = weight ,bias 순서의 layer별 데이터
