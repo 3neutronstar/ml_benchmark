@@ -6,8 +6,7 @@ import os
 import numpy as np
 from utils import load_params
 def load_csv(path):
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    file=open(os.path.join(current_path,'grad_data','grad.csv'),mode='r')
+    file=open(os.path.join(path,'grad.csv'),mode='r')
     csvReader=csv.reader(file)
     return csvReader
 
