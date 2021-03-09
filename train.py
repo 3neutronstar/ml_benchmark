@@ -60,17 +60,9 @@ def extract_data(configs):
     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
     urllib.request.install_opener(opener)
 
-    from DataSet.load import load_dataset
-    train_data,test_data=load_dataset(configs)
+    from DataSet.load import data_loader
+    train_data_loader,test_data_loader=data_loader(configs)
 
-    train_data_loader = torch.utils.data.DataLoader(train_data,
-                                          batch_size=configs['batch_size'],
-                                          shuffle=True,
-                                        )
-    test_data_loader = torch.utils.data.DataLoader(test_data,
-                                          batch_size=configs['batch_size'],
-                                          shuffle=True,
-                                        )
     
     print(train_data_loader.dataset.train_data.size())
     print(test_data_loader.dataset.train_data.size())

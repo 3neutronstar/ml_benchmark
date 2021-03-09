@@ -3,11 +3,11 @@ import json
 import os
 import sys
 import time
-from train import extract_data
 import torch
 import torch.optim as optim
 import random
 import numpy as np
+from utils import load_params,save_params
 
 def parse_args(args):
     parser = argparse.ArgumentParser(
@@ -43,12 +43,11 @@ def parse_args(args):
     parser.add_argument(
         '--device', type=str, default='gpu',
         help='choose NeuralNetwork')
+    parser.add_argument(
+        '--file_name', type=str, default=None,
+        help='grad_data/[].csv file load')
 
     return parser.parse_known_args(args)[0]
-
-def save_params(configs, time_data):
-    with open(os.path.join(configs['current_path'], 'training_data', '{}.json'.format(time_data)), 'w') as fp:
-        json.dump(configs, fp, indent=2)
 
 def main(args):
     time_data = time.strftime('%m-%d_%H-%M-%S', time.localtime(time.time()))
@@ -63,6 +62,7 @@ def main(args):
     torch.random.manual_seed(random_seed)
     torch.cuda.manual_seed_all(random_seed)
     np.random.seed(random_seed)
+    
 
 
     '''
@@ -78,12 +78,12 @@ def main(args):
     'nn_type':flags.nn_type.lower(),
     }
 
-    from train import extract_data
-    from visualization import visualization
 
     if flags.mode=='train':
+        from train import extract_data
         configs=extract_data(configs)
     if flags.mode=='visual':
+        from visualization import visualization
         configs=visualization(configs)
     
     save_params(configs,time_data)
