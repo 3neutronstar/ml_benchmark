@@ -101,7 +101,10 @@ def extract_data(configs):
     param_size=list()
     params_write=list()
     current_path = os.path.dirname(os.path.abspath(__file__))
-    making_path=os.path.join(current_path,'grad_data')
+    if configs['colab']==True:
+        making_path=os.path.join(current_path,'drive','MyDrive','grad_data')
+    else:
+        making_path=os.path.join(current_path,'grad_data')
     if os.path.exists(making_path) == False:
         os.mkdir(making_path)
     f=open(os.path.join(making_path,'grad.csv'),mode='w')

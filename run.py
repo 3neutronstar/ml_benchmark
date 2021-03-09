@@ -46,6 +46,9 @@ def parse_args(args):
     parser.add_argument(
         '--file_name', type=str, default=None,
         help='grad_data/[].csv file load')
+    parser.add_argument(
+        '--colab',type=bool,default=False,
+        help='if you are in colab use it')
 
     return parser.parse_known_args(args)[0]
 
@@ -76,6 +79,7 @@ def main(args):
     'batch_size':flags.batch_size,
     'dataset':flags.dataset.lower(),
     'nn_type':flags.nn_type.lower(),
+    'colab':flags.colab,
     }
 
 
