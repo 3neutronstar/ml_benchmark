@@ -13,7 +13,7 @@ def load_csv(path):
 def visualization(configs):
     current_path = os.path.dirname(os.path.abspath(__file__))
     if configs['colab']==True:
-        path=os.path.join(current_path,'drive','MyDrive','grad_data')
+        path=os.path.join('drive','MyDrive','grad_data')
     else:
         path=os.path.join(current_path,'grad_data')
     print(path)
