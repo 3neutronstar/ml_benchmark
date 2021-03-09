@@ -86,11 +86,13 @@ def main(args):
     if flags.mode=='train':
         from train import extract_data
         configs=extract_data(configs)
+        save_params(configs,time_data)
     if flags.mode=='visual':
         from visualization import visualization
         configs=visualization(configs)
     
-    save_params(configs,time_data)
+    print("End the process")
+    
 
 
 

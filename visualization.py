@@ -80,7 +80,9 @@ def visualization(configs):
     for i, node_w in enumerate(weight_data):
         for j,elem_w in enumerate(node_w):
             box_w[j].append(elem_w.tolist())
+    print("No.1 Start")
     for j,_ in enumerate(w_size_list):
+        plt.clf()
         plt.figure(figsize=(40,5))
         plt.boxplot(box_w[j],labels=['{}'.format(k) for k,_ in enumerate(weight_data)],showmeans=True,autorange=True,whis=2)# median 도 표시를 해주자
         plt.title('layer_grad_weight_distribution')
@@ -103,6 +105,7 @@ def visualization(configs):
                 elem_w_list[j][i].append(elem_w)
     '''
     element 수준에서는 관찰하지 않음
+    print("No.2 Start")
     #2 elem_w_list의 size: layer,weight_i
     # plot and save
     for j,w_node in enumerate(elem_w_list):
@@ -130,6 +133,8 @@ def visualization(configs):
                 sum_w[i][t]+=elem.item()/float(w_size_list[i])#averaging
     
     color_list=['red','yellow','green','blue','black']
+    print("No.3 Start")
+    plt.clf()
     plt.figure()
     for j,(w,color) in enumerate(zip(sum_w,color_list)):
         plt.plot(time_list,w,color=color) # log or not
@@ -150,31 +155,35 @@ def visualization(configs):
             sum_grad_in_time[i][j]=sum_grad
         sum_grad_in_layer_n_time.append(torch.tensor(sum_grad_in_time[i]).mean())
     
+    print("No.4 Start")
     #4 모든 layer에 대해서 각 elem(x) 시간에 따른 변화량의 합(y)
     num_node_list=[len(w) for w in elem_w_list]
     for i,(num_node,sum_grad_time) in enumerate(zip(num_node_list,sum_grad_in_time)):
         x_axis=[i for i in range(num_node)]
         plt.clf()#clear figure
+        plt.figure()
         plt.scatter(x_axis,sum_grad_time)
         plt.title('{}_layer_all_node'.format(i))
         plt.xlabel('element_num')
         plt.ylabel('sum of grad in all the times')
         plt.savefig(os.path.join(path,'{}_layer_all_node.png'.format(i)),dpi=200,facecolor='#eeeeee')
+    print("No.5 Start")
     #5 모든 layer(x)에서 (모든 시간과 (elem의 평균))(y)
     x_axis=[i for i,_ in enumerate(w_size_list)]
     plt.clf()#clear figure
+    plt.figure()
     plt.scatter(x_axis,sum_grad_in_layer_n_time)
     plt.title('sum of all elem in each layer'.format(i))
     plt.xlabel('layer')
     plt.ylabel('sum of gradient of all elems in all the times')
     plt.savefig(os.path.join(path,'each_layer_all_node.png'.format(i)),dpi=200,facecolor='#eeeeee')
-    print("Visualization")
 
+    print("No.6 Start")
     # 6 Node별 시간당 변화량
     for i,layer_w in enumerate(sum_grad_w_node_list):
-        print(len(layer_w))
         for j,node_w in enumerate(layer_w):
             plt.clf()#clear figure
+            plt.figure()
             plt.plot(time_list,node_w)
             plt.xlabel('time(epoch)')
             plt.ylabel('sum of grad in node')
@@ -183,7 +192,6 @@ def visualization(configs):
 
     # 6-1 Node별 시간당 변화량 (겹치기)
     for i,layer_w in enumerate(sum_grad_w_node_list):
-        print(len(layer_w))
         plt.clf()#clear figure
         plt.figure(figsize=(7,10))
         legend_list=list()
@@ -198,9 +206,9 @@ def visualization(configs):
 
     # 6-2 expectation of all elems (node:x, time:y)
     for i,layer_w in enumerate(avg_grad_w_node_list):
-        print(len(layer_w))
         for j,node_w in enumerate(layer_w):
             plt.clf()#clear figure
+            plt.figure()
             plt.plot(time_list,node_w,color='red')
             plt.xlabel('time(epoch)')
             plt.ylabel('avg of grad in node')
