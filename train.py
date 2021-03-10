@@ -29,7 +29,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), len(train_loader.dataset),100. * batch_idx / len(train_loader), running_loss/log_interval))
     tok=time.time()
-    print('Train Loss: ', running_loss/len(data),'Learning Time: ',b-a,'s')
+    print('Train Loss: ', running_loss/len(data),'Learning Time: ',tik-tok,'s')
     return running_loss
 
 def test(model, device, test_loader):
@@ -112,7 +112,7 @@ def extract_data(configs):
         os.mkdir(making_path)
     f=open(os.path.join(making_path,'grad.csv'),mode='w')
     fwriter=csv.writer(f)
-    a=time.time()
+    tik=time.time()
     for t,params in enumerate(parameter_list):
         if t==1:
             for i, p in enumerate(params):# 각 layer의 params
@@ -122,8 +122,8 @@ def extract_data(configs):
         if t % 100 == 0:
             print("\r step {} done".format(t),end='')
     f.close()
-    b=time.time()
-    print('play_time for saving:',b-a,"s")
+    tok=time.time()
+    print('play_time for saving:',tok-tik,"s")
     print('parameter size',param_size)
     print('# of row:',t+1)
 
