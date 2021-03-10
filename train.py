@@ -2,13 +2,17 @@
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.tensorboard import SummaryWriter
 from learning_rate import adjust_learning_rate
 from six.moves import urllib
+import os
 import time
 def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_list):
     tik=time.time()
     model.train() #train모드로 설정
     running_loss =0.0
+    correct=0
+    num_training_data=len(train_loader.dataset)
     criterion = nn.CrossEntropyLoss() #defalut is mean of mini-batchsamples, loss type설정
     # loss함수에 softmax 함수가 포함되어있음
     for batch_idx, (data, target) in enumerate(train_loader): # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
@@ -20,21 +24,27 @@ def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_
         loss.backward() #역전파
         optimizer.step() # step
         p_groups=optimizer.param_groups # group에 각 layer별 파라미터
+        pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
+        correct += pred.eq(target.view_as(pred)).sum().item()
         parameter_list.append([])
         for p in p_groups:
             for p_layers in p['params']:
-                parameter_list[-1].append(p_layers.view(-1).detach().cpu().clone())
+                parameter_list[-1].append(p_layers.view(-1).detach().cpu().clone()) #save cpu
+                p_layers.to(device)# gpu
         
-        running_loss += loss.cpu().item()
+        running_loss += loss.item()
         if batch_idx % log_interval == 0:
-            print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), len(train_loader.dataset),100. * batch_idx / len(train_loader), running_loss/log_interval),end='')
+            print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), num_training_data,100. * batch_idx / len(train_loader), loss.item()),end='')
+        
+    running_loss/=num_training_data
     tok=time.time()
-    print('Train Loss: {:.6f}'.format( running_loss/len(data)),'Learning Time: ',tok-tik,'s')
-    return running_loss
+    running_accuracy=100. * correct / float(num_training_data)
+    print('\nTrain Loss: {:.6f}'.format(running_loss),'Learning Time: {:.1f}s'.format(tok-tik),'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data,100.*correct/num_training_data))
+    return running_accuracy,running_loss,parameter_list
 
-def test(model, device, test_loader):
+def eval(model, device, test_loader,config):
     model.eval()
-    test_loss = 0
+    eval_loss = 0
     correct = 0
     criterion = nn.NLLLoss(reduction='sum') #add all samples in a mini-batch
     with torch.no_grad():
@@ -42,21 +52,23 @@ def test(model, device, test_loader):
             data, target = data.to(device), target.to(device)
             output = model(data)
             loss = criterion(output, target)
-            test_loss +=  loss.item()
+            eval_loss +=  loss.item()
             pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-    test_loss /= len(test_loader.dataset)
+    eval_loss =eval_loss/ len(test_loader.dataset)*config['batch_size']
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        test_loss, correct, len(test_loader.dataset),
+        eval_loss, correct, len(test_loader.dataset),
         100. * correct / float(len(test_loader.dataset)) ) )
-    accuracy=100.*correct/float(len(test_loader.dataset))
-    return accuracy
+    eval_accuracy=100.*correct/float(len(test_loader.dataset))
 
-def extract_data(configs):
+    return eval_accuracy,eval_loss
+
+def extract_data(config,time_data):
     print("Training")
-    DEVICE=configs['device']
+    DEVICE=config['device']
+    current_path = os.path.dirname(os.path.abspath(__file__))
     log_interval=100
 
     opener = urllib.request.build_opener()
@@ -64,25 +76,30 @@ def extract_data(configs):
     urllib.request.install_opener(opener)
 
     from DataSet.load import data_loader
-    train_data_loader,test_data_loader=data_loader(configs)
-
-    
+    train_data_loader,test_data_loader=data_loader(config)
     print(train_data_loader.dataset.train_data.size())
     print(test_data_loader.dataset.train_data.size())
 
-    if configs['nn_type']=='lenet5':
+    if config['nn_type']=='lenet5':
         from NeuralNet.lenet5 import LeNet5
         net = LeNet5().to(DEVICE)
+
+    # Tensorboard
+    logWriter=SummaryWriter(os.path.join(current_path,'training_data',time_data))
     
-    optimizer = optim.Adam(net.parameters(), lr=configs['lr'])
+    optimizer = optim.Adam(net.parameters(), lr=config['lr'])
     parameter_list=list()
-    final_accuracy=0.0
-    final_loss=0.0
-    for epoch in range(1, configs['epochs'] + 1):
-        adjust_learning_rate(optimizer, epoch,configs)
-        final_loss=train(log_interval,net,DEVICE,train_data_loader,optimizer,epoch,parameter_list)
-        final_accuracy=test(net,DEVICE,test_data_loader)
-        if configs['device']=='gpu':
+    eval_accuracy,eval_loss=0.0,0.0
+    train_accuracy,train_loss=0.0,0.0
+    for epoch in range(1, config['epochs'] + 1):
+        adjust_learning_rate(optimizer, epoch,config)
+        train_accuracy,train_loss,parameter_list=train(log_interval,net,DEVICE,train_data_loader,optimizer,epoch,parameter_list)
+        eval_accuracy,eval_loss=eval(net,DEVICE,test_data_loader,config)
+        loss_dict={'train':train_loss,'eval':eval_loss}
+        accuracy_dict={'train':train_accuracy,'eval':eval_accuracy}
+        logWriter.add_scalars('loss',loss_dict,epoch)
+        logWriter.add_scalars('accuracy',accuracy_dict,epoch)
+        if config['device']=='gpu':
             torch.cuda.empty_cache()
 
     
@@ -100,24 +117,23 @@ def extract_data(configs):
     '''
     import time
     import csv
-    import os
     param_size=list()
     params_write=list()
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    if configs['colab']==True:
+    if config['colab']==True:
         making_path=os.path.join('drive','MyDrive','grad_data')
     else:
         making_path=os.path.join(current_path,'grad_data')
     if os.path.exists(making_path) == False:
         os.mkdir(making_path)
-    f=open(os.path.join(making_path,'grad.csv'),mode='w')
+    f=open(os.path.join(making_path,'grad_{}.csv').format(time_data),mode='w')
     fwriter=csv.writer(f)
     tik=time.time()
     for t,params in enumerate(parameter_list):
         if t==1:
             for i, p in enumerate(params):# 각 layer의 params
                 param_size.append(p.size())
-        params_write=torch.cat(params,dim=0).tolist()
+        params_write=torch.cat(params,dim=0).view(-1).tolist()
+        print(len(params_write))
         fwriter.writerow(params_write)
         if t % 100 == 0:
             print("\r step {} done".format(t),end='')
@@ -130,10 +146,7 @@ def extract_data(configs):
     '''
     Save params
     '''
-    configs['final_accuracy']=final_accuracy
-    configs['final_loss']=final_loss
-
-    return configs
+    return config
 
 
 

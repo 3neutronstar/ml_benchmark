@@ -130,3 +130,5 @@ dmypy.json
 
 data/
 grad_data/
+tensorboard/
+training_data/

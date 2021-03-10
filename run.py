@@ -29,7 +29,7 @@ def parse_args(args):
         '--epochs', type=int, default=60,
         help='run epochs')
     parser.add_argument(
-        '--lr', type=float, default=1e-1,
+        '--lr', type=float, default=1e-2,
         help='set learning rate')
     parser.add_argument(
         '--lr_decaying_period', type=int, default=15,
@@ -53,8 +53,15 @@ def parse_args(args):
     return parser.parse_known_args(args)[0]
 
 def main(args):
-    time_data = time.strftime('%m-%d_%H-%M-%S', time.localtime(time.time()))
     flags= parse_args(args)
+    if flags.file_name is None and flags.mode=='train':#
+        time_data = time.strftime('%m-%d_%H-%M-%S', time.localtime(time.time()))
+    elif flags.file_name is not None and flags.mode=='visual':# load
+        time_data=flags.file_name
+        file_name=flags.file_name
+    else:
+        file_name=None# no file name just read from grad.csv
+    
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda and flags.device == 'gpu' else "cpu")
     print("Using device: {}".format(device))
@@ -85,18 +92,14 @@ def main(args):
 
     if flags.mode=='train':
         from train import extract_data
-        configs=extract_data(configs)
+        configs=extract_data(configs,time_data)
         save_params(configs,time_data)
     if flags.mode=='visual':
         from visualization import visualization
-        configs=visualization(configs)
+        configs=visualization(configs,file_name)
     
     print("End the process")
     
-
-
-
-
 
 if __name__ == '__main__':
     main(sys.argv[1:])
