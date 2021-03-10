@@ -7,9 +7,9 @@ import os
 import numpy as np
 from utils import load_params
 def load_csv(path):
-    file=open(os.path.join(path,'grad.csv'),mode='r')
-    csvReader=csv.reader(file)
-    return csvReader
+    csvfile=open(os.path.join(path,'grad.csv'),mode='r')
+    csvReader=csv.reader(csvfile)
+    return csvfile,csvReader
 
 def visualization(configs):
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -17,7 +17,7 @@ def visualization(configs):
         path=os.path.join('drive','MyDrive','grad_data')
     else:
         path=os.path.join(current_path,'grad_data')
-    csvReader=load_csv(path)
+    csvfile,csvReader=load_csv(path)
     if 'file_name' not in configs.keys():
         CALL_CONFIG=configs
         NUM_ROWS=CALL_CONFIG['epochs']*math.ceil(60000.0/float(CALL_CONFIG['batch_size']))
@@ -50,6 +50,8 @@ def visualization(configs):
         line_float=list(map(float,line))
         grad_data.append(list())
         weight_data.append(list())
+        if t%1000==0:
+            print('\r {} line complete'.format(t),end='')
         for j,(num_w,num_b) in enumerate(zip(w_size_list,b_size_list)):
             tmp_w=torch.tensor(line_float[:num_w])
             line_float=line_float[num_w:]
@@ -60,6 +62,7 @@ def visualization(configs):
                 for i in range(NN_size_list[j+1]):
                     sum_grad=torch.tensor(tmp_w[:(kernel_size**2)*NN_size_list[j]]).clone().detach().sum().item()
                     dist_grad_w_node_list[j][i]=tmp_w[:(kernel_size**2)*NN_size_list[j]]
+                    print('\r {} {} {}'.format(j,i,t),end='')
                     sum_grad_w_node_list[j][i][t]=sum_grad
                     avg_grad_w_node_list[j][i][t]=sum_grad/float(NN_size_list[j+1])
                     tmp_w =tmp_w[(kernel_size**2)*NN_size_list[j]:]
@@ -231,5 +234,7 @@ def visualization(configs):
         plt.ylabel('avg of grad in node')
         plt.title('avg of grad in layer{}'.format(i))
         plt.savefig(os.path.join(path,'node_info','avg_of_grad_{}layer.png'.format(i)),dpi=200,facecolor='#eeeeee')
-        
+    
+
+    csvfile.close()
         
