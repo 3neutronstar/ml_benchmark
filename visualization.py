@@ -1,7 +1,8 @@
+from pandas.core.frame import DataFrame
 import torch
 import math
 import matplotlib.pyplot as plt
-import csv
+import pandas as pd
 import os
 import numpy as np
 from utils import load_params
@@ -11,8 +12,10 @@ def load_csv(path,file_name):
         csvfile=open(os.path.join(path,'grad.csv'),mode='r')
     else:
         csvfile=open(os.path.join(path,'grad_{}.csv'.format(file_name)),mode='r')
-    csvReader=csv.reader(csvfile)
-    return csvfile,csvReader
+    csvReader=pd.read_csv(csvfile,dtype=float)
+    csvTensor=torch.from_numpy(pd.get_dummies(csvReader).values)
+    print("Load success csv, Size: ",csvTensor.size())
+    return csvfile,csvTensor
 
 def visualization(config,file_name):
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -20,7 +23,7 @@ def visualization(config,file_name):
         path=os.path.join('drive','MyDrive','grad_data')
     else:
         path=os.path.join(current_path,'grad_data')
-    csvfile,csvReader=load_csv(path,file_name)
+    csvfile,csvTensor=load_csv(path,file_name)
     if file_name is None:
         CALL_CONFIG=config
     else:
@@ -39,9 +42,9 @@ def visualization(config,file_name):
     # weight_data=weight의 time list, layer list, element tensor
     # data read
     if True:
-        using_tensorboard(csvReader,CALL_CONFIG,path,file_name)
+        using_tensorboard(csvTensor,CALL_CONFIG,path,file_name)
     else:
-        using_plt(csvReader,CALL_CONFIG,path)
+        using_plt(csvTensor,CALL_CONFIG,path)
 
 
     csvfile.close()

@@ -35,9 +35,6 @@ def parse_args(args):
         '--lr_decaying_period', type=int, default=15,
         help='set learning rate')
     parser.add_argument(
-        '--dataset', type=str, default='mnist',
-        help='choose dataset')
-    parser.add_argument(
         '--nn_type', type=str, default='lenet5',
         help='choose NeuralNetwork type')
     parser.add_argument(
@@ -49,6 +46,15 @@ def parse_args(args):
     parser.add_argument(
         '--colab',type=bool,default=False,
         help='if you are in colab use it')
+
+    nn_type=parser.parse_known_args(args)[0].nn_type.lower()
+    if nn_type=='lenet5':
+        dataset='mnist'
+    elif nn_type=='vgg16':
+        dataset='cifar10'
+    parser.add_argument(
+        '--dataset', type=str, default=dataset,
+        help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
 
     return parser.parse_known_args(args)[0]
 

@@ -3,8 +3,9 @@ import math
 import torch
 import os
 from torch.utils.tensorboard import SummaryWriter
+from Visualization.tensorboard import Tensorboard
 
-def using_tensorboard(csvReader,config,path,file_name):
+def using_tensorboard(csvTensor,config,path,file_name):
     print('Using tensorboard')
     epoch_rows=math.ceil(60000.0/float(config['batch_size']))
     config['epoch_rows']=epoch_rows
@@ -12,51 +13,52 @@ def using_tensorboard(csvReader,config,path,file_name):
         from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
     if file_name is None:
         file_name='grad'
-    if False:
-        elemWriter=SummaryWriter(log_dir='visualizing_data/elem_info',)
-    else:
-        nodeWriter=SummaryWriter(log_dir='visualizing_data/node_info/{}'.format(file_name))
-        total_data_tuple=tuple()
-        for t,line in enumerate(csvReader):
-            if len(line)==0:
-                continue
-            line_float=list(map(float,line))
-            total_data_tuple+=tuple(torch.tensor(line_float))
+    config['visual_type']='node'
+    logger=Tensorboard(csvTensor,path,config)
+    logger.node_write()
+    
+    # if False:
+    #     elemWriter=SummaryWriter(log_dir='visualizing_data/elem_info',)
+    # else:
+    #     nodeWriter=SummaryWriter(log_dir='visualizing_data/node_info/{}'.format(file_name))
+    #     total_data_list=list()
+    #     for t,line in enumerate(csvTensor):
+    #         total_data_list.append(torch.tensor(line).clone().detach())
 
-            if t%1000==0:
-                print('\r {} line complete'.format(t),end='')
-            for l,(num_w,num_b) in enumerate(zip(w_size_list,b_size_list)):# 라인 내의 모든 param처리
-                tmp_w=torch.tensor(line_float[:num_w],dtype=torch.float).clone()#layer 단위
-                line_float=line_float[num_w:]
-                nodeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm
-                if NN_type_list[l]=='cnn':
-                    n=0
-                    for n in range(NN_size_list[l+1]):#node 단위
-                        node_w=tmp_w[:(kernel_size_list[l][0]*kernel_size_list[l][1])*NN_size_list[l]]
-                        print(tmp_w.size(),node_w.size(),NN_type_list[l],n," ",l," ",t)
-                        nodeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                        nodeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
-                        tmp_w=tmp_w[(kernel_size_list[l][0]*kernel_size_list[l][1])*NN_size_list[l]:]# 내용 제거
+    #         if t%1000==0:
+    #             print('\r {} line complete'.format(t),end='')
+    #         for l,(num_w,num_b) in enumerate(zip(w_size_list,b_size_list)):# 라인 내의 모든 param처리
+    #             tmp_w=torch.tensor(line[:num_w],dtype=torch.float).clone().detach()#layer 단위
+    #             line=line[num_w:]
+    #             nodeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm
+    #             if NN_type_list[l]=='cnn':
+    #                 n=0
+    #                 for n in range(NN_size_list[l+1]):#node 단위
+    #                     node_w=tmp_w[:(kernel_size_list[l][0]*kernel_size_list[l][1])*NN_size_list[l]]
+    #                     # print(tmp_w.size(),node_w.size(),NN_type_list[l],n," ",l," ",t)
+    #                     nodeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
+    #                     nodeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
+    #                     tmp_w=tmp_w[(kernel_size_list[l][0]*kernel_size_list[l][1])*NN_size_list[l]:]# 내용 제거
 
                 
-                elif NN_type_list[l]=='fc':
-                    n=0
-                    for n in range(NN_size_list[l+1]):#node 단위
-                        node_w=tmp_w[:NN_size_list[l]]
-                        nodeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                        nodeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
-                        tmp_w= tmp_w[NN_size_list[l]:] # 내용제거
+    #             elif NN_type_list[l]=='fc':
+    #                 n=0
+    #                 for n in range(NN_size_list[l+1]):#node 단위
+    #                     node_w=tmp_w[:NN_size_list[l]]
+    #                     nodeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
+    #                     nodeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
+    #                     tmp_w= tmp_w[NN_size_list[l]:] # 내용제거
                 
-                tmp_b=torch.tensor(line_float[:num_b],dtype=torch.float).clone()
-                line_float=line_float[num_b:]#내용제거
-                nodeWriter.flush()
+    #             tmp_b=torch.tensor(line[:num_b],dtype=torch.float).clone().detach()
+    #             line=line[num_b:]#내용제거
+    #             nodeWriter.flush()
         
-        # 시간과 상관없는 분석을 위한 cat
-        total_data=torch.cat(total_data_tuple,dim=0)
-        nodeWriter.close()
-        print('Visualization Complete')
+    #     # 시간과 상관없는 분석을 위한 cat
+    #     total_data=torch.cat(total_data_list,dim=0)
+    #     nodeWriter.close()
+    print('Visualization Complete')
 
-def using_plt(csvReader,config,path):
+def using_plt(csvTensor,config,path):
     print('Using plt')
     NUM_ROWS=config['epochs']*math.ceil(60000.0/float(config['batch_size']))
     if config['nn_type']=='lenet5':
@@ -71,7 +73,7 @@ def using_plt(csvReader,config,path):
     avg_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
     dist_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
 
-    for t,line in enumerate(csvReader):
+    for t,line in enumerate(csvTensor):
         line_float=list(map(float,line))
         grad_data.append(list())
         weight_data.append(list())

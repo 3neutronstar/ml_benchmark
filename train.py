@@ -1,12 +1,14 @@
 
+import time
+import os
+import time
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.tensorboard import SummaryWriter
 from learning_rate import adjust_learning_rate
 from six.moves import urllib
-import os
-import time
 def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_list):
     tik=time.time()
     model.train() #train모드로 설정
@@ -115,8 +117,6 @@ def extract_data(config,time_data):
     x 축 : time
     y 축 : param
     '''
-    import time
-    import csv
     param_size=list()
     params_write=list()
     if config['colab']==True:
@@ -125,19 +125,20 @@ def extract_data(config,time_data):
         making_path=os.path.join(current_path,'grad_data')
     if os.path.exists(making_path) == False:
         os.mkdir(making_path)
-    f=open(os.path.join(making_path,'grad_{}.csv').format(time_data),mode='w')
-    fwriter=csv.writer(f)
     tik=time.time()
     for t,params in enumerate(parameter_list):
         if t==1:
             for i, p in enumerate(params):# 각 layer의 params
                 param_size.append(p.size())
-        params_write=torch.cat(params,dim=0).view(-1).tolist()
-        print(len(params_write))
-        fwriter.writerow(params_write)
+        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+
+        
         if t % 100 == 0:
             print("\r step {} done".format(t),end='')
-    f.close()
+    write_data=torch.cat(params_write,dim=0)
+    print("Write data size:",write_data.size())
+    data_frame=pd.DataFrame(write_data.numpy(),)
+    data_frame.to_csv(os.path.join(making_path,'grad_{}.csv').format(time_data),index=False,header=False)
     tok=time.time()
     print('play_time for saving:',tok-tik,"s")
     print('parameter size',param_size)

@@ -2,7 +2,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 class Tensorboard():
-    def __init__(self,csvReader,path,config):
+    def __init__(self,csvTensor,path,config):
 
         if config['nn_type']=='lenet5':
             from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
@@ -10,7 +10,7 @@ class Tensorboard():
             from NeuralNet.vgg16 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
         self.w_size_list=w_size_list
         self.b_size_list=b_size_list
-        self.NN_size_list,=NN_size_list
+        self.NN_size_list=NN_size_list
         self.NN_type_list=NN_type_list
         self.kernel_size_list=kernel_size_list
         if config['visual_type']=='elem':
@@ -18,14 +18,13 @@ class Tensorboard():
         elif config['visual_type']=='node':
             self.nodeWriter=SummaryWriter(log_dir='visualizing_data/node_info')
         
-        total_data_tuple=tuple()
-        for t,line in enumerate(csvReader):
-            line_float=list(map(float,line))
-            total_data_tuple+=tuple(torch.tensor(line_float))
+        total_data_list=list()
+        for t,line in enumerate(csvTensor):
+            total_data_list.append(torch.tensor(line).clone().detach())
             if t%1000==0:
                 print('\r {} line complete'.format(t),end='')
         
-        self.total_data=torch.cat(total_data_tuple,dim=0)
+        self.total_data=torch.cat(total_data_list,dim=0)
         tmp_data=self.total_data.detach().clone()
     
     def node_write(self):
