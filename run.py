@@ -29,7 +29,7 @@ def parse_args(args):
         '--epochs', type=int, default=60,
         help='run epochs')
     parser.add_argument(
-        '--lr', type=float, default=1e-3,
+        '--lr', type=float, default=1e-1,
         help='set learning rate')
     parser.add_argument(
         '--lr_decaying_period', type=int, default=15,

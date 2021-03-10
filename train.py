@@ -4,8 +4,9 @@ import torch.nn as nn
 import torch.optim as optim
 from learning_rate import adjust_learning_rate
 from six.moves import urllib
-
+import time
 def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_list):
+    tik=time.time()
     model.train() #train모드로 설정
     running_loss =0.0
     criterion = nn.CrossEntropyLoss() #defalut is mean of mini-batchsamples, loss type설정
@@ -22,11 +23,13 @@ def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_
         parameter_list.append([])
         for p in p_groups:
             for p_layers in p['params']:
-                parameter_list[-1].append(p_layers.view(-1).detach().clone())
+                parameter_list[-1].append(p_layers.view(-1).detach().cpu().clone())
         
         running_loss += loss.cpu().item()
         if batch_idx % log_interval == 0:
             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), len(train_loader.dataset),100. * batch_idx / len(train_loader), running_loss/log_interval))
+    tok=time.time()
+    print('Train Loss: ', running_loss/len(data),'Learning Time: ',b-a,'s')
     return running_loss
 
 def test(model, device, test_loader):
@@ -45,16 +48,16 @@ def test(model, device, test_loader):
 
     test_loss /= len(test_loader.dataset)
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
         test_loss, correct, len(test_loader.dataset),
-        100. * correct / len(test_loader.dataset)))
+        100. * correct / float(len(test_loader.dataset)) ) )
     accuracy=100.*correct/float(len(test_loader.dataset))
     return accuracy
 
 def extract_data(configs):
     print("Training")
     DEVICE=configs['device']
-    log_interval=200
+    log_interval=100
 
     opener = urllib.request.build_opener()
     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
@@ -102,7 +105,7 @@ def extract_data(configs):
     params_write=list()
     current_path = os.path.dirname(os.path.abspath(__file__))
     if configs['colab']==True:
-        making_path=os.path.join(current_path,'drive','MyDrive','grad_data')
+        making_path=os.path.join('drive','MyDrive','grad_data')
     else:
         making_path=os.path.join(current_path,'grad_data')
     if os.path.exists(making_path) == False:
@@ -116,13 +119,13 @@ def extract_data(configs):
                 param_size.append(p.size())
         params_write=torch.cat(params,dim=0).tolist()
         fwriter.writerow(params_write)
-        if t % 10 == 0:
+        if t % 100 == 0:
             print("\r step {} done".format(t),end='')
     f.close()
     b=time.time()
     print('play_time for saving:',b-a,"s")
     print('parameter size',param_size)
-    print('# of row:',t)
+    print('# of row:',t+1)
 
     '''
     Save params

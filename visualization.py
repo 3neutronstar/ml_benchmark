@@ -1,4 +1,5 @@
 import torch
+import math
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 import csv
@@ -16,11 +17,10 @@ def visualization(configs):
         path=os.path.join('drive','MyDrive','grad_data')
     else:
         path=os.path.join(current_path,'grad_data')
-    print(path)
     csvReader=load_csv(path)
     if 'file_name' not in configs.keys():
         CALL_CONFIG=configs
-        CALL_CONFIG['epochs']=csvReader.line_num
+        NUM_ROWS=CALL_CONFIG['epochs']*math.ceil(60000.0/float(CALL_CONFIG['batch_size']))
     else:
         CALL_CONFIG=load_params(configs,configs['file_name'])
 
@@ -30,6 +30,8 @@ def visualization(configs):
             os.mkdir(os.path.join(path,dir_name))
     if CALL_CONFIG['nn_type']=='lenet5':
         from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size
+    
+    print("Reading file complete")
     # Structure
     # time layer element
     # grad_data = weight ,bias 순서의 layer별 데이터
@@ -39,10 +41,10 @@ def visualization(configs):
     grad_data=list()
     weight_data=list()
     # sum of grad in all node 구조 만들기 (node에서의 elem들의 sum)
-    sum_grad_w_node_list=[[[[]for _ in range(CALL_CONFIG['epochs'])] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
+    sum_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
     # avg of grad in all node 구조 만들기 (node에서의 elem들의 평균 grad)
-    avg_grad_w_node_list=[[[[]for _ in range(CALL_CONFIG['epochs'])] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
-    dist_grad_w_node_list=[[[[]for _ in range(CALL_CONFIG['epochs'])] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
+    avg_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
+    dist_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
 
     for t,line in enumerate(csvReader):
         line_float=list(map(float,line))
@@ -56,7 +58,7 @@ def visualization(configs):
 
             if NN_type_list[j]=='cnn':
                 for i in range(NN_size_list[j+1]):
-                    sum_grad=torch.tensor(tmp_w[:(kernel_size**2)*NN_size_list[j]]).sum().clone().detach().item()
+                    sum_grad=torch.tensor(tmp_w[:(kernel_size**2)*NN_size_list[j]]).clone().detach().sum().item()
                     dist_grad_w_node_list[j][i]=tmp_w[:(kernel_size**2)*NN_size_list[j]]
                     sum_grad_w_node_list[j][i][t]=sum_grad
                     avg_grad_w_node_list[j][i][t]=sum_grad/float(NN_size_list[j+1])
@@ -122,7 +124,7 @@ def visualization(configs):
     #time 기반 layer별로 gradient 값을 모두 합쳐서 비교
     #sum_w
     # layer,time,weight_sum(elem들의 float)
-    sum_w=[[list() for i in range(CALL_CONFIG['epochs'])] for w in elem_w_list] # layer내의/ 시간에 대한/ grad 요소들의 합
+    sum_w=[[list() for i in range(NUM_ROWS)] for w in elem_w_list] # layer내의/ 시간에 대한/ grad 요소들의 합
     for i,layer_w in enumerate(elem_w_list):# layer구분
         for elem_w in layer_w:# time값을 갖는 elem
             for t,elem_w in enumerate(elem_w): # 각 time 의 elem
