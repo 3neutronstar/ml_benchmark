@@ -41,13 +41,13 @@ def data_loader(configs):
                                           batch_size=configs['batch_size'],
                                           shuffle=True,
                                           pin_memory=pin_memory,
-                                          num_workers=3,
+                                          num_workers=configs['num_workers'],
                                         )
     test_data_loader = torch.utils.data.DataLoader(test_data,
                                           batch_size=configs['batch_size'],
                                           shuffle=True,
                                           pin_memory=pin_memory,
-                                          num_workers=3,
+                                          num_workers=configs['num_workers'],
                                         )
 
     print("Using Datasets: ",configs['dataset'])

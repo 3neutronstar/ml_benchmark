@@ -40,6 +40,9 @@ def parse_args(args):
     parser.add_argument(
         '--colab',type=bool,default=False,
         help='if you are in colab use it')
+    parser.add_argument(
+        '--num_workers',type=int,default=3,
+        help='number of process you have')
 
     nn_type=parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type=='lenet5':
@@ -48,7 +51,7 @@ def parse_args(args):
     elif nn_type=='vgg16':
         dataset='cifar10'
         epochs=300
-        
+
     parser.add_argument(
         '--epochs', type=int, default=epochs,
         help='run epochs')
@@ -97,6 +100,7 @@ def main(args):
     'nn_type':flags.nn_type.lower(),
     'colab':flags.colab,
     'csv_extraction':flags.csv,
+    'num_workers':flags.num_workers,
     }
 
 
