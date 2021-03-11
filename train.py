@@ -58,8 +58,8 @@ def eval(model, device, test_loader,config):
             pred = output.argmax(dim=1, keepdim=True) # get the index of the max log-probability
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-    eval_loss =eval_loss/ len(test_loader.dataset)*config['batch_size']
-
+    eval_loss =eval_loss/ len(test_loader.dataset)
+    
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
         eval_loss, correct, len(test_loader.dataset),
         100. * correct / float(len(test_loader.dataset)) ) )
@@ -136,7 +136,7 @@ def extract_data(config,time_data):
         if t % 100 == 0:
             print("\r step {} done".format(t),end='')
     write_data=torch.cat(params_write,dim=0)
-    print("Write data size:",write_data.size())
+    print("\n Write data size:",write_data.size())
     data_frame=pd.DataFrame(write_data.numpy(),)
     data_frame.to_csv(os.path.join(making_path,'grad_{}.csv').format(time_data),index=False,header=False)
     tok=time.time()

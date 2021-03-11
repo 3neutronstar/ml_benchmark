@@ -13,7 +13,8 @@ def using_tensorboard(csvTensor,config,path,file_name):
         from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
     if file_name is None:
         file_name='grad'
-    config['visual_type']='node'
+    config['visual_type']='time_domain'
+
     logger=Tensorboard(csvTensor,path,config)
     logger.node_write()
     
