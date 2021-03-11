@@ -37,7 +37,7 @@ def parse_args(args):
         help='choose NeuralNetwork')
     parser.add_argument(
         '--file_name', type=str, default=None,
-        help='grad_data/grad_[].csv file load')
+        help='grad_data/grad_[].log file load')
     parser.add_argument(
         '--colab', type=bool, default=False,
         help='if you are in colab use it')
@@ -61,8 +61,8 @@ def parse_args(args):
         help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
 
     parser.add_argument(
-        '--csv', type=bool, default=True,
-        help='generate csv')
+        '--log', type=bool, default=True,
+        help='generate log')
 
     return parser.parse_known_args(args)[0]
 
@@ -101,14 +101,14 @@ def main(args):
                'dataset': flags.dataset.lower(),
                'nn_type': flags.nn_type.lower(),
                'colab': flags.colab,
-               'csv_extraction': flags.csv,
+               'log_extraction': flags.log,
                'num_workers': flags.num_workers,
                }
 
     if flags.mode == 'train':
         from train import extract_data
         configs = extract_data(configs, time_data)
-        if configs['csv_extraction'] == True:
+        if configs['log_extraction'] == True:
             save_params(configs, time_data)
     if flags.mode == 'visual':
         from visualization import visualization

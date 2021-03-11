@@ -12,7 +12,7 @@ from six.moves import urllib
 from torch.optim. lr_scheduler import StepLR, MultiStepLR
 
 
-def train(log_interval, model, device, train_loader, optimizer, epoch, parameter_list):
+def train(log_interval, model, device, train_loader, optimizer, epoch, parameter_list,config):
     tik = time.time()
     model.train()  # train모드로 설정
     running_loss = 0.0
@@ -37,22 +37,23 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, parameter
         correct += pred.eq(target.view_as(pred)).sum().item()
         parameter_list.append([])
         for p in p_groups:
-            for p_layers in p['params']:
+            for i,p_layers in enumerate(p['params']):
                 # save cpu
-                parameter_list[-1].append(
-                    p_layers.view(-1).detach().cpu().clone())
+                if i%2==0:#==0:weight// bias filtering
+                    p_layers.cpu()
+                    parameter_list[-1].append(torch.tensor([p_layers.mean(),p_layers.norm()]).detach())
                 p_layers.to(device)  # gpu
 
         running_loss += loss.item()
         if batch_idx % log_interval == 0:
             print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
-                data), num_training_data, 100. * batch_idx / len(train_loader), loss.item()), end='')
+                data), num_training_data, 100.0 * batch_idx / len(train_loader), loss.item()), end='')
 
     running_loss /= num_training_data
     tok = time.time()
-    running_accuracy = 100. * correct / float(num_training_data)
+    running_accuracy = 100.0 * correct / float(num_training_data)
     print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
-        tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.*correct/num_training_data))
+        tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
     return running_accuracy, running_loss, parameter_list
 
 
@@ -75,8 +76,8 @@ def eval(model, device, test_loader, config):
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
         eval_loss, correct, len(test_loader.dataset),
-        100. * correct / float(len(test_loader.dataset))))
-    eval_accuracy = 100.*correct/float(len(test_loader.dataset))
+        100.0 * correct / float(len(test_loader.dataset))))
+    eval_accuracy = 100.0*correct/float(len(test_loader.dataset))
 
     return eval_accuracy, eval_loss
 
@@ -118,7 +119,7 @@ def extract_data(config, time_data):
     train_accuracy, train_loss = 0.0, 0.0
     for epoch in range(1, config['epochs'] + 1):
         train_accuracy, train_loss, parameter_list = train(
-            log_interval, net, DEVICE, train_data_loader, optimizer, epoch, parameter_list)
+            log_interval, net, DEVICE, train_data_loader, optimizer, epoch, parameter_list,config)
         eval_accuracy, eval_loss = eval(net, DEVICE, test_data_loader, config)
         scheduler.step()
         loss_dict = {'train': train_loss, 'eval': eval_loss}

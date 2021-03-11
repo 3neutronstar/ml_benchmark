@@ -58,11 +58,11 @@ class Tensorboard_node(Tensorboard):
                     #     'avg_grad/{}l_{}n'.format(l, n), node_info[0], t)  # 합
                     # self.timeWriter.add_scalar(
                     #     'norm_grad/{}l_{}n'.format(l, n), node_info[1], t)  # norm
-
+                    
                 self.timeWriter.add_scalars(
                     '{}l/avg_of_grads'.format(l), nodes_integrated_avg, t)
                 self.timeWriter.add_scalars(
-                    '{}l/l2_norm_of_grads'.format(l), nodes_integrated_norm, t)
+                    '{}l/norm_of_grads'.format(l), nodes_integrated_norm, t)
 
             if t % 1000 == 0:
                 print('\r {} line complete'.format(t), end='')
@@ -78,7 +78,7 @@ class Tensorboard_node(Tensorboard):
                 self.timeWriter.add_scalars(
                     '{}l/avg_of_grads'.format(l), node_info[0], n)
                 self.timeWriter.add_scalars(
-                    '{}l/l2_norm_of_grads'.format(l), node_info[1], n)
+                    '{}l/norm_of_grads'.format(l), node_info[1], n)
 
 
 class Tensorboard_elem(Tensorboard):
@@ -125,9 +125,9 @@ class Tensorboard_elem(Tensorboard):
                         # self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
                         tmp_w = tmp_w[self.NN_size_list[l]:]  # 내용제거
                 self.timeWriter.add_scalars(
-                    '{}l/avg_of_grads', nodes_integrated_avg, t)
+                    '{}l/avg_of_grads'.format(l), nodes_integrated_avg, t)
                 self.timeWriter.add_scalars(
-                    '{}l/l2_norm_of_grads', nodes_integrated_norm, t)
+                    '{}l/norm_of_grads'.format(l), nodes_integrated_norm, t)
 
                 # bias
                 node_b = tmp_data[:num_b].detach().clone()
@@ -147,14 +147,14 @@ class Tensorboard_elem(Tensorboard):
                     tmp_w = tmp_w[(
                         self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # 내용 제거
                     self.nodeWriter.add_scalar(
-                        '{}l/l2_norm_grad'.format(l), node_w.norm(2), n)
+                        '{}l/norm_grad'.format(l), node_w.norm(2), n)
 
             elif self.NN_type_list[l] == 'fc':
                 for n in range(self.NN_size_list[l+1]):  # node 단위
                     node_w = tmp_w[:self.NN_size_list[l]]
                     tmp_w = tmp_w[self.NN_size_list[l]:]  # 내용제거
                     self.nodeWriter.add_scalar(
-                        '{}l/l2_norm_grad'.format(l), node_w.norm(2), n)
+                        '{}l/norm_grad'.format(l), node_w.norm(2), n)
 
             # bias
             node_b = tmp_data[:num_b].detach().clone()
