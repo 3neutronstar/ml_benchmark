@@ -14,18 +14,19 @@ cfg = {
 class VGG(nn.Module):
     def __init__(self, config):
         super(VGG, self).__init__()
-        if config['dataset']=='cifar10':
-            final_out=10
-        if config['dataset']=='cifar100':
-            final_out=100
+        if config['dataset'] == 'cifar10':
+            final_out = 10
+        if config['dataset'] == 'cifar100':
+            final_out = 100
         self.features = self._make_layers(cfg[config['nn_type']])
         self.classifier = nn.Sequential(nn.Linear(7*7*512, 4096),
-        nn.ReLU(inplace=True),
-        nn.Linear(4096,4096),
-        nn.ReLU(inplace=True),
-        nn.Linear(4096,final_out),
-        )
-        self.optim=optim.SGD(params=self.parameters(),momentum=0.9,lr=config['lr'],nesterov=True)
+                                        nn.ReLU(inplace=True),
+                                        nn.Linear(4096, 4096),
+                                        nn.ReLU(inplace=True),
+                                        nn.Linear(4096, final_out),
+                                        )
+        self.optim = optim.SGD(params=self.parameters(),
+                               momentum=0.9, lr=config['lr'], nesterov=True)
 
     def forward(self, x):
         out = self.features(x)
@@ -44,38 +45,40 @@ class VGG(nn.Module):
                            nn.BatchNorm2d(x),
                            nn.ReLU(inplace=True)]
                 in_channels = x
-        layers += [nn.AdaptiveAvgPool2d(output_size=(7,7))]
+        layers += [nn.AdaptiveAvgPool2d(output_size=(7, 7))]
 
         return nn.Sequential(*layers)
 
 
 def test():
     net = VGG('VGG11')
-    x = torch.randn(2,3,32,32)
+    x = torch.randn(2, 3, 32, 32)
     y = net(x)
     print(y.size())
 
-def get_nn_config(vgg_name):
-    w_size_list=list()
-    b_size_list=list()
-    kernel_size_list=list()
-    NN_size_list=list()
-    NN_type_list=list()
 
-    NN_size_list.append(3) # 3개 채널 color
+def get_nn_config(vgg_name):
+    w_size_list = list()
+    b_size_list = list()
+    kernel_size_list = list()
+    NN_size_list = list()
+    NN_type_list = list()
+
+    NN_size_list.append(3)  # 3개 채널 color
 
     for cnn_info in cfg[vgg_name]:
-        if cnn_info !='M':
+        if cnn_info != 'M':
             NN_type_list.append('cnn')
             NN_size_list.append(cnn_info)
-            kernel_size_list.append((3,3))
+            kernel_size_list.append((3, 3))
             b_size_list.append(cnn_info)
-            w_size_list.append(kernel_size_list[-1][0]*kernel_size_list[-1][1]*b_size_list[-1])
-    
-    for fc_info in [4096,4096,1000]:
+            w_size_list.append(
+                kernel_size_list[-1][0]*kernel_size_list[-1][1]*b_size_list[-1])
+
+    for fc_info in [4096, 4096, 1000]:
         NN_type_list.append('fc')
         NN_size_list.append(fc_info)
         b_size_list.append(fc_info)
         w_size_list.append(b_size_list[-2]*b_size_list[-1])
 
-    return w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
+    return w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list

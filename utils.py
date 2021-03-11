@@ -1,6 +1,9 @@
-import json,os
+import json
+import os
 import torch
 import numpy as np
+
+
 def load_params(configs, file_name):
     current_path = os.path.dirname(os.path.abspath(__file__))
     ''' replay_name from flags.replay_name '''
@@ -8,14 +11,16 @@ def load_params(configs, file_name):
         configs = json.load(fp)
     return configs
 
-    
-def save_params(configs,time_data):
+
+def save_params(configs, time_data):
     current_path = os.path.dirname(os.path.abspath(__file__))
     with open(os.path.join(current_path, 'grad_data', '{}.json'.format(time_data)), 'w') as fp:
         json.dump(configs, fp, indent=2)
 
+
 class EarlyStopping:
     """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
+
     def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt'):
         """
         Args:
@@ -46,7 +51,8 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            print(
+                f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -57,6 +63,7 @@ class EarlyStopping:
     def save_checkpoint(self, val_loss, model):
         '''validation loss가 감소하면 모델을 저장한다.'''
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+            print(
+                f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
