@@ -37,20 +37,28 @@ class Tensorboard():
                 #weight
                 tmp_w=tmp_data[:num_w]
                 tmp_data=tmp_data[num_w:]#remove
-                self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
+                # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
                 if self.NN_type_list[l]=='cnn':
+                    nodes_integrated_sum=dict()
+                    nodes_integrated_norm=dict()
                     for n in range(self.NN_size_list[l+1]):#node 단위
                         node_w=tmp_w[:(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]]
-                        self.timeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                        self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
+                        nodes_integrated_sum['{}l_{}n'.format(l,n)]=node_w.sum()
+                        nodes_integrated_norm['{}l_{}n'.format(l,n)]=node_w.norm(2)
+                        # self.timeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
+                        # self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
                         tmp_w=tmp_w[(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]# 내용 제거
 
                 elif self.NN_type_list[l]=='fc':
                     for n in range(self.NN_size_list[l+1]):#node 단위
                         node_w=tmp_w[:self.NN_size_list[l]]
-                        self.timeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                        self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
+                        nodes_integrated_sum['{}l_{}n'.format(l,n)]=node_w.sum()
+                        nodes_integrated_norm['{}l_{}n'.format(l,n)]=node_w.norm(2)
+                        # self.timeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
+                        # self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
                         tmp_w= tmp_w[self.NN_size_list[l]:] # 내용제거
+                self.timeWriter.add_scalars('{}l/sum_of_grads',nodes_integrated_sum,t)
+                self.timeWriter.add_scalars('{}l/l2_norm_of_grads',nodes_integrated_norm,t)
 
             #bias
             tmp_b=tmp_data[:num_b].detach().clone()
@@ -58,16 +66,14 @@ class Tensorboard():
 
     
     def node_write(self):
-        sum_time=torch.sum(self.transposed_data,dim=0)
+        sum_time=torch.sum(self.transposed_data,dim=1)
         for l,(num_w,num_b) in enumerate(zip(self.w_size_list,self.b_size_list)):
-            tmp_w=tmp_data[:num_w]
+            tmp_w=tmp_data[:num_w]# layer  단위 컷
             tmp_data=tmp_data[num_w:]#remove
-            self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
+
             if self.NN_type_list[l]=='cnn':
                 for n in range(self.NN_size_list[l+1]):#node 단위
                     node_w=tmp_w[:(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]]
-                    self.timeWriter.add_scalar('sum_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                    self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
                     tmp_w=tmp_w[(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]# 내용 제거
 
             elif self.NN_type_list[l]=='fc':
@@ -83,4 +89,4 @@ class Tensorboard():
 
     def layer_write(self):
         for l,(num_w,num_b) in enumerate(zip(self.w_size_list,self.b_size_list)):
-            print('hi')
+            print("hi")
