@@ -35,6 +35,7 @@ def data_loader(configs):
     train_data,test_data=load_dataset(configs)
     if configs['device']=='gpu':
         pin_memory=True
+        # pin_memory=False
     else:
         pin_memory=False
     train_data_loader = torch.utils.data.DataLoader(train_data,

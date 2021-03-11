@@ -56,6 +56,6 @@ def visualization(config,file_name):
         using_plt(dataTensor,CALL_CONFIG,path)
     
     tok=time.time()
-    print("\n Visualization Time: {}s".format(tik-tok))
+    print("\n Visualization Time: {}s".format(tok-tik))
 
         
