@@ -6,9 +6,11 @@ import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
-from learning_rate import adjust_learning_rate
 from six.moves import urllib
+from torch.optim. lr_scheduler import StepLR,MultiStepLR
+
 def train(log_interval, model, device, train_loader, optimizer, epoch,parameter_list):
     tik=time.time()
     model.train() #train모드로 설정
@@ -59,7 +61,7 @@ def eval(model, device, test_loader,config):
             correct += pred.eq(target.view_as(pred)).sum().item()
 
     eval_loss =eval_loss/ len(test_loader.dataset)
-    
+
     print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
         eval_loss, correct, len(test_loader.dataset),
         100. * correct / float(len(test_loader.dataset)) ) )
@@ -68,7 +70,7 @@ def eval(model, device, test_loader,config):
     return eval_accuracy,eval_loss
 
 def extract_data(config,time_data):
-    print("Training")
+    print("Training {} epochs".format(config['epochs']))
     DEVICE=config['device']
     current_path = os.path.dirname(os.path.abspath(__file__))
     log_interval=100
@@ -77,26 +79,33 @@ def extract_data(config,time_data):
     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
     urllib.request.install_opener(opener)
 
-    from DataSet.load import data_loader
+    from DataSet.data_load import data_loader
     train_data_loader,test_data_loader=data_loader(config)
-    print(train_data_loader.dataset.train_data.size())
-    print(test_data_loader.dataset.train_data.size())
 
     if config['nn_type']=='lenet5':
         from NeuralNet.lenet5 import LeNet5
-        net = LeNet5().to(DEVICE)
+        net = LeNet5(config).to(DEVICE)
+    if config['nn_type'][:3]=='vgg':
+        from NeuralNet.vgg import VGG
+        net = VGG(config).to(DEVICE)
 
     # Tensorboard
     logWriter=SummaryWriter(os.path.join(current_path,'training_data',time_data))
     
-    optimizer = optim.Adam(net.parameters(), lr=config['lr'])
+    optimizer = net.optim
+
+    if config['nn_type']=='lenet5':
+        scheduler= StepLR(optimizer=optimizer,step_size=15,gamma=0.1)
+    elif config['nn_type'][:3]=='vgg':
+        scheduler= MultiStepLR(optimizer=optimizer,milestones=[150,225],gamma=0.1)
+
     parameter_list=list()
     eval_accuracy,eval_loss=0.0,0.0
     train_accuracy,train_loss=0.0,0.0
     for epoch in range(1, config['epochs'] + 1):
-        adjust_learning_rate(optimizer, epoch,config)
         train_accuracy,train_loss,parameter_list=train(log_interval,net,DEVICE,train_data_loader,optimizer,epoch,parameter_list)
         eval_accuracy,eval_loss=eval(net,DEVICE,test_data_loader,config)
+        scheduler.step()
         loss_dict={'train':train_loss,'eval':eval_loss}
         accuracy_dict={'train':train_accuracy,'eval':eval_accuracy}
         logWriter.add_scalars('loss',loss_dict,epoch)
@@ -126,23 +135,45 @@ def extract_data(config,time_data):
     if os.path.exists(making_path) == False:
         os.mkdir(making_path)
     tik=time.time()
-    for t,params in enumerate(parameter_list):
-        if t==1:
-            for i, p in enumerate(params):# 각 layer의 params
-                param_size.append(p.size())
-        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+    import numpy as np
+    if config['csv_extraction']==True:
+        for t,params in enumerate(parameter_list):
+            if t==1:
+                for i, p in enumerate(params):# 각 layer의 params
+                    param_size.append(p.size())
+            params_write.append(torch.cat(params,dim=0).unsqueeze(0))
 
-        
-        if t % 100 == 0:
-            print("\r step {} done".format(t),end='')
-    write_data=torch.cat(params_write,dim=0)
-    print("\n Write data size:",write_data.size())
-    data_frame=pd.DataFrame(write_data.numpy(),)
-    data_frame.to_csv(os.path.join(making_path,'grad_{}.csv').format(time_data),index=False,header=False)
-    tok=time.time()
-    print('play_time for saving:',tok-tik,"s")
-    print('parameter size',param_size)
-    print('# of row:',t+1)
+            
+            if t % 100 == 0:
+                print("\r step {} done".format(t),end='')
+        write_data=torch.cat(params_write,dim=0)
+        print("\n Write data size:",write_data.size())
+        np.save(os.path.join(making_path,'grad_{}'.format(time_data)),write_data.numpy())
+        tok=time.time()
+        print('play_time for saving:',tok-tik,"s")
+    
+    # tik=time.time()
+    # params_write.clear()
+    # if config['csv_extraction']==True:
+    #     for t,params in enumerate(parameter_list):
+    #         if t==1:
+    #             for i, p in enumerate(params):# 각 layer의 params
+    #                 param_size.append(p.size())
+    #         params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+
+            
+    #         if t % 100 == 0:
+    #             print("\r step {} done".format(t),end='')
+    #     write_data=torch.cat(params_write,dim=0)
+    #     print("\n Write data size:",write_data.size())
+    #     data_frame=pd.DataFrame(write_data.numpy(),)
+    #     data_frame.to_csv(os.path.join(making_path,'grad_{}.csv').format(time_data),index=False,header=False)
+    #     tok=time.time()
+    #     print('play_time for saving:',tok-tik,"s")
+    #     print('parameter size',param_size)
+    #     print('# of row:',t+1)
+    # else:
+    #     print("No Extraction of csv file")
 
     '''
     Save params

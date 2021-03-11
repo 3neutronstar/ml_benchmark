@@ -26,23 +26,17 @@ def parse_args(args):
         '--batch_size', type=int, default=128,
         help='set mini-batch size')
     parser.add_argument(
-        '--epochs', type=int, default=60,
-        help='run epochs')
-    parser.add_argument(
-        '--lr', type=float, default=1e-2,
-        help='set learning rate')
-    parser.add_argument(
-        '--lr_decaying_period', type=int, default=15,
-        help='set learning rate')
-    parser.add_argument(
         '--nn_type', type=str, default='lenet5',
         help='choose NeuralNetwork type')
+    parser.add_argument(
+        '--lr', type=float, default=1e-1,
+        help='set learning rate')
     parser.add_argument(
         '--device', type=str, default='gpu',
         help='choose NeuralNetwork')
     parser.add_argument(
         '--file_name', type=str, default=None,
-        help='grad_data/[].csv file load')
+        help='grad_data/grad_[].csv file load')
     parser.add_argument(
         '--colab',type=bool,default=False,
         help='if you are in colab use it')
@@ -50,11 +44,21 @@ def parse_args(args):
     nn_type=parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type=='lenet5':
         dataset='mnist'
+        epochs=60
     elif nn_type=='vgg16':
         dataset='cifar10'
+        epochs=300
+        
+    parser.add_argument(
+        '--epochs', type=int, default=epochs,
+        help='run epochs')
     parser.add_argument(
         '--dataset', type=str, default=dataset,
         help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
+    
+    parser.add_argument(
+        '--csv', type=bool, default=True,
+        help='generate csv')
 
     return parser.parse_known_args(args)[0]
 
@@ -88,18 +92,19 @@ def main(args):
     'seed':random_seed,
     'epochs':flags.epochs,
     'lr':flags.lr,
-    'lr_decaying_period':flags.lr_decaying_period,
     'batch_size':flags.batch_size,
     'dataset':flags.dataset.lower(),
     'nn_type':flags.nn_type.lower(),
     'colab':flags.colab,
+    'csv_extraction':flags.csv,
     }
 
 
     if flags.mode=='train':
         from train import extract_data
         configs=extract_data(configs,time_data)
-        save_params(configs,time_data)
+        if configs['csv_extraction']==True:
+            save_params(configs,time_data)
     if flags.mode=='visual':
         from visualization import visualization
         configs=visualization(configs,file_name)

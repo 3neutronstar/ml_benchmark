@@ -5,25 +5,25 @@ import os
 from torch.utils.tensorboard import SummaryWriter
 from Visualization.tensorboard import Tensorboard
 
-def using_tensorboard(csvTensor,config,path,file_name):
+def using_tensorboard(fileTensor,config,path,file_name):
     print('Using tensorboard')
     epoch_rows=math.ceil(60000.0/float(config['batch_size']))
     config['epoch_rows']=epoch_rows
-    if config['nn_type']=='lenet5':
-        from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
     if file_name is None:
         file_name='grad'
     config['visual_type']='time_domain'
 
-    logger=Tensorboard(csvTensor,path,config)
-    logger.node_write()
+    logger=Tensorboard(fileTensor,path,file_name,config)
+    logger.time_write()
     
+    # if config['nn_type']=='lenet5':
+    #     from NeuralNet.lenet5 import w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
     # if False:
     #     elemWriter=SummaryWriter(log_dir='visualizing_data/elem_info',)
     # else:
     #     nodeWriter=SummaryWriter(log_dir='visualizing_data/node_info/{}'.format(file_name))
     #     total_data_list=list()
-    #     for t,line in enumerate(csvTensor):
+    #     for t,line in enumerate(fileTensor):
     #         total_data_list.append(torch.tensor(line).clone().detach())
 
     #         if t%1000==0:
@@ -57,9 +57,9 @@ def using_tensorboard(csvTensor,config,path,file_name):
     #     # 시간과 상관없는 분석을 위한 cat
     #     total_data=torch.cat(total_data_list,dim=0)
     #     nodeWriter.close()
-    print('Visualization Complete')
+    print('\n ==Visualization Complete==')
 
-def using_plt(csvTensor,config,path):
+def using_plt(fileTensor,config,path):
     print('Using plt')
     NUM_ROWS=config['epochs']*math.ceil(60000.0/float(config['batch_size']))
     if config['nn_type']=='lenet5':
@@ -74,7 +74,7 @@ def using_plt(csvTensor,config,path):
     avg_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
     dist_grad_w_node_list=[[[[]for _ in range(NUM_ROWS)] for _ in range(NN_size_list[i+1])] for i,w_size in enumerate(w_size_list)]
 
-    for t,line in enumerate(csvTensor):
+    for t,line in enumerate(fileTensor):
         line_float=list(map(float,line))
         grad_data.append(list())
         weight_data.append(list())
