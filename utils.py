@@ -21,7 +21,7 @@ def save_params(configs, time_data):
 class EarlyStopping:
     """주어진 patience 이후로 validation loss가 개선되지 않으면 학습을 조기 중지"""
 
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt'):
+    def __init__(self, path,time_data,patience=7, verbose=False, delta=0):
         """
         Args:
             patience (int): validation loss가 개선된 후 기다리는 기간
@@ -40,19 +40,21 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
-        self.path = path
+        self.path = os.path.join(path,'grad_data','checkpoint_{}.pt'.format(time_data))
 
     def __call__(self, val_loss, model):
 
-        score = -val_loss
+        score = val_loss
 
         if self.best_score is None:
             self.best_score = score
             self.save_checkpoint(val_loss, model)
-        elif score < self.best_score + self.delta:
+        elif score > self.best_score + self.delta:
             self.counter += 1
             print(
                 f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            print(
+                f'Validation loss not decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:

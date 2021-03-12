@@ -27,6 +27,7 @@ class VGG(nn.Module):
                                         )
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=0.9, lr=config['lr'], nesterov=True)
+        self.loss=nn.CrossEntropyLoss()
 
     def forward(self, x):
         out = self.features(x)

@@ -12,9 +12,9 @@ def using_tensorboard(fileTensor, config, path, file_name):
     config['epoch_rows'] = epoch_rows
     if file_name is None:
         file_name = 'grad'
-    config['visual_type'] = 'time_domain'
 
-    if config['nn_type'] == 'lenet5':
+    # if config['nn_type'] == 'lenet5':
+    if False:
         logger = Tensorboard_elem(fileTensor, path, file_name, config)
         if config['visual_type'] == 'time_domain':
             logger.time_write()

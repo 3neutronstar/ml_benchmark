@@ -23,6 +23,7 @@ class LeNet5(nn.Module):
         self.log_softmax = nn.LogSoftmax(dim=-1)
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=0.9, lr=config['lr'], nesterov=True)
+        self.loss=nn.CrossEntropyLoss()
 
     def forward(self, x):
         x = F.relu(self.conv1(x))

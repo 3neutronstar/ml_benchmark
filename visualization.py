@@ -44,6 +44,9 @@ def visualization(config, file_name):
         CALL_CONFIG = config
     else:
         CALL_CONFIG = load_params(config, file_name)
+        CALL_CONFIG['visual_type']=config['visual_type']
+        if config['mode']=='visual':
+            print(config['visual_type'])
 
     tik = time.time()
     # dir_list=['layer_grad_distribution','node_info']

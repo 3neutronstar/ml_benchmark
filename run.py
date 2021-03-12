@@ -27,6 +27,9 @@ def parse_args(args):
         '--batch_size', type=int, default=128,
         help='set mini-batch size')
     parser.add_argument(
+        '--patience', type=int, default=10,
+        help='set mini-batch size')
+    parser.add_argument(
         '--nn_type', type=str, default='lenet5',
         help='choose NeuralNetwork type')
     parser.add_argument(
@@ -44,6 +47,12 @@ def parse_args(args):
     parser.add_argument(
         '--num_workers', type=int, default=3,
         help='number of process you have')
+    parser.add_argument(
+        '--log', type=bool, default=True,
+        help='generate log')
+    parser.add_argument(
+        '--visual_type', type=str, default='time_domain',
+        help='visualization domain decision [time,node,node_integrated]')
 
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type == 'lenet5':
@@ -59,10 +68,6 @@ def parse_args(args):
     parser.add_argument(
         '--dataset', type=str, default=dataset,
         help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
-
-    parser.add_argument(
-        '--log', type=bool, default=True,
-        help='generate log')
 
     return parser.parse_known_args(args)[0]
 
@@ -89,6 +94,8 @@ def main(args):
     torch.random.manual_seed(random_seed)
     torch.cuda.manual_seed_all(random_seed)
     np.random.seed(random_seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
     '''
     Basic Setting
@@ -103,6 +110,9 @@ def main(args):
                'colab': flags.colab,
                'log_extraction': flags.log,
                'num_workers': flags.num_workers,
+               'visual_type':flags.visual_type,
+               'mode':flags.mode,
+               'patience':flags.patience,
                }
 
     if flags.mode == 'train':
