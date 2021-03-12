@@ -79,21 +79,21 @@ class Tensorboard_node(Tensorboard):# norm avg기반
                     # self.timeWriter.add_scalar(
                     #     'norm_grad/{}l_{}n'.format(l, n), node_info[1], t)  # norm
                     
-                self.timeWriter.add_scalars(
-                    'avg_of_grads'.format(l), nodes_integrated_avg, t)
-                self.timeWriter.add_scalars(
-                    'norm_of_grads'.format(l), nodes_integrated_norm, t)
-                self.timeWriter.add_scalars(
-                    'var_of_grads'.format(l), nodes_integrated_var, t)
-                self.timeWriter.flush()
+            self.timeWriter.add_scalars(
+                'avg_of_grads'.format(l), nodes_integrated_avg, t)
+            self.timeWriter.add_scalars(
+                'norm_of_grads'.format(l), nodes_integrated_norm, t)
+            self.timeWriter.add_scalars(
+                'var_of_grads'.format(l), nodes_integrated_var, t)
+            self.timeWriter.flush()
 
-                self.timeWriter_cum.add_scalars(
-                    'avg_of_grads'.format(l), nodes_integrated_avg_cum, t)
-                self.timeWriter_cum.add_scalars(
-                    'norm_of_grads'.format(l), nodes_integrated_norm_cum, t)
-                self.timeWriter_cum.add_scalars(
-                    'var_of_grads'.format(l), nodes_integrated_var_cum, t)
-                self.timeWriter_cum.flush()
+            self.timeWriter_cum.add_scalars(
+                'avg_of_grads'.format(l), nodes_integrated_avg_cum, t)
+            self.timeWriter_cum.add_scalars(
+                'norm_of_grads'.format(l), nodes_integrated_norm_cum, t)
+            self.timeWriter_cum.add_scalars(
+                'var_of_grads'.format(l), nodes_integrated_var_cum, t)
+            self.timeWriter_cum.flush()
 
 
     def node_write(self):
@@ -176,25 +176,25 @@ class Tensorboard_elem(Tensorboard):
                         # self.timeWriter.add_scalar('avg_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
                         # self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
                         tmp_w = tmp_w[self.NN_size_list[l]:]  # 내용제거
-                self.timeWriter.add_scalars(
-                    'avg_of_grads', nodes_integrated_avg, t)
-                self.timeWriter.add_scalars(
-                    'norm_of_grads', nodes_integrated_norm, t)
-                self.timeWriter.add_scalars(
-                    'var_of_grads', nodes_integrated_var, t)
-                self.timeWriter.flush()
-
-                self.timeWriter_cum.add_scalars(
-                    'avg_of_grads', nodes_integrated_avg, t)
-                self.timeWriter_cum.add_scalars(
-                    'norm_of_grads', nodes_integrated_norm, t)
-                self.timeWriter_cum.add_scalars(
-                    'var_of_grads', nodes_integrated_var_cum, t)
-                self.timeWriter_cum.flush()
-
                 # bias
                 node_b = tmp_data[:num_b].detach().clone()
                 tmp_data = tmp_data[num_b:]  # remove
+            self.timeWriter.add_scalars(
+                'avg_of_grads', nodes_integrated_avg, t)
+            self.timeWriter.add_scalars(
+                'norm_of_grads', nodes_integrated_norm, t)
+            self.timeWriter.add_scalars(
+                'var_of_grads', nodes_integrated_var, t)
+            self.timeWriter.flush()
+
+            self.timeWriter_cum.add_scalars(
+                'avg_of_grads', nodes_integrated_avg, t)
+            self.timeWriter_cum.add_scalars(
+                'norm_of_grads', nodes_integrated_norm, t)
+            self.timeWriter_cum.add_scalars(
+                'var_of_grads', nodes_integrated_var_cum, t)
+            self.timeWriter_cum.flush()
+
 
     def node_write(self):
         sum_time = torch.sum(self.transposed_data, dim=1)
