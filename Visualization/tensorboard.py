@@ -48,7 +48,7 @@ class Tensorboard_node(Tensorboard):# norm avg기반
         for t, data in enumerate(self.total_data):
             tmp_data = data.detach().clone()
 
-            if t % 1000 == 0:
+            if t % 100 == 0:
                 print('\r {} line complete'.format(t), end='')
             for l, num_w in enumerate(self.b_size_list):  # b인 이유: node관찰이므로
                 # weight
