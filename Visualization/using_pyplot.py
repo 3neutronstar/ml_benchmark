@@ -6,7 +6,7 @@ import math
 
 
 class Pyplot_node():
-    def __init__(self, fileTensor, config, path):
+    def __init__(self, fileTensor, config, path,file_name):
         NUM_ROWS = config['epochs'] * \
             math.ceil(60000.0/float(config['batch_size']))
         if config['nn_type'] == 'lenet5':
@@ -15,8 +15,15 @@ class Pyplot_node():
             from NeuralNet.vgg import get_nn_config
             w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = get_nn_config(
                 config['nn_type'])
+        if os.path.exists(os.path.join(path,file_name)) == False:
+            os.mkdir(os.path.join(path,file_name))  
+        dir_list=['node_info','node_integrated_info']
+        for dir in dir_list:
+            if os.path.exists(os.path.join(path,file_name,dir)) == False:
+                os.mkdir(os.path.join(path,file_name,dir))  
 
         self.path = path
+        self.file_name=file_name
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list
         self.NN_size_list = NN_size_list
@@ -49,6 +56,7 @@ class Pyplot_node():
                         l, n)].append(node_info[1])
                     self.nodes_integrated['var_{}l_{}n'.format(
                         l, n)].append(node_info[2])
+        print("File Visualization Start")
 
         self.info_type_list = ['avg', 'avg_cum',
                                'norm', 'norm_cum', 'var', 'var_cum']
@@ -56,10 +64,10 @@ class Pyplot_node():
     def time_write_(self, layer, node, info_type):
         plt.clf()
         plt.plot(
-            [self.time_list, torch.tensor(self.nodes_integrated['{}_{}l_{}n'.format(info_type, layer, node)]).tolist()])
+            self.time_list, torch.tensor(self.nodes_integrated['{}_{}l_{}n'.format(info_type, layer, node)]).tolist())
         plt.xlabel('iter')
         plt.ylabel('{} of grad in node'.format(info_type))
-        plt.savefig(os.path.join(self.path, 'visualizing_data',
+        plt.savefig(os.path.join(self.path,self.file_name,
                                  'node_info', '{}_{}l_{}n.png'.format(info_type, layer, node)), dpi=100)
 
     def time_write(self):
@@ -80,12 +88,12 @@ class Pyplot_node():
         legend_list = list()
         for n in range(num_node):
             plt.plot(
-                self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(info_type, layer, n)].tolist())
+                self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(info_type, layer, n)])
             legend_list.append(['{}l_{}n'.format(layer, n)])
         plt.xlabel('iter')
         plt.ylabel('avg of grad in node')
         plt.legend(legend_list)
-        plt.savefig(os.path.join(self.path, 'visualizing_data',
+        plt.savefig(os.path.join(self.path,self.file_name,
                                  'node_integrated_info', '{}_{}l_{}n.png'.format(layer, n)), dpi=150)
         del legend_list
 

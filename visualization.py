@@ -58,10 +58,10 @@ def visualization(config, file_name):
     # grad_data = weight ,bias 순서의 layer별 데이터
     # weight_data=weight의 time list, layer list, element tensor
     # data read
-    if False:
+    if True:
         using_tensorboard(dataTensor, CALL_CONFIG, path, file_name)
     else:
-        using_plt(dataTensor, CALL_CONFIG, path)
+        using_plt(dataTensor, CALL_CONFIG, path,file_name)
 
     tok = time.time()
     print("\n Visualization Time: {}s".format(tok-tik))

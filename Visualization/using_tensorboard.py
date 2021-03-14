@@ -2,7 +2,7 @@ import time
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
-
+import os
 
 class Tensorboard():
     def __init__(self, dataTensor, path, file_name, config):
@@ -17,14 +17,15 @@ class Tensorboard():
         self.NN_size_list = NN_size_list
         self.NN_type_list = NN_type_list
         self.kernel_size_list = kernel_size_list
+        self.path=path
         if config['visual_type'] == 'node_domain':
             self.nodeWriter = SummaryWriter(
-                log_dir='visualizing_data/{}/node_xaxis_meantime'.format(file_name),)
+                log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
         if config['visual_type'] == 'time_domain':
             self.timeWriter = SummaryWriter(
-                log_dir='visualizing_data/{}/time_xaxis'.format(file_name))
+                log_dir=os.path.join(path,'{}/time_info'.format(file_name)))
             self.timeWriter_cum = SummaryWriter(
-                log_dir='visualizing_data/{}/time_xaxis_cum'.format(file_name))
+                log_dir=os.path.join(path,'{}/time_info_cum'.format(file_name)))
         if config['visual_type'] == 'node_domain_integrated':
             # node value integrated for each layer
             self.integratedNodeWriter = SummaryWriter(
@@ -69,8 +70,8 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     self.nodes_integrated['var_{}l_{}n'.format(
                         l, n)].append(node_info[2])
 
-        self.info_type_list = ['avg', 'avg_cum',
-                               'norm', 'norm_cum', 'var', 'var_cum']
+        self.info_type_list = [
+                               'norm', 'norm_cum', 'var', 'var_cum','avg', 'avg_cum']
 
         for l, num_node in enumerate(self.b_size_list):
             for n in range(num_node):
@@ -80,19 +81,29 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     self.nodes_integrated['var_{}l_{}n'.format(l, n)]), dim=0)
                 self.nodes_integrated['norm_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
                     self.nodes_integrated['norm_{}l_{}n'.format(l, n)]), dim=0)
+        print("\nFile Visualization Start")
 
-    def time_write_(self, layer, node, info_type):
-        plt.clf()
-        plt.plot(self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(
-            layer, node, info_type)])
-        self.timeWriter.add_figure(
-            '{}_{}l_{}n'.format(layer, node, info_type), plt)
+    def time_write_(self, layer, node, info_type,t):
+        # plt.clf()
+        # plt.plot(self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(
+        #     info_type,layer, node)])
+        if 'cum' in info_type:
+            self.timeWriter_cum.add_scalar(
+                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+        else:
+            self.timeWriter.add_scalar(
+                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
 
     def time_write(self):
-        for l, num_node in enumerate(self.b_size_list):
-            for n, _ in range(num_node):
-                for info_type in self.info_type_list:
-                    self.time_write_(l, n, info_type)
+        for info_type in self.info_type_list:
+            for l, num_node in enumerate(self.b_size_list):
+                for n in range(num_node):
+                    print("\rinfo_type: {}_{}l_{}n".format(info_type,l,n),end='')
+                    for t in self.time_list:
+                        self.time_write_(l, n, info_type,t)
+            self.timeWriter.flush()
+            self.timeWriter_cum.flush()
+
         # self.timeWriter.add_scalars(
         #     'avg_of_grads'.format(l), nodes_integrated_avg, t)
         # self.timeWriter.add_scalars(

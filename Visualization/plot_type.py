@@ -31,9 +31,9 @@ def using_tensorboard(fileTensor, config, path, file_name):
     print('\n ==Visualization Complete==')
 
 
-def using_plt(fileTensor, config, path):
+def using_plt(fileTensor, config, path,file_name):
     print('Using pyplot')
-    logger = Pyplot_node(fileTensor, config, path)
-    Pyplot_node.node_write()
-    Pyplot_node.node_integrated_write()
+    logger = Pyplot_node(fileTensor, config, path,file_name)
+    logger.time_write()
+    logger.time_integrated_write()
     print('\n ==Visualization Complete==')
