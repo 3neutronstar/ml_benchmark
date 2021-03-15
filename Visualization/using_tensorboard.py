@@ -23,9 +23,14 @@ class Tensorboard():
                 log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
         if config['visual_type'] == 'time_domain':
             self.timeWriter = SummaryWriter(
-                log_dir=os.path.join(path,'{}/time_info'.format(file_name)))
+                log_dir=os.path.join(path,'time_info/{}'.format(file_name)))
             self.timeWriter_cum = SummaryWriter(
-                log_dir=os.path.join(path,'{}/time_info_cum'.format(file_name)))
+                log_dir=os.path.join(path,'time_info_cum/{}'.format(file_name)))
+        if config['visual_type'] == 'time_domain_integrated':
+            self.timeWriter = SummaryWriter(
+                log_dir=os.path.join(path,'time_info/{}'.format(file_name)))
+            self.timeWriter_cum = SummaryWriter(
+                log_dir=os.path.join(path,'time_info_cum/{}'.format(file_name)))
         if config['visual_type'] == 'node_domain_integrated':
             # node value integrated for each layer
             self.integratedNodeWriter = SummaryWriter(
@@ -90,35 +95,48 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
         if 'cum' in info_type:
             self.timeWriter_cum.add_scalar(
                 '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+            
         else:
             self.timeWriter.add_scalar(
                 '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+        #self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,layer, node))
 
     def time_write(self):
         for info_type in self.info_type_list:
             for l, num_node in enumerate(self.b_size_list):
                 for n in range(num_node):
-                    print("\rinfo_type: {}_{}l_{}n".format(info_type,l,n),end='')
+                    print("\rinfo_type: {}_{}l_{}n==========".format(info_type,l,n),end='')
                     for t in self.time_list:
                         self.time_write_(l, n, info_type,t)
+                    self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,l, n))
+            self.timeWriter.flush()
+            self.timeWriter_cum.flush()
+    
+    def time_write_integrated_(self, layer, node, info_type,t):
+        #TODO
+        # plt.clf()
+        # plt.plot(self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(
+        #     info_type,layer, node)])
+        if 'cum' in info_type:
+            self.timeWriter_cum.add_scalars(
+                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+            
+        else:
+            self.timeWriter.add_scalars(
+                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+        #self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,layer, node))
+
+    def time_write_integrated(self):
+        for info_type in self.info_type_list:
+            for l, num_node in enumerate(self.b_size_list):
+                for n in range(num_node):
+                    print("\rinfo_type: {}_{}l_{}n==========".format(info_type,l,n),end='')
+                    for t in self.time_list:
+                        self.time_write_(l, n, info_type,t)
+                    self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,l, n))
             self.timeWriter.flush()
             self.timeWriter_cum.flush()
 
-        # self.timeWriter.add_scalars(
-        #     'avg_of_grads'.format(l), nodes_integrated_avg, t)
-        # self.timeWriter.add_scalars(
-        #     'norm_of_grads'.format(l), nodes_integrated_norm, t)
-        # self.timeWriter.add_scalars(
-        #     'var_of_grads'.format(l), nodes_integrated_var, t)
-        # self.timeWriter.flush()
-
-        # self.timeWriter_cum.add_scalars(
-        #     'avg_of_grads'.format(l), nodes_integrated_avg_cum, t)
-        # self.timeWriter_cum.add_scalars(
-        #     'norm_of_grads'.format(l), nodes_integrated_norm_cum, t)
-        # self.timeWriter_cum.add_scalars(
-        #     'var_of_grads'.format(l), nodes_integrated_var_cum, t)
-        # self.timeWriter_cum.flush()
 
     def node_write(self):
         print(self.total_data.size())

@@ -40,12 +40,16 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, parameter
         for p in p_groups:
             for i,p_layers in enumerate(p['params']):
                 # save cpu
-                if i%2==0:#==0:weight// bias filtering
-                    p_calc=p_layers.view(p_layers.size()[0],-1).cpu().detach().clone()
-                    # if i==0:
-                    #     print(p_calc[0])
-                    parameter_list[-1].append(torch.cat([p_calc.mean(dim=1,keepdim=True),p_calc.norm(dim=1,keepdim=True),p_calc.var(dim=1,keepdim=True)],dim=1))
-                p_layers.to(device)  # gpu
+                # filtering the info by norm, avg, var
+                # if i%2==0:#==0:weight// bias filtering
+                #     p_calc=p_layers.view(p_layers.size()[0],-1).cpu().detach().clone()
+                #     # if i==0:
+                #     #     print(p_calc[0])
+                #     parameter_list[-1].append(torch.cat([p_calc.mean(dim=1,keepdim=True),p_calc.norm(dim=1,keepdim=True),p_calc.var(dim=1,keepdim=True)],dim=1))
+                if i%2==0:
+                    p_node=p_layers.view(p_layers.size()[0],-1).cpu().detach().clone()
+                    parameter_list[-1].append(p_node)
+                    p_layers.to(device)  # gpu
 
         running_loss += loss.item()
         if batch_idx % log_interval == 0:
@@ -154,7 +158,8 @@ def extract_data(config, time_data):
             if t == 1:
                 for i, p in enumerate(params):  # 각 layer의 params
                     param_size.append(p.size())
-            params_write.append(torch.cat(params, dim=0).unsqueeze(0))
+            params_write.append(torch.cat(params))
+            print(len(params))
 
             if t % 100 == 0:
                 print("\r step {} done".format(t), end='')
@@ -164,7 +169,7 @@ def extract_data(config, time_data):
             time_data)), write_data.numpy())#npy save
         tok = time.time()
         print('play_time for saving:', tok-tik, "s")
-    
+        print('size: {}'.format(params_write.size()))
     #CSV extraction
     '''
     csv 저장

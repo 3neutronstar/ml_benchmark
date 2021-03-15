@@ -33,9 +33,6 @@ def parse_args(args):
         '--nn_type', type=str, default='lenet5',
         help='choose NeuralNetwork type')
     parser.add_argument(
-        '--lr', type=float, default=1e-1,
-        help='set learning rate')
-    parser.add_argument(
         '--device', type=str, default='gpu',
         help='choose NeuralNetwork')
     parser.add_argument(
@@ -58,10 +55,15 @@ def parse_args(args):
     if nn_type == 'lenet5':
         dataset = 'mnist'
         epochs = 60
+        lr=1e-1
     elif nn_type == 'vgg16':
         dataset = 'cifar10'
         epochs = 300
+        lr=1e-2
 
+    parser.add_argument(
+        '--lr', type=float, default=lr,
+        help='set learning rate')
     parser.add_argument(
         '--epochs', type=int, default=epochs,
         help='run epochs')
