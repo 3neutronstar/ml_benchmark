@@ -19,6 +19,7 @@ def using_tensorboard(fileTensor, config, path, file_name):
         logger = Tensorboard_elem(fileTensor, path, file_name, config)
         if config['visual_type'] == 'time_domain':
             logger.time_write()
+            logger.time_write_elem()
         elif config['visual_type'] == 'node_domain':
             logger.node_write()
     else:
