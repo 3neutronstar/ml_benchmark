@@ -22,15 +22,12 @@ class Tensorboard():
             self.nodeWriter = SummaryWriter(
                 log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
         if config['visual_type'] == 'time_domain':
-            self.timeWriter = SummaryWriter(
-                log_dir=os.path.join(path,'time_info/{}'.format(file_name)))
-            self.timeWriter_cum = SummaryWriter(
-                log_dir=os.path.join(path,'time_info_cum/{}'.format(file_name)))
-        if config['visual_type'] == 'time_domain_integrated':
-            self.timeWriter = SummaryWriter(
-                log_dir=os.path.join(path,'time_info/{}'.format(file_name)))
-            self.timeWriter_cum = SummaryWriter(
-                log_dir=os.path.join(path,'time_info_cum/{}'.format(file_name)))
+            self.timeWriter=list()
+            self.timeWriter_cum=list()
+            for l,_ in enumerate(b_size_list):
+                self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_info/{}/{}l'.format(file_name,l))))
+                self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_info_cum/{}/{}l'.format(file_name,l))))
+
         if config['visual_type'] == 'node_domain_integrated':
             # node value integrated for each layer
             self.integratedNodeWriter = SummaryWriter(
@@ -38,7 +35,10 @@ class Tensorboard():
         self.total_data = dataTensor
         self.transposed_data = self.total_data.T
         self.nodes_integrated = dict()
+        self.node_elems_integrated=dict()# [l_n]=torch.tensor(elems,time)
         self.time_list = list()
+        self.info_type_list = [
+                               'norm', 'norm_cum', 'var', 'var_cum','avg', 'avg_cum']
 
 
 class Tensorboard_node(Tensorboard):  # norm avg기반
@@ -160,13 +160,9 @@ class Tensorboard_elem(Tensorboard):
         super(Tensorboard_elem, self).__init__(
             dataTensor, path, file_name, config)
 
-    def time_write(self):
         # Gradient of node write in time
         # x: time
         # y: sum of grad (each node), norm of grad (each node), norm of grad (each layer)
-        nodes_integrated_avg_cum = dict()
-        nodes_integrated_norm_cum = dict()
-        nodes_integrated_var_cum = dict()
         for t, data in enumerate(self.total_data):
             tmp_data = data.clone().detach()
             if t % 1000 == 0:
@@ -175,73 +171,74 @@ class Tensorboard_elem(Tensorboard):
                 # weight
                 tmp_w = tmp_data[:num_w]
                 tmp_data = tmp_data[num_w:]  # remove
-                nodes_integrated_avg = dict()
-                nodes_integrated_norm = dict()
-                nodes_integrated_var = dict()
                 # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
                 if self.NN_type_list[l] == 'cnn':
                     for n in range(self.NN_size_list[l+1]):  # node 단위
                         if t == 0:
-                            nodes_integrated_avg_cum['{}l_{}n'.format(
-                                l, n)] = 0.0
-                            nodes_integrated_norm_cum['{}l_{}n'.format(
-                                l, n)] = 0.0
-                            nodes_integrated_var_cum['{}l_{}n'.format(
-                                l, n)] = 0.0
+                            self.nodes_integrated['avg_{}l_{}n'.format(
+                                l, n)] = list()
+                            self.nodes_integrated['norm_{}l_{}n'.format(
+                                l, n)] = list()
+                            self.nodes_integrated['var_{}l_{}n'.format(
+                                l, n)] = list()
                         node_w = tmp_w[:(
                             self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]]
-                        nodes_integrated_avg['{}l_{}n'.format(
-                            l, n)] = node_w.sum()
-                        nodes_integrated_norm['{}l_{}n'.format(
-                            l, n)] = node_w.norm(2)
-                        # self.timeWriter.add_scalar('avg_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                        # self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
+                        self.nodes_integrated['avg_{}l_{}n'.format(
+                            l, n)].append(node_w.mean())
+                        self.nodes_integrated['norm_{}l_{}n'.format(
+                            l, n)].append(node_w.norm(2))
+                        self.nodes_integrated['norm_{}l_{}n'.format(
+                            l, n)].append(node_w.var())
                         tmp_w = tmp_w[(
                             self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # 내용 제거
 
                 elif self.NN_type_list[l] == 'fc':
                     for n in range(self.NN_size_list[l+1]):  # node 단위
                         if t == 0:
-                            nodes_integrated_avg_cum['{}l_{}n'.format(
-                                l, n)] = 0.0
-                            nodes_integrated_norm_cum['{}l_{}n'.format(
-                                l, n)] = 0.0
-                            nodes_integrated_var_cum['{}l_{}n'.format(
-                                l, n)] = 0.0
+                            self.nodes_integrated['avg_{}l_{}n'.format(
+                                l, n)] = list()
+                            self.nodes_integrated['norm_{}l_{}n'.format(
+                                l, n)] = list()
+                            self.nodes_integrated['var_{}l_{}n'.format(
+                                l, n)] = list()
                         node_w = tmp_w[:self.NN_size_list[l]]
-                        nodes_integrated_avg['{}l_{}n'.format(
-                            l, n)] = node_w.sum()
-                        nodes_integrated_norm['{}l_{}n'.format(
-                            l, n)] = node_w.norm(2)
-                        nodes_integrated_var['{}l_{}n'.format(
-                            l, n)] = node_w.var()
-                        nodes_integrated_avg_cum['{}l_{}n'.format(
-                            l, n)] += node_w.sum()
-                        nodes_integrated_norm_cum['{}l_{}n'.format(
-                            l, n)] += node_w.norm(2)
-                        nodes_integrated_var_cum['{}l_{}n'.format(
-                            l, n)] += node_w.var()
-                        # self.timeWriter.add_scalar('avg_grad/{}l_{}n'.format(l,n),node_w.sum(),t)#합
-                        # self.timeWriter.add_scalar('norm_grad/{}l_{}n'.format(l,n),node_w.norm(2),t)#norm
+                        self.nodes_integrated['avg_{}l_{}n'.format(
+                            l, n)].append( node_w.mean())
+                        self.nodes_integrated['norm_{}l_{}n'.format(
+                            l, n)].append(node_w.norm(2))
+                        self.nodes_integrated['var_{}l_{}n'.format(
+                            l, n)].append (node_w.var())
                         tmp_w = tmp_w[self.NN_size_list[l]:]  # 내용제거
-                # bias
-                node_b = tmp_data[:num_b].detach().clone()
-                tmp_data = tmp_data[num_b:]  # remove
-            self.timeWriter.add_scalars(
-                'avg_of_grads', nodes_integrated_avg, t)
-            self.timeWriter.add_scalars(
-                'norm_of_grads', nodes_integrated_norm, t)
-            self.timeWriter.add_scalars(
-                'var_of_grads', nodes_integrated_var, t)
-            self.timeWriter.flush()
+                # # bias
+                # node_b = tmp_data[:num_b].detach().clone()
+                # tmp_data = tmp_data[num_b:]  # remove
+        for type_info in self.info_type_list:
+            for l,num_node in enumerate(self.b_size_list):
+                for n in range(num_node):
+                    self.nodes_integrated['{}_cum_{}l_{}n'.format(type_info,l,n)]=torch.cumsum(torch.tensor(
+                        self.nodes_integrated['{}_{}l_{}n'.format(type_info,l, n)]), dim=0).clone()
+        print("\n Read Complete")
 
-            self.timeWriter_cum.add_scalars(
-                'avg_of_grads', nodes_integrated_avg, t)
-            self.timeWriter_cum.add_scalars(
-                'norm_of_grads', nodes_integrated_norm, t)
-            self.timeWriter_cum.add_scalars(
-                'var_of_grads', nodes_integrated_var_cum, t)
-            self.timeWriter_cum.flush()
+    
+    def time_write(self):
+        for type_info in self.info_type_list:
+            for l_idx,num_node in enumerate(self.b_size_list):
+                if 'cum' in type_info:
+                    for t in self.time_list:
+                        layer_dict=dict()
+                        for n_idx in range(num_node):
+                            layer_dict['{}_{}n'.format(type_info,n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                        self.timeWriter_cum[l_idx].add_scalars(type_info,layer_dict,t)
+                    self.timeWriter_cum[l_idx].flush()
+                else:
+                    for t in self.time_list:
+                        layer_dict=dict()
+                        for n_idx in range(num_node):
+                            layer_dict['{}_{}n'.format(type_info,n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                        self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
+                    self.timeWriter[l_idx].flush()
+
+          
 
     def node_write(self):
         sum_time = torch.sum(self.transposed_data, dim=1)

@@ -15,7 +15,7 @@ def using_tensorboard(fileTensor, config, path, file_name):
         file_name = 'grad'
 
     # if config['nn_type'] == 'lenet5':
-    if False:
+    if True:
         logger = Tensorboard_elem(fileTensor, path, file_name, config)
         if config['visual_type'] == 'time_domain':
             logger.time_write()

@@ -48,7 +48,8 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, parameter
                 #     parameter_list[-1].append(torch.cat([p_calc.mean(dim=1,keepdim=True),p_calc.norm(dim=1,keepdim=True),p_calc.var(dim=1,keepdim=True)],dim=1))
                 if i%2==0:
                     p_node=p_layers.view(p_layers.size()[0],-1).cpu().detach().clone()
-                    parameter_list[-1].append(p_node)
+                    for p_elem in p_node:
+                        parameter_list[-1].append(p_elem)
                     p_layers.to(device)  # gpu
 
         running_loss += loss.item()
@@ -125,6 +126,7 @@ def extract_data(config, time_data):
     eval_accuracy, eval_loss = 0.0, 0.0
     train_accuracy, train_loss = 0.0, 0.0
     early_stopping = EarlyStopping(current_path,time_data,patience = config['patience'], verbose = True)
+    # Train
     for epoch in range(1, config['epochs'] + 1):
         train_accuracy, train_loss, parameter_list = train(
             log_interval, net, DEVICE, train_data_loader, optimizer, epoch, parameter_list,config)
@@ -142,7 +144,7 @@ def extract_data(config, time_data):
             break
         if config['device'] == 'gpu':
             torch.cuda.empty_cache()
-
+    # Save
     param_size = list()
     params_write = list()
     if config['colab'] == True:
@@ -158,8 +160,8 @@ def extract_data(config, time_data):
             if t == 1:
                 for i, p in enumerate(params):  # 각 layer의 params
                     param_size.append(p.size())
-            params_write.append(torch.cat(params))
-            print(len(params))
+            
+            params_write.append(torch.cat(params,dim=0).unsqueeze(0))
 
             if t % 100 == 0:
                 print("\r step {} done".format(t), end='')
@@ -169,7 +171,7 @@ def extract_data(config, time_data):
             time_data)), write_data.numpy())#npy save
         tok = time.time()
         print('play_time for saving:', tok-tik, "s")
-        print('size: {}'.format(params_write.size()))
+        print('size: {}'.format(len(params_write)))
     #CSV extraction
     '''
     csv 저장
