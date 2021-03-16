@@ -158,10 +158,20 @@ class Tensorboard_elem(Tensorboard):
         super(Tensorboard_elem, self).__init__(
             dataTensor, path, file_name, config)
         self.num_elem_list=list()
+        if os.path.exists(os.path.join(self.path,'time_elem_info')) == False:
+            os.mkdir(os.path.join(self.path,'time_elem_info'))
+        if os.path.exists(os.path.join(self.path,'time_elem_info_cum')) == False:
+            os.mkdir(os.path.join(self.path,'time_elem_info_cum'))
+        if os.path.exists(os.path.join(self.path,'time_elem_info',self.file_name)) == False:
+            os.mkdir(os.path.join(self.path,'time_elem_info',self.file_name))
+        if os.path.exists(os.path.join(self.path,'time_elem_info_cum',self.file_name)) == False:
+            os.mkdir(os.path.join(self.path,'time_elem_info_cum',self.file_name))
 
         # Gradient of node write in time
         # x: time
         # y: sum of grad (each node), norm of grad (each node), norm of grad (each layer)
+
+    def time_write_(self):
         for t, data in enumerate(self.total_data):
             self.time_list.append(t)
             tmp_data = data.clone().detach()
@@ -171,8 +181,8 @@ class Tensorboard_elem(Tensorboard):
                 # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
                 if self.NN_type_list[l] == 'cnn':
                     # weight
-                    tmp_w = tmp_data[:num_w*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
-                    tmp_data = tmp_data[num_w*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
+                    tmp_w = tmp_data[:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
+                    tmp_data = tmp_data[num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
                     for n in range(self.NN_size_list[l+1]):  # node 단위
                         if t == 0:
                             self.nodes_integrated['avg_{}l_{}n'.format(
@@ -195,8 +205,8 @@ class Tensorboard_elem(Tensorboard):
 
                 elif self.NN_type_list[l] == 'fc':
                     # weight
-                    tmp_w = tmp_data[:num_w*self.NN_size_list[l]].detach().clone()
-                    tmp_data = tmp_data[num_w*self.NN_size_list[l]:]  # remove
+                    tmp_w = tmp_data[:num_b*self.NN_size_list[l]].detach().clone()
+                    tmp_data = tmp_data[num_b*self.NN_size_list[l]:]  # remove
                     for n in range(self.NN_size_list[l+1]):  # node 단위
                         if t == 0:
                             self.nodes_integrated['avg_{}l_{}n'.format(
@@ -222,13 +232,14 @@ class Tensorboard_elem(Tensorboard):
                 for n in range(num_node):
                     self.nodes_integrated['{}_cum_{}l_{}n'.format(type_info,l,n)]=torch.cumsum(torch.tensor(self.nodes_integrated['{}_{}l_{}n'.format(type_info,l, n)]), dim=0).clone().tolist()
 
-        print("\n Read Complete")
+        print("\n Reading Process Complete")
 
     
     def time_write(self):
+        self.time_write_()
         for type_info in self.info_type_list:
             for l_idx,num_node in enumerate(self.b_size_list):
-                print('\r{}_{}l Complete'.format(type_info,l_idx),end='')
+                print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
                 if 'cum' in type_info:
                     for t in self.time_list:
                         layer_dict=dict()
@@ -247,48 +258,57 @@ class Tensorboard_elem(Tensorboard):
     
     def time_write_elem_(self):
         data_dict=dict() # layer name:
-        for t, data in enumerate(self.total_data):
+        for t in range(self.total_data.size()[0]):
             self.time_list.append(t)
-            tmp_data = data.clone().detach()
-            if t % 1000 == 0:
-                print('\r {} line complete'.format(t), end='')
-            for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
-                # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
-                if self.NN_type_list[l] == 'cnn':
-                    # weight
-                    tmp_w = tmp_data[:num_w*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]]
-                    tmp_data = tmp_data[num_w*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
-                    for elem_idx,w in enumerate(tmp_w):
-                        if t==0:
-                            data_dict['{}l_{}e'.format(l,elem_idx)]=list()
-                        data_dict['{}l_{}e'.format(l,elem_idx)].append(w)
 
-                elif self.NN_type_list[l] == 'fc':
-                    # weight
-                    tmp_w = tmp_data[:num_w*self.NN_size_list[l]]
-                    tmp_data = tmp_data[num_w*self.NN_size_list[l]:]  # remove
-                    for elem_idx,w in enumerate(tmp_w):
-                        if t==0:
-                            data_dict['{}l_{}e'.format(l,elem_idx)]=list()
-                        data_dict['{}l_{}e'.format(l,elem_idx)].append(w)
+        tmp_data = self.total_data.clone().detach()
+        for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
+            # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
+            if self.NN_type_list[l] == 'cnn':
+                # weight
+                tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
+                tmp_data = tmp_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
+                print(tmp_w.T.size())
+                for elem_idx,w in enumerate(tmp_w.T):
+                    if t==0:
+                        data_dict['{}l_{}e'.format(l,elem_idx)]=list()
+                    data_dict['{}l_{}e'.format(l,elem_idx)]=w
+                self.num_elem_list.append((self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l])
+
+            elif self.NN_type_list[l] == 'fc':
+                # weight
+                tmp_w = tmp_data[:,:num_b*self.NN_size_list[l]].detach().clone()
+                tmp_data = tmp_data[:,num_b*self.NN_size_list[l]:]  # remove
+                print(tmp_w.T.size())
+                for elem_idx,w in enumerate(tmp_w.T):
+                    if t==0:
+                        data_dict['{}l_{}e'.format(l,elem_idx)]=list()
+                    data_dict['{}l_{}e'.format(l,elem_idx)]=w
+                self.num_elem_list.append(self.NN_size_list[l]*self.NN_size_list[l+1])
+            print('{} layer done'.format(l))
 
         return data_dict
 
     def time_write_elem(self):
-        if os.path.exists(os.path.join(self.path,self.file_name,'time_elem_info')) == False:
-            os.mkdir(os.path.join(self.path,self.file_name,'time_elem_info'))
-
-        data_dict=self.time_write_elem()
+        
+        data_dict=self.time_write_elem_()
         for l_idx,num_node in enumerate(self.b_size_list):
-            for e_idx in range(self.num_elem_list[l_idx]):
+            cum_save_path=os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))
+            save_path=os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))
+            if os.path.exists(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))) == False:
+                os.mkdir(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx)))
+            if os.path.exists(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))) == False:
+                os.mkdir(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx)))
+            for e_idx in range(self.num_elem_list[l_idx]*num_node):
+                print('\r {} Layer {:4.0f}Elem Complete'.format(l_idx,e_idx),end='')
                 plt.clf()
                 plt.plot(self.time_list,data_dict['{}l_{}e'.format(l_idx,e_idx)])
-                plt.xlabel('grad_elem')
-                plt.ylabel('time')
-                plt.savefig(os.path.join(self.path,self.file_name,'time_elem_info','{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
+                plt.ylabel('grad_elem')
+                plt.xlabel('time')
+                plt.savefig(os.path.join(save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
 
                 plt.clf()
-                plt.plot(self.time_list,torch.cumsum(torch.tensor(data_dict['{}l_{}e'.format(l_idx,e_idx)])))
-                plt.xlabel('grad_elem')
-                plt.ylabel('time')
-                plt.savefig(os.path.join(self.path,self.file_name,'time_elem_info_cum','{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
+                plt.plot(self.time_list,torch.cumsum(data_dict['{}l_{}e'.format(l_idx,e_idx)],dim=0))
+                plt.ylabel('grad_elem')
+                plt.xlabel('time')
+                plt.savefig(os.path.join(cum_save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)

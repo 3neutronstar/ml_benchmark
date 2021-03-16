@@ -160,6 +160,8 @@ def extract_data(config, time_data):
             if t == 1:
                 for i, p in enumerate(params):  # 각 layer의 params
                     param_size.append(p.size())
+                    if i==10:
+                        print(p)
             
             params_write.append(torch.cat(params,dim=0).unsqueeze(0))
 
