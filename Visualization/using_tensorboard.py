@@ -27,6 +27,12 @@ class Tensorboard():
             for l,_ in enumerate(b_size_list):
                 self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_info/{}/{}l'.format(file_name,l))))
                 self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_info_cum/{}/{}l'.format(file_name,l))))
+        if config['visual_type'] == 'time_elem_domain':
+            self.timeWriter=list()
+            self.timeWriter_cum=list()
+            for l,_ in enumerate(b_size_list):
+                self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info/{}/{}l'.format(file_name,l))))
+                self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info_cum/{}/{}l'.format(file_name,l))))
 
         if config['visual_type'] == 'node_domain_integrated':
             # node value integrated for each layer
@@ -239,7 +245,6 @@ class Tensorboard_elem(Tensorboard):
         self.time_write_()
         for type_info in self.info_type_list:
             for l_idx,num_node in enumerate(self.b_size_list):
-                print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
                 if 'cum' in type_info:
                     for t in self.time_list:
                         layer_dict=dict()
@@ -254,6 +259,7 @@ class Tensorboard_elem(Tensorboard):
                             layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
                         self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
                     self.timeWriter[l_idx].flush()
+                print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
         del self.nodes_integrated
     
     def time_write_elem_(self):
@@ -268,24 +274,24 @@ class Tensorboard_elem(Tensorboard):
                 # weight
                 tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
                 tmp_data = tmp_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
-                print(tmp_w.T.size())
                 for elem_idx,w in enumerate(tmp_w.T):
                     if t==0:
                         data_dict['{}l_{}e'.format(l,elem_idx)]=list()
                     data_dict['{}l_{}e'.format(l,elem_idx)]=w
+                    data_dict['cum_{}l_{}e'.format(l,elem_idx)]=torch.cumsum(w,dim=1)
                 self.num_elem_list.append((self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l])
 
             elif self.NN_type_list[l] == 'fc':
                 # weight
                 tmp_w = tmp_data[:,:num_b*self.NN_size_list[l]].detach().clone()
                 tmp_data = tmp_data[:,num_b*self.NN_size_list[l]:]  # remove
-                print(tmp_w.T.size())
                 for elem_idx,w in enumerate(tmp_w.T):
                     if t==0:
                         data_dict['{}l_{}e'.format(l,elem_idx)]=list()
                     data_dict['{}l_{}e'.format(l,elem_idx)]=w
+                    data_dict['cum_{}l_{}e'.format(l,elem_idx)]=torch.cumsum(w,dim=1)
                 self.num_elem_list.append(self.NN_size_list[l]*self.NN_size_list[l+1])
-            print('{} layer done'.format(l))
+            print('{} layer done, {}'.format(l,tmp_w.T.size()))
 
         return data_dict
 
@@ -293,22 +299,39 @@ class Tensorboard_elem(Tensorboard):
         
         data_dict=self.time_write_elem_()
         for l_idx,num_node in enumerate(self.b_size_list):
-            cum_save_path=os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))
-            save_path=os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))
-            if os.path.exists(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))) == False:
-                os.mkdir(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx)))
-            if os.path.exists(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))) == False:
-                os.mkdir(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx)))
-            for e_idx in range(self.num_elem_list[l_idx]*num_node):
-                print('\r {} Layer {:4.0f}Elem Complete'.format(l_idx,e_idx),end='')
-                plt.clf()
-                plt.plot(self.time_list,data_dict['{}l_{}e'.format(l_idx,e_idx)])
-                plt.ylabel('grad_elem')
-                plt.xlabel('time')
-                plt.savefig(os.path.join(save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
+            if l_idx==2:
+                for t in self.time_list:
+                    t_data=dict()
+                    t_data_cum=dict()
+                    print('\r {} Layer {:7.0f}Time Complete'.format(l_idx,t),end='')
+                    for e_idx in range(self.num_elem_list[l_idx]*num_node):
+                        t_data['{}l_{}e'.format(l_idx,e_idx)]=data_dict['{}l_{}e'.format(l_idx,e_idx)][t]
+                        t_data_cum['{}l_{}e'.format(l_idx,e_idx)]=data_dict['cum_{}l_{}e'.format(l_idx,e_idx)][t]
+                    self.timeWriter[l_idx].add_scalars('elem_grad',t_data,t)
+                    self.timeWriter_cum[l_idx].add_scalars('cum_elem_grad',t_data,t)
+                    self.timeWriter[l_idx].flush()
+                    self.timeWriter_cum[l_idx].flush()
 
-                plt.clf()
-                plt.plot(self.time_list,torch.cumsum(data_dict['{}l_{}e'.format(l_idx,e_idx)],dim=0))
-                plt.ylabel('grad_elem')
-                plt.xlabel('time')
-                plt.savefig(os.path.join(cum_save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
+                    
+
+
+        # for l_idx,num_node in enumerate(self.b_size_list):
+        #     cum_save_path=os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))
+        #     save_path=os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))
+        #     if os.path.exists(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))) == False:
+        #         os.mkdir(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx)))
+        #     if os.path.exists(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))) == False:
+        #         os.mkdir(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx)))
+        #     for e_idx in range(self.num_elem_list[l_idx]*num_node):
+        #         print('\r {} Layer {:4.0f}Elem Complete'.format(l_idx,e_idx),end='')
+        #         plt.clf()
+        #         plt.plot(self.time_list,data_dict['{}l_{}e'.format(l_idx,e_idx)])
+        #         plt.ylabel('grad_elem')
+        #         plt.xlabel('time')
+        #         plt.savefig(os.path.join(save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
+
+        #         plt.clf()
+        #         plt.plot(self.time_list,torch.cumsum(data_dict['{}l_{}e'.format(l_idx,e_idx)],dim=0))
+        #         plt.ylabel('grad_elem')
+        #         plt.xlabel('time')
+        #         plt.savefig(os.path.join(cum_save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)

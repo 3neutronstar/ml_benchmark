@@ -13,7 +13,7 @@ from torch.optim. lr_scheduler import StepLR, MultiStepLR
 from utils import EarlyStopping
 
 
-def train(log_interval, model, device, train_loader, optimizer, epoch, parameter_list,config):
+def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list,config):
     tik = time.time()
     model.train()  # train모드로 설정
     running_loss = 0.0
@@ -29,27 +29,22 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, parameter
         # model에서 입력과 출력이 나옴 batch 수만큼 들어가서 batch수만큼 결과가 나옴 (1개 인풋 1개 아웃풋 아님)
         output = model(data)
         loss = criterion(output, target)  # 결과와 target을 비교하여 계산
+        # get the index of the max log-probability
+        pred = output.argmax(dim=1, keepdim=True)
+        correct += pred.eq(target.view_as(pred)).sum().item()
 
         loss.backward()  # 역전파
         optimizer.step()  # step
         p_groups = optimizer.param_groups  # group에 각 layer별 파라미터
-        # get the index of the max log-probability
-        pred = output.argmax(dim=1, keepdim=True)
-        correct += pred.eq(target.view_as(pred)).sum().item()
-        parameter_list.append([])
+        grad_list.append([])
         for p in p_groups:
             for i,p_layers in enumerate(p['params']):
-                # save cpu
-                # filtering the info by norm, avg, var
-                # if i%2==0:#==0:weight// bias filtering
-                #     p_calc=p_layers.view(p_layers.size()[0],-1).cpu().detach().clone()
-                #     # if i==0:
-                #     #     print(p_calc[0])
-                #     parameter_list[-1].append(torch.cat([p_calc.mean(dim=1,keepdim=True),p_calc.norm(dim=1,keepdim=True),p_calc.var(dim=1,keepdim=True)],dim=1))
                 if i%2==0:
-                    p_node=p_layers.view(p_layers.size()[0],-1).cpu().detach().clone()
-                    for p_elem in p_node:
-                        parameter_list[-1].append(p_elem)
+                    p_node=p_layers.grad.view(-1).cpu().detach().clone()
+                    if i==0:
+                        print(p_node[50:75])
+                        print(p_node.size())
+                    grad_list[-1].append(p_node)
                     p_layers.to(device)  # gpu
 
         running_loss += loss.item()
@@ -62,7 +57,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, parameter
     running_accuracy = 100.0 * correct / float(num_training_data)
     print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
         tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
-    return running_accuracy, running_loss, parameter_list
+    return running_accuracy, running_loss, grad_list
 
 
 def eval(model, device, test_loader, config):
@@ -122,14 +117,14 @@ def extract_data(config, time_data):
         scheduler = MultiStepLR(optimizer=optimizer, milestones=[
                                 150, 225], gamma=0.1)
 
-    parameter_list = list()
+    grad_list = list()
     eval_accuracy, eval_loss = 0.0, 0.0
     train_accuracy, train_loss = 0.0, 0.0
     early_stopping = EarlyStopping(current_path,time_data,patience = config['patience'], verbose = True)
     # Train
     for epoch in range(1, config['epochs'] + 1):
-        train_accuracy, train_loss, parameter_list = train(
-            log_interval, net, DEVICE, train_data_loader, optimizer, epoch, parameter_list,config)
+        train_accuracy, train_loss, grad_list = train(
+            log_interval, net, DEVICE, train_data_loader, optimizer, epoch, grad_list,config)
         eval_accuracy, eval_loss = eval(net, DEVICE, test_data_loader, config)
         scheduler.step()
         loss_dict = {'train': train_loss, 'eval': eval_loss}
@@ -156,12 +151,10 @@ def extract_data(config, time_data):
     tik = time.time()
     import numpy as np
     if config['log_extraction'] == True:
-        for t, params in enumerate(parameter_list):
+        for t, params in enumerate(grad_list):
             if t == 1:
                 for i, p in enumerate(params):  # 각 layer의 params
                     param_size.append(p.size())
-                    if i==10:
-                        print(p)
             
             params_write.append(torch.cat(params,dim=0).unsqueeze(0))
 
@@ -178,7 +171,7 @@ def extract_data(config, time_data):
     '''
     csv 저장
     자료구조
-    parameter_list
+    grad_list
     1dim: time
     2dim: layer
 
@@ -190,7 +183,7 @@ def extract_data(config, time_data):
     # tik=time.time()
     # params_write.clear()
     # if config['csv_extraction']==True:
-    #     for t,params in enumerate(parameter_list):
+    #     for t,params in enumerate(grad_list):
     #         if t==1:
     #             for i, p in enumerate(params):# 각 layer의 params
     #                 param_size.append(p.size())

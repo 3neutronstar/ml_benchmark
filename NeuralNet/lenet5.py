@@ -33,5 +33,6 @@ class LeNet5(nn.Module):
         x = F.relu(self.conv3(x))
         x = x.view(-1, 120)
         x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
         x = self.log_softmax(x)
         return x
