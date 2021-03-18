@@ -1,3 +1,4 @@
+from Visualization.create_cam import create_cam
 import argparse
 import json
 import os
@@ -19,7 +20,8 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or test, simulate, "train_old" is the old version to train')
+        help='train or visual, cam')
+    #TRAIN SECTION
     parser.add_argument(
         '--seed', type=int, default=1,
         help='fix random seed')
@@ -36,9 +38,6 @@ def parse_args(args):
         '--device', type=str, default='gpu',
         help='choose NeuralNetwork')
     parser.add_argument(
-        '--file_name', type=str, default=None,
-        help='grad_data/grad_[].log file load')
-    parser.add_argument(
         '--colab', type=bool, default=False,
         help='if you are in colab use it')
     parser.add_argument(
@@ -47,10 +46,7 @@ def parse_args(args):
     parser.add_argument(
         '--log', type=bool, default=True,
         help='generate log')
-    parser.add_argument(
-        '--visual_type', type=str, default='time_domain',
-        help='visualization domain decision [time,node,node_integrated]')
-
+    #TRAIN OPTION BY NN
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type == 'lenet5':
         dataset = 'mnist'
@@ -60,7 +56,6 @@ def parse_args(args):
         dataset = 'cifar10'
         epochs = 300
         lr=1e-2
-
     parser.add_argument(
         '--lr', type=float, default=lr,
         help='set learning rate')
@@ -70,6 +65,19 @@ def parse_args(args):
     parser.add_argument(
         '--dataset', type=str, default=dataset,
         help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
+    
+    # VISUAL and CAM SECTION
+    parser.add_argument(
+        '--file_name', type=str, default=None,
+        help='grad_data/grad_[].log for VISUAL and grad_[].pt file load for CAM')
+    parser.add_argument(
+        '--visual_type', type=str, default='time_domain',
+        help='visualization domain decision [time,node,node_integrated]')
+    parser.add_argument(
+        '--num_result', type=int, default=1,
+        help='grad_data/grad_[].log file load')
+
+
 
     return parser.parse_known_args(args)[0]
 
@@ -79,11 +87,11 @@ def main(args):
     if flags.file_name is None and flags.mode == 'train':
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
-    elif flags.file_name is not None and flags.mode == 'visual':  # load
+    elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='hist'):  # load
         time_data = flags.file_name
         file_name = flags.file_name
     else:
-        file_name = None  # no file name just read from grad.csv
+        file_name = None  # no file name just read from grad.csv, .npy and .pt
 
     use_cuda = torch.cuda.is_available()
     device = torch.device(
@@ -116,15 +124,33 @@ def main(args):
                'mode':flags.mode,
                'patience':flags.patience,
                }
-
-    if flags.mode == 'train':
-        from train import extract_data
-        configs = extract_data(configs, time_data)
-        if configs['log_extraction'] == True:
-            save_params(configs, time_data)
     if flags.mode == 'visual':
         from visualization import visualization
         configs = visualization(configs, file_name)
+    
+    
+    if configs['nn_type'] == 'lenet5':
+        from NeuralNet.lenet5 import LeNet5
+        model = LeNet5(configs).to(configs['device'])
+    if configs['nn_type'][:3] == 'vgg':
+        from NeuralNet.vgg import VGG
+        model = VGG(configs).to(configs['device'])
+
+    if flags.mode == 'train':
+        from train import extract_data
+        configs = extract_data(model,configs, time_data)
+        if configs['log_extraction'] == True:
+            save_params(configs, time_data)
+    if flags.mode.lower() =='cam':
+        configs['batch_size']=1 # 1장씩 extracting
+        file_path=os.path.dirname(os.path.abspath(__file__))
+        create_cam(model,file_path,file_name,flags.num_result,configs)
+    if flags.mode.lower()=='hist':
+        from utils import channel_hist
+        configs['batch_size']=1 # 1장씩 extracting
+        file_path=os.path.dirname(os.path.abspath(__file__))
+        channel_hist(model,file_path,file_name,configs)
+
 
     print("End the process")
 

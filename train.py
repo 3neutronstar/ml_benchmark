@@ -41,9 +41,9 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list
             for i,p_layers in enumerate(p['params']):
                 if i%2==0:
                     p_node=p_layers.grad.view(-1).cpu().detach().clone()
-                    if i==0:
-                        print(p_node[50:75])
-                        print(p_node.size())
+                    # if i==0:
+                    #     print(p_node[50:75])
+                    #     print(p_node.size())
                     grad_list[-1].append(p_node)
                     p_layers.to(device)  # gpu
 
@@ -64,7 +64,7 @@ def eval(model, device, test_loader, config):
     model.eval()
     eval_loss = 0
     correct = 0
-    criterion = nn.NLLLoss(reduction='sum')  # add all samples in a mini-batch
+    criterion = model.loss  # add all samples in a mini-batch
     with torch.no_grad():
         for data, target in test_loader:
             data, target = data.to(device), target.to(device)
@@ -85,7 +85,7 @@ def eval(model, device, test_loader, config):
     return eval_accuracy, eval_loss
 
 
-def extract_data(config, time_data):
+def extract_data(net,config, time_data):
     print("Training {} epochs".format(config['epochs']))
     DEVICE = config['device']
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -98,12 +98,6 @@ def extract_data(config, time_data):
     from DataSet.data_load import data_loader
     train_data_loader, test_data_loader = data_loader(config)
 
-    if config['nn_type'] == 'lenet5':
-        from NeuralNet.lenet5 import LeNet5
-        net = LeNet5(config).to(DEVICE)
-    if config['nn_type'][:3] == 'vgg':
-        from NeuralNet.vgg import VGG
-        net = VGG(config).to(DEVICE)
 
     # Tensorboard
     logWriter = SummaryWriter(os.path.join(
@@ -132,7 +126,7 @@ def extract_data(config, time_data):
         logWriter.add_scalars('loss', loss_dict, epoch)
         logWriter.add_scalars('accuracy', accuracy_dict, epoch)
 
-        early_stopping(eval_loss, net)
+        early_stopping(train_loss, net)
 
         if early_stopping.early_stop:
             print("Early stopping")

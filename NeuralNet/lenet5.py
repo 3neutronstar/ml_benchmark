@@ -36,3 +36,15 @@ class LeNet5(nn.Module):
         x = F.relu(self.fc2(x))
         x = self.log_softmax(x)
         return x
+    
+    def extract_feature(self,x):
+        x = F.relu(self.conv1(x))
+        x = self.subsampling(x)
+        x = F.relu(self.conv2(x))
+        x = self.subsampling(x)
+        feature = F.relu(self.conv3(x))
+        x = feature.view(-1, 120)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.log_softmax(x)
+        return x,feature
