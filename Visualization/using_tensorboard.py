@@ -143,9 +143,9 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
 
 
     def node_write(self):
-        print(self.total_data.size())
+        # print(self.total_data.size())
         sum_data = torch.mean(self.total_data, dim=0).squeeze(0)
-        print(sum_data.size())
+        # print(sum_data.size())
         tmp_data = sum_data.detach().clone()
         for l, num_w in enumerate(self.b_size_list):
             node_w = tmp_data[:num_w].detach().clone()
@@ -202,7 +202,7 @@ class Tensorboard_elem(Tensorboard):
                             self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
                         self.nodes_integrated['avg_{}l_{}n'.format(
                             l, n)].append(node_w.mean())
-                        print(node_w,t)
+                        # print(node_w,t)
                         self.nodes_integrated['norm_{}l_{}n'.format(
                             l, n)].append(node_w.norm(2))
                         self.nodes_integrated['var_{}l_{}n'.format(

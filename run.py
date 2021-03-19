@@ -20,7 +20,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or visual, cam')
+        help='train or visual, cam, prune,visual_prune')
     #TRAIN SECTION
     parser.add_argument(
         '--seed', type=int, default=1,
@@ -87,7 +87,7 @@ def main(args):
     if flags.file_name is None and flags.mode == 'train':
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
-    elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='hist'):  # load
+    elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune'):  # load
         time_data = flags.file_name
         file_name = flags.file_name
     else:
@@ -139,18 +139,22 @@ def main(args):
     if flags.mode == 'train':
         from train import extract_data
         configs = extract_data(model,configs, time_data)
-        if configs['log_extraction'] == True:
-            save_params(configs, time_data)
+    if flags.mode=='train_prune':
+        from train import extract_data_prune
+        configs= extract_data_prune(model,configs,time_data)
+
     if flags.mode.lower() =='cam':
         configs['batch_size']=1 # 1장씩 extracting
         file_path=os.path.dirname(os.path.abspath(__file__))
         create_cam(model,file_path,file_name,flags.num_result,configs)
-    if flags.mode.lower()=='hist':
-        from utils import channel_hist
+    if flags.mode.lower()=='visual_prune':
+        from Visualization import visual_prune
         configs['batch_size']=1 # 1장씩 extracting
         file_path=os.path.dirname(os.path.abspath(__file__))
-        channel_hist(model,file_path,file_name,configs)
+        visual_prune(model,file_path,file_name,configs)
 
+    if configs['log_extraction'] == True:
+        save_params(configs, time_data)
 
     print("End the process")
 

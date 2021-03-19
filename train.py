@@ -23,6 +23,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list
     criterion = model.loss
     # loss함수에 softmax 함수가 포함되어있음
     # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
+    stop_grad_mask=dict()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)  # gpu로 올림
         optimizer.zero_grad()  # optimizer zero로 초기화
@@ -37,15 +38,41 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list
         optimizer.step()  # step
         p_groups = optimizer.param_groups  # group에 각 layer별 파라미터
         grad_list.append([])
+        # # elem
+        # for p in p_groups:
+        #     for i,p_layers in enumerate(p['params']):
+        #         if i%2==0:
+        #             p_node=p_layers.grad.view(-1).cpu().detach().clone()
+        #             # if i==0:
+        #             #     print(p_node[50:75])
+        #             #     print(p_node.size())
+        #             grad_list[-1].append(p_node)
+        #             p_layers.to(device)  # gpu
+        #
+        # # node #for cifar10
         for p in p_groups:
-            for i,p_layers in enumerate(p['params']):
-                if i%2==0:
-                    p_node=p_layers.grad.view(-1).cpu().detach().clone()
-                    # if i==0:
-                    #     print(p_node[50:75])
-                    #     print(p_node.size())
-                    grad_list[-1].append(p_node)
-                    p_layers.to(device)  # gpu
+            for l,p_layers in enumerate(p['params']):
+                if len(p_layers.size())>1: #weight filtering
+                    p_nodes=p_layers.grad.cpu().detach().clone()
+                    grad_list[-1].append([])
+                    # print(p_nodes.size())
+                    for n,p_node in enumerate(p_nodes):
+                        grad_list[-1][-1].append(torch.stack([p_node.mean(),p_node.norm(2),torch.nan_to_num(p_node.var())],dim=0))
+                        if p_node.requires_grad==False:
+                            continue
+
+                        elif epoch>5:
+                            if batch_idx==0:
+                                stop_grad_mask['{}l_{}n'.format(l,n)]=0.0
+                            if p_node.norm(2)==0:
+                                stop_grad_mask['{}l_{}n'.format(l,n)]+=1
+                                if stop_grad_mask['{}l_{}n'.format(l,n)]>100:
+                                    p_node.grad=0.0
+                                    
+
+                    p_layers.to(device)
+                    
+
 
         running_loss += loss.item()
         if batch_idx % log_interval == 0:
@@ -149,8 +176,9 @@ def extract_data(net,config, time_data):
             if t == 1:
                 for i, p in enumerate(params):  # 각 layer의 params
                     param_size.append(p.size())
-            
+            #elem
             params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+            #node
 
             if t % 100 == 0:
                 print("\r step {} done".format(t), end='')
