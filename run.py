@@ -52,12 +52,17 @@ def parse_args(args):
         dataset = 'mnist'
         epochs = 60
         lr=1e-1
+        momentum=0.5
     elif nn_type == 'vgg16':
         dataset = 'cifar10'
         epochs = 300
         lr=1e-2
+        momentum=0.9
     parser.add_argument(
         '--lr', type=float, default=lr,
+        help='set learning rate')
+    parser.add_argument(
+        '--momentum', type=float, default=momentum,
         help='set learning rate')
     parser.add_argument(
         '--epochs', type=int, default=epochs,
@@ -125,6 +130,7 @@ def main(args):
                'visual_type':flags.visual_type,
                'mode':flags.mode,
                'patience':flags.patience,
+               'momentum':flags.momentum,
                }
     if flags.mode == 'visual':
         from visualization import visualization
