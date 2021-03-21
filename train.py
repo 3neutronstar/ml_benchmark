@@ -38,39 +38,37 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list
         optimizer.step()  # step
         p_groups = optimizer.param_groups  # group에 각 layer별 파라미터
         grad_list.append([])
-        # # elem
-        # for p in p_groups:
-        #     for i,p_layers in enumerate(p['params']):
-        #         if i%2==0:
-        #             p_node=p_layers.grad.view(-1).cpu().detach().clone()
-        #             # if i==0:
-        #             #     print(p_node[50:75])
-        #             #     print(p_node.size())
-        #             grad_list[-1].append(p_node)
-        #             p_layers.to(device)  # gpu
+        # elem
+        for p in p_groups:
+            for i,p_layers in enumerate(p['params']):
+                if i%2==0:
+                    p_node=p_layers.grad.view(-1).cpu().detach().clone()
+                    # if i==0:
+                    #     print(p_node[50:75])
+                    #     print(p_node.size())
+                    grad_list[-1].append(p_node)
+                    p_layers.to(device)  # gpu
         #
         # # node #for cifar10
-        for p in p_groups:
-            for l,p_layers in enumerate(p['params']):
-                if len(p_layers.size())>1: #weight filtering
-                    p_nodes=p_layers.grad.cpu().detach().clone()
-                    grad_list[-1].append([])
-                    # print(p_nodes.size())
-                    for n,p_node in enumerate(p_nodes):
-                        grad_list[-1][-1].append(torch.stack([p_node.mean(),p_node.norm(2),torch.nan_to_num(p_node.var())],dim=0))
-                        if p_node.requires_grad==False:
-                            continue
+        # for p in p_groups:
+        #     for l,p_layers in enumerate(p['params']):
+        #         if len(p_layers.size())>1: #weight filtering
+        #             p_nodes=p_layers.grad.cpu().detach().clone()
+        #             grad_list[-1].append([])
+        #             # print(p_nodes.size())
+        #             for n,p_node in enumerate(p_nodes):
+        #                 grad_list[-1][-1].append(torch.stack([p_node.mean(),p_node.norm(2),torch.nan_to_num(p_node.var())],dim=0))
+        #                 if p_node.requires_grad==False:
+        #                     continue
 
-                        elif epoch>5:
-                            if batch_idx==0:
-                                stop_grad_mask['{}l_{}n'.format(l,n)]=0.0
-                            if p_node.norm(2)==0:
-                                stop_grad_mask['{}l_{}n'.format(l,n)]+=1
-                                if stop_grad_mask['{}l_{}n'.format(l,n)]>100:
-                                    p_node.grad=0.0
-                                    
-
-                    p_layers.to(device)
+        #                 elif epoch>5:
+        #                     if batch_idx==0:
+        #                         stop_grad_mask['{}l_{}n'.format(l,n)]=0.0
+        #                     if p_node.norm(2)==0:
+        #                         stop_grad_mask['{}l_{}n'.format(l,n)]+=1
+        #                         if stop_grad_mask['{}l_{}n'.format(l,n)]>100:
+        #                             p_node.grad=0.0
+        #             p_layers.to(device)
                     
 
 

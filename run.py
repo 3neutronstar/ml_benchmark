@@ -87,6 +87,8 @@ def main(args):
     if flags.file_name is None and flags.mode == 'train':
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
+        if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
+            os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
     elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune'):  # load
         time_data = flags.file_name
         file_name = flags.file_name
@@ -127,14 +129,14 @@ def main(args):
     if flags.mode == 'visual':
         from visualization import visualization
         configs = visualization(configs, file_name)
+    else:
+        if configs['nn_type'] == 'lenet5':
+            from NeuralNet.lenet5 import LeNet5
+            model = LeNet5(configs).to(configs['device'])
+        if configs['nn_type'][:3] == 'vgg':
+            from NeuralNet.vgg import VGG
+            model = VGG(configs).to(configs['device'])
     
-    
-    if configs['nn_type'] == 'lenet5':
-        from NeuralNet.lenet5 import LeNet5
-        model = LeNet5(configs).to(configs['device'])
-    if configs['nn_type'][:3] == 'vgg':
-        from NeuralNet.vgg import VGG
-        model = VGG(configs).to(configs['device'])
 
     if flags.mode == 'train':
         from train import extract_data
