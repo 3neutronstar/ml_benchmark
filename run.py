@@ -10,7 +10,6 @@ import random
 import numpy as np
 from utils import load_params, save_params
 
-
 def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -51,13 +50,19 @@ def parse_args(args):
     if nn_type == 'lenet5':
         dataset = 'mnist'
         epochs = 60
-        lr=1e-1
-        momentum=0.5
+        lr=1e-2
+        momentum=0.9
     elif nn_type == 'vgg16':
         dataset = 'cifar10'
         epochs = 300
         lr=1e-2
         momentum=0.9
+    elif nn_type=='lenet300_100':
+        dataset = 'mnist'
+        epochs = 60
+        lr=1e-2
+        momentum=0.9
+
     parser.add_argument(
         '--lr', type=float, default=lr,
         help='set learning rate')
@@ -99,7 +104,7 @@ def main(args):
         file_name = flags.file_name
     else:
         file_name = None  # no file name just read from grad.csv, .npy and .pt
-
+    
     use_cuda = torch.cuda.is_available()
     device = torch.device(
         "cuda" if use_cuda and flags.device == 'gpu' else "cpu")
@@ -132,6 +137,9 @@ def main(args):
                'patience':flags.patience,
                'momentum':flags.momentum,
                }
+    if configs['log_extraction'] == True and configs['mode']==False:
+        save_params(configs, time_data)
+        
     if flags.mode == 'visual':
         from visualization import visualization
         configs = visualization(configs, file_name)
@@ -142,7 +150,11 @@ def main(args):
         if configs['nn_type'][:3] == 'vgg':
             from NeuralNet.vgg import VGG
             model = VGG(configs).to(configs['device'])
-    
+        if configs['nn_type']=='lenet300_100':
+            from NeuralNet.lenet300_100 import LeNet_300_100
+            model = LeNet_300_100(configs).to(configs['device'])
+    # time_data
+    # sys.
 
     if flags.mode == 'train':
         from train import extract_data
@@ -156,13 +168,11 @@ def main(args):
         file_path=os.path.dirname(os.path.abspath(__file__))
         create_cam(model,file_path,file_name,flags.num_result,configs)
     if flags.mode.lower()=='visual_prune':
-        from Visualization import visual_prune
+        from Visualization.visual_prune import visual_prune
         configs['batch_size']=1 # 1장씩 extracting
         file_path=os.path.dirname(os.path.abspath(__file__))
         visual_prune(model,file_path,file_name,configs)
 
-    if configs['log_extraction'] == True:
-        save_params(configs, time_data)
 
     print("End the process")
 

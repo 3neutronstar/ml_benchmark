@@ -1,3 +1,4 @@
+import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from utils import load_model
@@ -49,7 +50,10 @@ def visual_prune(model,file_path,file_name,configs):
         2:[0,1,3,4,5,7,8,9,10,11,12,13,14],
         4:[4,6,7,8,11,16,22,25,26,31,33,37,38,40,41,47,48,53,54,55,57,58,63,64,66,73,74,76,83,84,89,96,100,106,109,110,116],
         6:[0,10,17,32,33,38,40,53,56,57,68,69,78,79]#fc
-        }
+        } # lr 0.01 momentum 0.9
+    # prune_ln_dict={
+    #     4:[4,10,14,21,39,45,65,85,103,107,111]
+    # } # lr0.01 momentum 0.5
     prune_ln_key_list=prune_ln_dict.keys()
     # pruning
     params=model.parameters()

@@ -6,7 +6,7 @@ import torch
 def load_dataset(configs):
     if configs['dataset'] == 'mnist':
         transform = transforms.Compose(
-            [transforms.Resize((32, 32)), transforms.ToTensor()])
+            [transforms.Resize((32, 32)), transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
         train_data = datasets.MNIST(root='data', train=True,
                                     download=True, transform=transform)
         test_data = datasets.MNIST(root='data', train=False,

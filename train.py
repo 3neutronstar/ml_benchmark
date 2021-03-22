@@ -1,15 +1,13 @@
-
 import time
 import os
+import sys
 import time
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from six.moves import urllib
-from torch.optim. lr_scheduler import StepLR, MultiStepLR
 from utils import EarlyStopping
 
 
@@ -129,12 +127,8 @@ def extract_data(net,config, time_data):
         current_path, 'training_data', time_data))
 
     optimizer = net.optim
+    scheduler=net.scheduler
 
-    if config['nn_type'] == 'lenet5':
-        scheduler = StepLR(optimizer=optimizer, step_size=15, gamma=0.1)
-    elif config['nn_type'][:3] == 'vgg':
-        scheduler = MultiStepLR(optimizer=optimizer, milestones=[
-                                150, 225], gamma=0.1)
 
     grad_list = list()
     eval_accuracy, eval_loss = 0.0, 0.0
@@ -151,7 +145,7 @@ def extract_data(net,config, time_data):
         logWriter.add_scalars('loss', loss_dict, epoch)
         logWriter.add_scalars('accuracy', accuracy_dict, epoch)
 
-        early_stopping(train_loss, net)
+        early_stopping(eval_loss, net)
 
         if early_stopping.early_stop:
             print("Early stopping")
@@ -194,7 +188,6 @@ def extract_data(net,config, time_data):
     grad_list
     1dim: time
     2dim: layer
-
     저장시
     x 축 내용: parameters의 grad
     x 축 : time

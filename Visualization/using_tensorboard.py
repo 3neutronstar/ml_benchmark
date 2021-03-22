@@ -45,7 +45,7 @@ class Tensorboard():
         self.time_list = list()
         self.file_name=file_name
         self.info_type_list = [
-                               'norm', 'norm_cum', 'var', 'var_cum','avg', 'avg_cum']
+                               'norm', 'norm_cum', ]#'var', 'var_cum','avg', 'avg_cum']
 
 
 class Tensorboard_node(Tensorboard):  # norm avg기반

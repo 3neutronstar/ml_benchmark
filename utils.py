@@ -43,13 +43,13 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.train_loss_min = np.Inf
+        self.val_loss_min = np.Inf
         self.delta = delta
         self.path = os.path.join(file_path,'grad_data','checkpoint_{}.pt'.format(time_data))
 
-    def __call__(self, train_loss, model):
+    def __call__(self, val_loss, model):
 
-        score = train_loss
+        score = val_loss
 
         if self.best_score is None:
             self.best_score = score
@@ -58,18 +58,18 @@ class EarlyStopping:
             print(
                 f'EarlyStopping counter: {self.counter} out of {self.patience}')
             print(
-                f'Train loss not decreased ({self.train_loss_min:.6f} --> {train_loss:.6f}).')
+                f'Eval loss not decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
             self.best_score = score
-            self.save_checkpoint(train_loss,model)
+            self.save_checkpoint(val_loss,model)
             self.counter = 0
             
-    def save_checkpoint(self, train_loss, model):
+    def save_checkpoint(self, val_loss, model):
         '''validation loss가 감소하면 모델을 저장한다.'''
         if self.verbose:
             print(
-                f'Train loss decreased ({self.train_loss_min:.6f} --> {train_loss:.6f}).  Saving model ...')
+                f'Eval loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
-        self.train_loss_min = train_loss
+        self.val_loss_min = val_loss

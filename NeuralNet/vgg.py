@@ -28,6 +28,8 @@ class VGG(nn.Module):
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=0.9, lr=config['lr'], nesterov=True)
         self.loss=nn.CrossEntropyLoss()
+        self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
+                                150, 225], gamma=0.1)
 
     def forward(self, x):
         out = self.features(x)
