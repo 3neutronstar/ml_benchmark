@@ -8,15 +8,18 @@ class Tensorboard():
     def __init__(self, dataTensor, path, file_name, configs):
         if configs['nn_type'] == 'lenet5':
             from NeuralNet.lenet5 import w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list
+            self.kernel_size_list = kernel_size_list
+        elif configs['nn_type'] == 'lenet300_100':
+            from NeuralNet.lenet300_100 import w_size_list, b_size_list, NN_size_list, NN_type_list
         elif configs['nn_type'][:3] == 'vgg':
             from NeuralNet.vgg import get_nn_config
             w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = get_nn_config(
                 configs['nn_type'])
+            self.kernel_size_list = kernel_size_list
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list
         self.NN_size_list = NN_size_list
         self.NN_type_list = NN_type_list
-        self.kernel_size_list = kernel_size_list
         self.path=path
         if configs['visual_type'] == 'node_domain':
             self.nodeWriter = SummaryWriter(
@@ -44,7 +47,7 @@ class Tensorboard():
         self.node_elems_integrated=dict()# [l_n]=torch.tensor(elems,time)
         self.time_list = list()
         self.file_name=file_name
-        self.info_type_list = [
+        self.info_type_list = [ 
                                'norm', 'norm_cum', ]#'var', 'var_cum','avg', 'avg_cum']
 
 
@@ -66,7 +69,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                 # weight
                 node_w = tmp_data[:num_w].detach().clone()
                 tmp_data = tmp_data[num_w:]
-                for n, node_info in enumerate(node_w):  # node 단위
+                for n in range(num_w):  # node 단위
                     if t == 0:
                         self.nodes_integrated['avg_{}l_{}n'.format(
                             l, n)] = list()
@@ -76,11 +79,11 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                             l, n)] = list()
 
                     self.nodes_integrated['avg_{}l_{}n'.format(
-                        l, n)].append(node_info[0])
+                        l, n)].append(node_w[n][0])
                     self.nodes_integrated['norm_{}l_{}n'.format(
-                        l, n)].append(node_info[1])
+                        l, n)].append(node_w[n][1])
                     self.nodes_integrated['var_{}l_{}n'.format(
-                        l, n)].append(node_info[2])
+                        l, n)].append(node_w[n][2])
 
         for l, num_node in enumerate(self.b_size_list):
             for n in range(num_node):
@@ -97,24 +100,32 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
         # plt.plot(self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(
         #     info_type,layer, node)])
         if 'cum' in info_type:
-            self.timeWriter_cum.add_scalar(
-                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+            self.timeWriter_cum[layer].add_scalar(
+                '{}/{}l_{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
             
         else:
-            self.timeWriter.add_scalar(
-                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
+            self.timeWriter[layer].add_scalar(
+                '{}/{}l_{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
         #self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,layer, node))
 
     def time_write(self):
-        for info_type in self.info_type_list:
-            for l, num_node in enumerate(self.b_size_list):
-                for n in range(num_node):
-                    print("\rinfo_type: {}_{}l_{}n==========".format(info_type,l,n),end='')
+        for type_info in self.info_type_list:
+            for l_idx,num_node in enumerate(self.b_size_list):
+                if 'cum' in type_info:
                     for t in self.time_list:
-                        self.time_write_(l, n, info_type,t)
-                    self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,l, n))
-            self.timeWriter.flush()
-            self.timeWriter_cum.flush()
+                        layer_dict=dict()
+                        for n_idx in range(num_node):
+                            layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                        self.timeWriter_cum[l_idx].add_scalars(type_info,layer_dict,t)
+                    self.timeWriter_cum[l_idx].flush()
+                else:
+                    for t in self.time_list:
+                        layer_dict=dict()
+                        for n_idx in range(num_node):
+                            layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                        self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
+                    self.timeWriter[l_idx].flush()
+                print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
     
     def time_write_integrated_(self, layer, node, info_type,t):
         #TODO

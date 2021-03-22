@@ -137,7 +137,7 @@ def main(args):
                'patience':flags.patience,
                'momentum':flags.momentum,
                }
-    if configs['log_extraction'] == True and configs['mode']==False:
+    if configs['log_extraction'] == True and configs['mode']=='train':
         save_params(configs, time_data)
         
     if flags.mode == 'visual':

@@ -45,15 +45,15 @@ def visual_prune(model,file_path,file_name,configs):
     model=load_model(model,file_path,file_name)
 
     no_prune_eval_accuracy, _ = visual_prune_process(model, configs['device'], test_data_loader, no_prune_logWriter,prune_or_not=False)
-    prune_ln_dict={
-        0:[0,2,3,4,5],
-        2:[0,1,3,4,5,7,8,9,10,11,12,13,14],
-        4:[4,6,7,8,11,16,22,25,26,31,33,37,38,40,41,47,48,53,54,55,57,58,63,64,66,73,74,76,83,84,89,96,100,106,109,110,116],
-        6:[0,10,17,32,33,38,40,53,56,57,68,69,78,79]#fc
-        } # lr 0.01 momentum 0.9
     # prune_ln_dict={
-    #     4:[4,10,14,21,39,45,65,85,103,107,111]
-    # } # lr0.01 momentum 0.5
+    #     0:[0,2,3,4,5],
+    #     2:[0,1,3,4,5,7,8,9,10,11,12,13,14],
+    #     4:[4,6,7,8,11,16,22,25,26,31,33,37,38,40,41,47,48,53,54,55,57,58,63,64,66,73,74,76,83,84,89,96,100,106,109,110,116],
+    #     6:[0,10,17,32,33,38,40,53,56,57,68,69,78,79]#fc
+    #     } # lr 0.01 momentum 0.9
+    prune_ln_dict={
+        4:[13,14,21,39,41,43,51,62,65,70,71,79,85,88,97,100,103,107,111,112,119]
+    } # lr0.01 momentum 0.9 # lenet5
     prune_ln_key_list=prune_ln_dict.keys()
     # pruning
     params=model.parameters()
