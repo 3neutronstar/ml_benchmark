@@ -20,10 +20,12 @@ class LeNet5(nn.Module):
             in_channels=16, out_channels=120, kernel_size=(5, 5))  # 5x5+1 params
         self.fc1 = nn.Linear(120, 84)
         self.fc2 = nn.Linear(84, 10)
+        
         self.log_softmax = nn.LogSoftmax(dim=-1)
         self.optim = optim.SGD(params=self.parameters(),
-                               momentum=0.9, lr=config['lr'], nesterov=True)
+                               momentum=config['momentum'], lr=config['lr'], nesterov=True)
         self.loss=nn.CrossEntropyLoss()
+        self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -33,5 +35,18 @@ class LeNet5(nn.Module):
         x = F.relu(self.conv3(x))
         x = x.view(-1, 120)
         x = F.relu(self.fc1(x))
+        x = self.fc2(x)
         x = self.log_softmax(x)
         return x
+    
+    def extract_feature(self,x):
+        x = F.relu(self.conv1(x))
+        x = self.subsampling(x)
+        x = F.relu(self.conv2(x))
+        x = self.subsampling(x)
+        feature = F.relu(self.conv3(x))
+        x = feature.view(-1, 120)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+        x = self.log_softmax(x)
+        return x,feature
