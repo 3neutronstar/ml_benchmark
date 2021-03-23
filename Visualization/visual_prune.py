@@ -2,24 +2,23 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from utils import load_model
-def visual_prune_process(model, device, test_loader, logWriter, prune_or_not):
-    if prune_or_not==True:
-        ptf='prune'
-    else:
-        ptf='no_prune'
+def visual_prune_process(model, device, test_loader, logWriter):
     model.eval()
     eval_loss = 0
     correct = 0
     with torch.no_grad():
         for i,(data, target) in enumerate(test_loader):
             data, target = data.to(device), target.to(device)
-            output,feature = model.extract_feature(data)
+            # feature
+            # output,feature = model.extract_feature(data)
+            output=model(data)
             # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
-            if i%1000==0:
-                for t,feat in enumerate(feature.view(-1)):
-                    logWriter.add_scalar('feature_map/{}th_photo'.format(i),feat,t)
+            # if i%1000==0:
+            #     print("\r{} Step".format(i),end='')
+            #     for t,feat in enumerate(feature.view(-1)):
+            #         logWriter.add_scalar('feature_map/{}th_photo'.format(i),feat,t)
 
             ground_truth=torch.zeros_like(output)
             ground_truth[0,target]=1
@@ -35,7 +34,7 @@ def visual_prune_process(model, device, test_loader, logWriter, prune_or_not):
 
 def visual_prune(model,file_path,file_name,configs):
     from DataSet.data_load import data_loader
-    _,test_data_loader=data_loader(configs)
+    train_data_loader,test_data_loader=data_loader(configs)
         # Tensorboard
     no_prune_logWriter = SummaryWriter(os.path.join(
         file_path,'grad_data', file_name,'no_prune'))
@@ -44,7 +43,7 @@ def visual_prune(model,file_path,file_name,configs):
 
     model=load_model(model,file_path,file_name)
 
-    no_prune_eval_accuracy, _ = visual_prune_process(model, configs['device'], test_data_loader, no_prune_logWriter,prune_or_not=False)
+    no_prune_eval_accuracy, _ = visual_prune_process(model, configs['device'], train_data_loader, no_prune_logWriter)
     # prune_ln_dict={
     #     0:[0,2,3,4,5],
     #     2:[0,1,3,4,5,7,8,9,10,11,12,13,14],
@@ -52,8 +51,11 @@ def visual_prune(model,file_path,file_name,configs):
     #     6:[0,10,17,32,33,38,40,53,56,57,68,69,78,79]#fc
     #     } # lr 0.01 momentum 0.9
     prune_ln_dict={
-        4:[13,14,21,39,41,43,51,62,65,70,71,79,85,88,97,100,103,107,111,112,119]
+        4:[13,14,21,39,41,43,51,62,65,70,71,79,85,97,100,103,107,111,112,119] #88추가
     } # lr0.01 momentum 0.9 # lenet5
+    prune_ln_dict={
+        0:[0,10,131,139,13,152,156,171,179,191,195,201,207]
+    } # lr0.01 momentum 0.9 # lenet300_100
     prune_ln_key_list=prune_ln_dict.keys()
     # pruning
     params=model.parameters()
@@ -64,18 +66,23 @@ def visual_prune(model,file_path,file_name,configs):
     with torch.no_grad():
         for key in prune_ln_dict.keys():
             for ln_idx in prune_ln_dict[key]:
-                if key==0:
-                    model.conv1.weight[ln_idx]=0.0
-                    model.conv1.bias[ln_idx]=0.0
-                if key==2:
-                    model.conv2.weight[ln_idx]=0.0
-                    model.conv2.bias[ln_idx]=0.0
-                if key==4:
-                    model.conv3.weight[ln_idx]=0.0
-                    model.conv3.bias[ln_idx]=0.0
-                if key==6:
-                    model.fc1.weight[ln_idx]=0.0
-                    model.fc1.bias[ln_idx]=0.0
+                if configs['nn_type']=='lenet5':
+                    if key==0:
+                        model.conv1.weight[ln_idx]=0.0
+                        model.conv1.bias[ln_idx]=0.0
+                    if key==2:
+                        model.conv2.weight[ln_idx]=0.0
+                        model.conv2.bias[ln_idx]=0.0
+                    if key==4:
+                        model.conv3.weight[ln_idx]=0.0
+                        model.conv3.bias[ln_idx]=0.0
+                    if key==6:
+                        model.fc1.weight[ln_idx]=0.0
+                        model.fc1.bias[ln_idx]=0.0
+                else:
+                    if key==0:
+                        model.fc1.weight[ln_idx]=0.0
+                        model.fc1.bias[ln_idx]=0.0
     
     # for l,p_layer in enumerate(params):
     #     if l%2==0:
@@ -91,5 +98,5 @@ def visual_prune(model,file_path,file_name,configs):
     for l,p_layer in enumerate(params_a):
         if l in prune_ln_key_list:
             print("After {}".format(l),torch.nonzero(p_layer).size())
-    prune_eval_accuracy,_=visual_prune_process(model,configs['device'],test_data_loader, prune_logWriter,prune_or_not=True)
-    print("Before Accur: {}% After Prune Accur: {}%".format(no_prune_eval_accuracy,prune_eval_accuracy))
+    prune_eval_accuracy,_=visual_prune_process(model,configs['device'],train_data_loader, prune_logWriter)
+    print("Before Accur: {:0.5f}% After Prune Accur: {:0.5f}%".format(no_prune_eval_accuracy,prune_eval_accuracy))

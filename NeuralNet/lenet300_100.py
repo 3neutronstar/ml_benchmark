@@ -9,10 +9,6 @@ NN_type_list = ['fc', 'fc', 'fc']
 
 
 class LeNet_300_100(nn.Module):
-    """Simple NN with hidden layers [300, 100]
-    Based on https://github.com/mi-lad/snip/blob/master/train.py
-    by Milad Alizadeh.
-    """
 
     def __init__(self,configs):
         super(LeNet_300_100, self).__init__()

@@ -21,6 +21,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list
     criterion = model.loss
     # loss함수에 softmax 함수가 포함되어있음
     # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
+    mask=torch.zeros((410,3),dtype=torch.bool)
     stop_grad_mask=dict()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)  # gpu로 올림
@@ -57,10 +58,7 @@ def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list
                         # print(p_nodes.size())
                         for n,p_node in enumerate(p_nodes):
                             grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm(2).view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
-
-                    
-
-
+                        
         running_loss += loss.item()
         if batch_idx % log_interval == 0:
             print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
