@@ -19,7 +19,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or visual, cam, prune,visual_prune')
+        help='train or visual, cam, prune,visual_prune, train_prune, test')
     #TRAIN SECTION
     parser.add_argument(
         '--seed', type=int, default=1,
@@ -44,7 +44,7 @@ def parse_args(args):
         help='number of process you have')
     parser.add_argument(
         '--log', type=bool, default=True,
-        help='generate log')
+        help='generate log(gradient save)')
     #TRAIN OPTION BY NN
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type == 'lenet5':
@@ -94,7 +94,7 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
-    if flags.file_name is None and flags.mode == 'train':
+    if flags.file_name is None and (flags.mode == 'train'or flags.mode=='train_prune'):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
         if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
@@ -139,14 +139,13 @@ def main(args):
                }
     if configs['log_extraction'] == True and configs['mode']=='train':
         save_params(configs, time_data)
+        sys.stdout=open(os.path.join(os.path.abspath(__file__),'grad_data','log_{}.txt'.format(time_data)),'w')
     else:
-        if file_name is None:
-            CALL_CONFIG = configs
-        else:
+        if flags.file_name is not None:
             CALL_CONFIG = load_params(configs, file_name)
-            CALL_CONFIG['visual_type']=configs['visual_type']
             CALL_CONFIG['mode']=configs['mode']
             if configs['mode']=='visual':
+                CALL_CONFIG['visual_type']=configs['visual_type']
                 print(configs['visual_type'])
             configs=CALL_CONFIG
         
@@ -166,12 +165,10 @@ def main(args):
     # time_data
     # sys.
 
-    if flags.mode == 'train':
-        from train import extract_data
-        configs = extract_data(model,configs, time_data)
-    if flags.mode=='train_prune':
-        from train import extract_data_prune
-        configs= extract_data_prune(model,configs,time_data)
+    if flags.mode == 'train' or flags.mode=='train_prune':
+        from train import Learner
+        learner=Learner(model,time_data,configs)
+        configs=learner.run()
 
     if flags.mode.lower() =='cam':
         configs['batch_size']=1 # 1장씩 extracting
@@ -182,10 +179,10 @@ def main(args):
         configs['batch_size']=1 # 1장씩 extracting
         file_path=os.path.dirname(os.path.abspath(__file__))
         visual_prune(model,file_path,file_name,configs)
-
-
+    
     print("End the process")
-
+    if flags.log==True:
+        sys.stdout.close()
 
 if __name__ == '__main__':
     main(sys.argv[1:])

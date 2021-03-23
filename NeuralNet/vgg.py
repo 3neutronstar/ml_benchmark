@@ -31,6 +31,31 @@ class VGG(nn.Module):
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
                                 150, 225], gamma=0.1)
 
+        #basic config
+        self.w_size_list = list()
+        self.b_size_list = list()
+        self.kernel_size_list = list()
+        self.NN_size_list = list()
+        self.NN_type_list = list()
+
+        self.NN_size_list.append(3)  # 3개 채널 color
+
+        vgg_name=config['nn_type']
+        for cnn_info in cfg[vgg_name]:
+            if cnn_info != 'M':
+                self.NN_type_list.append('cnn')
+                self.NN_size_list.append(cnn_info)
+                self.kernel_size_list.append((3, 3))
+                self.b_size_list.append(cnn_info)
+                self.w_size_list.append(
+                    self.kernel_size_list[-1][0]*self.kernel_size_list[-1][1]*self.b_size_list[-1])
+
+        for fc_info in [4096, 4096, 1000]:
+            self.NN_type_list.append('fc')
+            self.NN_size_list.append(fc_info)
+            self.b_size_list.append(fc_info)
+            self.w_size_list.append(self.b_size_list[-2]*self.b_size_list[-1])
+
     def forward(self, x):
         out = self.features(x)
         out = out.view(out.size(0), -1)
@@ -52,6 +77,8 @@ class VGG(nn.Module):
 
         return nn.Sequential(*layers)
 
+    def get_nn_config(self):
+        return self.w_size_list, self.b_size_list, self.NN_size_list, self.NN_type_list, self.kernel_size_list
 
 def test():
     net = VGG('VGG11')
@@ -60,28 +87,3 @@ def test():
     print(y.size())
 
 
-def get_nn_config(vgg_name):
-    w_size_list = list()
-    b_size_list = list()
-    kernel_size_list = list()
-    NN_size_list = list()
-    NN_type_list = list()
-
-    NN_size_list.append(3)  # 3개 채널 color
-
-    for cnn_info in cfg[vgg_name]:
-        if cnn_info != 'M':
-            NN_type_list.append('cnn')
-            NN_size_list.append(cnn_info)
-            kernel_size_list.append((3, 3))
-            b_size_list.append(cnn_info)
-            w_size_list.append(
-                kernel_size_list[-1][0]*kernel_size_list[-1][1]*b_size_list[-1])
-
-    for fc_info in [4096, 4096, 1000]:
-        NN_type_list.append('fc')
-        NN_size_list.append(fc_info)
-        b_size_list.append(fc_info)
-        w_size_list.append(b_size_list[-2]*b_size_list[-1])
-
-    return w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list

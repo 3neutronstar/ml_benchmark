@@ -1,11 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-w_size_list = [150, 2400, 48000, 10080, 840]  # weight,bias size
-b_size_list = [6, 16, 120, 84, 10]
-kernel_size_list = [(5, 5), (5, 5), (5, 5)]
-NN_size_list = [1, 6, 16, 120, 84, 10]  # cnn과 fc_net out 작성
-NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
 
 
 class LeNet5(nn.Module):
@@ -50,3 +45,11 @@ class LeNet5(nn.Module):
         x = self.fc2(x)
         x = self.log_softmax(x)
         return x,feature
+
+    def get_configs(self):
+        w_size_list = [150, 2400, 48000, 10080, 840]  # weight,bias size
+        b_size_list = [6, 16, 120, 84, 10]
+        NN_size_list = [1, 6, 16, 120, 84, 10]  # cnn과 fc_net out 작성
+        NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
+        kernel_size_list = [(5, 5), (5, 5), (5, 5)]
+        return w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list

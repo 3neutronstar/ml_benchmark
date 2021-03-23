@@ -7,14 +7,18 @@ import os
 class Tensorboard():
     def __init__(self, dataTensor, path, file_name, configs):
         if configs['nn_type'] == 'lenet5':
-            from NeuralNet.lenet5 import w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list
+            from NeuralNet.lenet5 import LeNet5
+            model=LeNet5(configs)
+            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list=model.get_configs()
             self.kernel_size_list = kernel_size_list
         elif configs['nn_type'] == 'lenet300_100':
-            from NeuralNet.lenet300_100 import w_size_list, b_size_list, NN_size_list, NN_type_list
+            from NeuralNet.lenet300_100 import LeNet_300_100
+            model=LeNet_300_100(configs)
+            w_size_list, b_size_list, NN_size_list, NN_type_list=model.get_configs()
         elif configs['nn_type'][:3] == 'vgg':
-            from NeuralNet.vgg import get_nn_config
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = get_nn_config(
-                configs['nn_type'])
+            from NeuralNet.vgg import VGG
+            model=VGG(configs)
+            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = model.get_configs(configs['nn_type'])
             self.kernel_size_list = kernel_size_list
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list

@@ -9,217 +9,259 @@ from torch.optim import lr_scheduler
 from torch.utils.tensorboard import SummaryWriter
 from six.moves import urllib
 from utils import EarlyStopping
+from DataSet.data_load import data_loader
+
+class Learner():
+    def __init__(self,model,time_data,config):
+        self.model=model
+        self.optimizer=self.model.optim
+        self.criterion=self.model.loss
+        self.scheduler=self.model.scheduler
+        self.config=config
+        self.grad_list=list()
+        self.log_interval=100
+        self.device = self.config['device']
+        # data
+        opener = urllib.request.build_opener()
+        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+        urllib.request.install_opener(opener)
+        self.train_loader, self.test_loader = data_loader(self.config)
+        # Tensorboard
+        self.current_path = os.path.dirname(os.path.abspath(__file__))
+        self.logWriter = SummaryWriter(os.path.join(
+            self.current_path, 'training_data', time_data))
+        self.time_data=time_data
+
+        self.early_stopping = EarlyStopping(self.current_path,time_data,patience = self.config['patience'], verbose = True)
 
 
-def train(log_interval, model, device, train_loader, optimizer, epoch, grad_list,config):
-    tik = time.time()
-    model.train()  # train모드로 설정
-    running_loss = 0.0
-    correct = 0
-    num_training_data = len(train_loader.dataset)
-    # defalut is mean of mini-batchsamples, loss type설정
-    criterion = model.loss
-    # loss함수에 softmax 함수가 포함되어있음
-    # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
-    mask=torch.zeros((410,3),dtype=torch.bool)
-    stop_grad_mask=dict()
-    for batch_idx, (data, target) in enumerate(train_loader):
-        data, target = data.to(device), target.to(device)  # gpu로 올림
-        optimizer.zero_grad()  # optimizer zero로 초기화
-        # model에서 입력과 출력이 나옴 batch 수만큼 들어가서 batch수만큼 결과가 나옴 (1개 인풋 1개 아웃풋 아님)
-        output = model(data)
-        loss = criterion(output, target)  # 결과와 target을 비교하여 계산
-        # get the index of the max log-probability
-        pred = output.argmax(dim=1, keepdim=True)
-        correct += pred.eq(target.view_as(pred)).sum().item()
-
-        loss.backward()  # 역전파
-        optimizer.step()  # step
-        p_groups = optimizer.param_groups  # group에 각 layer별 파라미터
-        grad_list.append([])
-        # elem ,lenet5
-        if config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
-            for p in p_groups:
-                for i,p_layers in enumerate(p['params']):
-                    if i%2==0:
-                        p_node=p_layers.grad.view(-1).cpu().detach().clone()
-                        # if i==0:
-                        #     print(p_node[50:75])
-                        #     print(p_node.size())
-                        grad_list[-1].append(p_node)
-                        p_layers.to(device)  # gpu
-
-        # node, rest
-        else:
-            for p in p_groups:
-                for l,p_layers in enumerate(p['params']):
-                    if len(p_layers.size())>1: #weight filtering
-                        p_nodes=p_layers.grad.cpu().detach().clone()
-                        # print(p_nodes.size())
-                        for n,p_node in enumerate(p_nodes):
-                            grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm(2).view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
-                        
-        running_loss += loss.item()
-        if batch_idx % log_interval == 0:
-            print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
-                data), num_training_data, 100.0 * batch_idx / len(train_loader), loss.item()), end='')
-
-    running_loss /= num_training_data
-    tok = time.time()
-    running_accuracy = 100.0 * correct / float(num_training_data)
-    print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
-        tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
-    return running_accuracy, running_loss, grad_list
+        #pruning
+        self.grad_off_mask=list()
+        self.mask=dict()
+        self.grad_norm_dict=dict()
+        self.grad_norm_cum=dict()
+        for l,num_nodes in enumerate(self.model.b_size_list):
+            for n in range(num_nodes):
+                self.grad_norm_dict['{}l_{}n'.format(l,n)]=list()
+                self.grad_norm_cum['{}l_{}n'.format(l,n)]=0.0
+                self.mask['{}l_{}n'.format(l,n)]=0
+            self.grad_off_mask.append(torch.zeros(num_nodes,dtype=torch.bool,device=self.device))# grad=0으로 끄는 mask
+            # True면 꺼짐
 
 
-def eval(model, device, test_loader, config):
-    model.eval()
-    eval_loss = 0
-    correct = 0
-    criterion = model.loss  # add all samples in a mini-batch
-    with torch.no_grad():
-        for data, target in test_loader:
-            data, target = data.to(device), target.to(device)
-            output = model(data)
-            loss = criterion(output, target)
-            eval_loss += loss.item()
+    def run(self):
+        print("Training {} epochs".format(self.config['epochs']))
+
+        eval_accuracy, eval_loss = 0.0, 0.0
+        train_accuracy, train_loss = 0.0, 0.0
+        grad_list=list()
+        # Train
+        for epoch in range(1, self.config['epochs'] + 1):
+            train_accuracy, train_loss, grad_list = self.train_(epoch,grad_list)
+            eval_accuracy, eval_loss = self.eval_()
+            self.scheduler.step()
+            loss_dict = {'train': train_loss, 'eval': eval_loss}
+            accuracy_dict = {'train': train_accuracy, 'eval': eval_accuracy}
+            self.logWriter.add_scalars('loss', loss_dict, epoch)
+            self.logWriter.add_scalars('accuracy', accuracy_dict, epoch)
+
+            self.early_stopping(eval_loss, self.model)
+
+            if self.early_stopping.early_stop:
+                print("Early stopping")
+                break
+            if self.device == 'gpu':
+                torch.cuda.empty_cache()
+        if self.config['mode']=='train_prune':
+            print("before prune")
+            for layer in self.optimizer.param_groups[0]['params']:
+                print(layer.size())
+
+            print("after prune")
+            for mask_layer in self.grad_off_mask:
+                print("Pruned rate",torch.nonzero(mask_layer).size())
+            
+
+        
+        configs=self.save_grad(grad_list)
+        return configs
+    
+    def train_(self,epoch,grad_list):
+        tik = time.time()
+        self.model.train()  # train모드로 설정
+        running_loss = 0.0
+        correct = 0
+        num_training_data = len(self.train_loader.dataset)
+        # defalut is mean of mini-batchsamples, loss type설정
+        # loss함수에 softmax 함수가 포함되어있음
+        # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
+        for batch_idx, (data, target) in enumerate(self.train_loader):
+            data, target = data.to(self.device), target.to(self.device)  # gpu로 올림
+            self.optimizer.zero_grad()  # optimizer zero로 초기화
+            # model에서 입력과 출력이 나옴 batch 수만큼 들어가서 batch수만큼 결과가 나옴 (1개 인풋 1개 아웃풋 아님)
+            output = self.model(data)
+            loss = self.criterion(output, target)  # 결과와 target을 비교하여 계산
             # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-    eval_loss = eval_loss / len(test_loader.dataset)
+            loss.backward()  # 역전파
+            p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
+            grad_list.append([])
+            # grad save
+            self.save_grad_(p_groups,grad_list)
+            # grad prune
+            self.prune_grad_(p_groups,epoch,batch_idx)     
+            # prune 이후 optimizer step
+            self.optimizer.step()
+                            
+            running_loss += loss.item()
+            if batch_idx % self.log_interval == 0:
+                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
+                    data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.item()), end='')
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
-        eval_loss, correct, len(test_loader.dataset),
-        100.0 * correct / float(len(test_loader.dataset))))
-    eval_accuracy = 100.0*correct/float(len(test_loader.dataset))
-
-    return eval_accuracy, eval_loss
-
-
-def extract_data(net,config, time_data):
-    print("Training {} epochs".format(config['epochs']))
-    DEVICE = config['device']
-    current_path = os.path.dirname(os.path.abspath(__file__))
-    log_interval = 100
-
-    opener = urllib.request.build_opener()
-    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-    urllib.request.install_opener(opener)
-
-    from DataSet.data_load import data_loader
-    train_data_loader, test_data_loader = data_loader(config)
-
-
-    # Tensorboard
-    logWriter = SummaryWriter(os.path.join(
-        current_path, 'training_data', time_data))
-
-    optimizer = net.optim
-    scheduler=net.scheduler
-
-
-    grad_list = list()
-    eval_accuracy, eval_loss = 0.0, 0.0
-    train_accuracy, train_loss = 0.0, 0.0
-    early_stopping = EarlyStopping(current_path,time_data,patience = config['patience'], verbose = True)
-    # Train
-    for epoch in range(1, config['epochs'] + 1):
-        train_accuracy, train_loss, grad_list = train(
-            log_interval, net, DEVICE, train_data_loader, optimizer, epoch, grad_list,config)
-        eval_accuracy, eval_loss = eval(net, DEVICE, test_data_loader, config)
-        scheduler.step()
-        loss_dict = {'train': train_loss, 'eval': eval_loss}
-        accuracy_dict = {'train': train_accuracy, 'eval': eval_accuracy}
-        logWriter.add_scalars('loss', loss_dict, epoch)
-        logWriter.add_scalars('accuracy', accuracy_dict, epoch)
-
-        early_stopping(eval_loss, net)
-
-        if early_stopping.early_stop:
-            print("Early stopping")
-            break
-        if config['device'] == 'gpu':
-            torch.cuda.empty_cache()
-    # Save
-    param_size = list()
-    params_write = list()
-    if config['colab'] == True:
-        making_path = os.path.join('drive', 'MyDrive', 'grad_data')
-    else:
-        making_path = os.path.join(current_path, 'grad_data')
-    if os.path.exists(making_path) == False:
-        os.mkdir(making_path)
-    tik = time.time()
-    import numpy as np
-    if config['log_extraction'] == True:
-        if config['nn_type']=='lenet5':
-            for t, params in enumerate(grad_list):
-                if t == 1:
-                    for i, p in enumerate(params):  # 각 layer의 params
-                        param_size.append(p.size())
-                #elem
-                # print(params)
-                params_write.append(torch.cat(params,dim=0).unsqueeze(0))
-                #node
-
-                if t % 100 == 0:
-                    print("\r step {} done".format(t), end='')
-            write_data = torch.cat(params_write, dim=0)
-        else: # lenet300 100 # vgg16
-            for t, params in enumerate(grad_list):
-                if t == 1:
-                    for i, p in enumerate(params):  # 각 layer의 params
-                        param_size.append(p.size())
-                #elem
-                params_write.append(torch.cat(params,dim=0).unsqueeze(0))
-                #node
-
-                if t % 100 == 0:
-                    print("\r step {} done".format(t), end='')
-            write_data = torch.cat(params_write, dim=0)
-
-        print("\n Write data size:", write_data.size())
-        np.save(os.path.join(making_path, 'grad_{}'.format(
-            time_data)), write_data.numpy())#npy save
+        running_loss /= num_training_data
         tok = time.time()
-        print('play_time for saving:', tok-tik, "s")
-        print('size: {}'.format(len(params_write)))
-    #CSV extraction
-    '''
-    csv 저장
-    자료구조
-    grad_list
-    1dim: time
-    2dim: layer
-    저장시
-    x 축 내용: parameters의 grad
-    x 축 : time
-    y 축 : param
-    '''
-    # tik=time.time()
-    # params_write.clear()
-    # if config['csv_extraction']==True:
-    #     for t,params in enumerate(grad_list):
-    #         if t==1:
-    #             for i, p in enumerate(params):# 각 layer의 params
-    #                 param_size.append(p.size())
-    #         params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+        running_accuracy = 100.0 * correct / float(num_training_data)
+        print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
+            tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
+        return running_accuracy, running_loss, grad_list
 
-    #         if t % 100 == 0:
-    #             print("\r step {} done".format(t),end='')
-    #     write_data=torch.cat(params_write,dim=0)
-    #     print("\n Write data size:",write_data.size())
-    #     data_frame=pd.DataFrame(write_data.numpy(),)
-    #     data_frame.to_csv(os.path.join(making_path,'grad_{}.csv').format(time_data),index=False,header=False)
-    #     tok=time.time()
-    #     print('play_time for saving:',tok-tik,"s")
-    #     print('parameter size',param_size)
-    #     print('# of row:',t+1)
-    # else:
-    #     print("No Extraction of csv file")
+    def eval_(self):
+        self.model.eval()
+        eval_loss = 0
+        correct = 0
+        criterion = self.model.loss  # add all samples in a mini-batch
+        with torch.no_grad():
+            for data, target in self.test_loader:
+                data, target = data.to(self.device), target.to(self.device)
+                output = self.model(data)
+                loss = criterion(output, target)
+                eval_loss += loss.item()
+                # get the index of the max log-probability
+                pred = output.argmax(dim=1, keepdim=True)
+                correct += pred.eq(target.view_as(pred)).sum().item()
 
-    '''
-    Save params
-    '''
-    return config
+        eval_loss = eval_loss / len(self.test_loader.dataset)
+
+        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
+            eval_loss, correct, len(self.test_loader.dataset),
+            100.0 * correct / float(len(self.test_loader.dataset))))
+        eval_accuracy = 100.0*correct/float(len(self.test_loader.dataset))
+
+        return eval_accuracy, eval_loss
+    
+    def save_grad(self,grad_list):
+        # Save all grad to the file 
+        if self.config['log_extraction']==False:
+            param_size = list()
+            params_write = list()
+            if self.config['colab'] == True:
+                making_path = os.path.join('drive', 'MyDrive', 'grad_data')
+            else:
+                making_path = os.path.join(self.current_path, 'grad_data')
+            if os.path.exists(making_path) == False:
+                os.mkdir(making_path)
+            tik = time.time()
+            import numpy as np
+            if self.config['log_extraction'] == True:
+                if self.config['nn_type']=='lenet5':
+                    for t, params in enumerate(grad_list):
+                        if t == 1:
+                            for i, p in enumerate(params):  # 각 layer의 params
+                                param_size.append(p.size())
+                        #elem
+                        # print(params)
+                        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+                        #node
+
+                        if t % 100 == 0:
+                            print("\r step {} done".format(t), end='')
+                    write_data = torch.cat(params_write, dim=0)
+                else: # lenet300 100 # vgg16
+                    for t, params in enumerate(grad_list):
+                        if t == 1:
+                            for i, p in enumerate(params):  # 각 layer의 params
+                                param_size.append(p.size())
+                        #elem
+                        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+                        #node
+
+                        if t % 100 == 0:
+                            print("\r step {} done".format(t), end='')
+                    write_data = torch.cat(params_write, dim=0)
+
+                print("\n Write data size:", write_data.size())
+                np.save(os.path.join(making_path, 'grad_{}'.format(
+                    self.time_data)), write_data.numpy())#npy save
+                tok = time.time()
+                print('play_time for saving:', tok-tik, "s")
+                print('size: {}'.format(len(params_write)))
+
+            '''
+            Save params
+            '''
+        return self.config
+
+    def save_grad_(self,p_groups,grad_list):
+        # save grad to the list
+        if self.config['log_extraction']==True:
+            for p in p_groups:
+                for l,p_layers in enumerate(p['params']):
+                    if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
+                        if len(p_layers.size())>1: #weight filtering
+                            p_node=p_layers.grad.view(-1).cpu().detach().clone()
+                            # if i==0:
+                            #     print(p_node[50:75])
+                            #     print(p_node.size())
+                            grad_list[-1].append(p_node)
+                    # node, rest
+                    else:
+                        if len(p_layers.size())>1: #weight filtering
+                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            # print(p_nodes.size())
+                            for n,p_node in enumerate(p_nodes):
+                                grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm(2).view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
+                    p_layers.to(self.device)
+        return grad_list
+
+    def prune_grad_(self,p_groups,epoch,batch_idx):
+        # pruning mask generator
+        if self.config['mode']=='train_prune':
+            for p in p_groups:
+                for i,p_layers in enumerate(p['params']):
+                    if len(p_layers.size())>1: #weight filtering
+                        l=int(i/2)
+                        p_nodes=p_layers.grad.cpu().detach().clone()
+                        for n,p_node in enumerate(p_nodes):
+                            #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
+                            if epoch<6:
+                                self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # cumulative value
+                            if epoch ==6 and batch_idx==0:
+                                if self.grad_norm_cum['{}l_{}n'.format(l,n)]<100: # 100 이하면
+                                    self.grad_off_mask[l][n]=True
+                                    print('{}l_{}n grad_off'.format(l,n))
+
+                            # #2. gradient의 gradient threshold 이후 종료
+                            # if epoch >5 and self.grad_off_mask[l][n]==False:
+                            #     self.grad_norm_dict['{}l_{}n'.format(l,n)].append(p_node.norm(2).view(-1))
+                            #     if len(self.grad_norm_dict['{}l_{}n'.format(l,n)])>1:
+                            #         if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]<1e-4:
+                            #             self.mask['{}l_{}n'.format(l,n)]+=1
+                            #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]-self.grad_norm_dict['{}l_{}n'.format(l,n)][-2]<1e-5:
+                            #         #     self.mask['{}l_{}n'.format(l,n)]+=1
+                            #         self.grad_norm_dict['{}l_{}n'.format(l,n)].pop(0)
+
+                            #     if self.mask['{}l_{}n'.format(l,n)]>100:
+                            #         self.grad_off_mask[l][n]=True
+                            #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
+                        p_layers.to(self.device)
+            
+            # pruning the gradient
+            if epoch >5:
+                for p in p_groups:
+                    for i,p_layers in enumerate(p['params']):
+                        if len(p_layers.size())>1: #weight filtering
+                            l=int(i/2)
+                            p_layers.grad[self.grad_off_mask[l]]=0.0
+                            #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
