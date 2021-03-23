@@ -40,13 +40,7 @@ def visualization(config, file_name):
         path = os.path.join(current_path, 'grad_data')
     # dataFile,dataTensor=load_csv(path,file_name)
     dataTensor = load_npy(path, file_name)
-    if file_name is None:
-        CALL_CONFIG = config
-    else:
-        CALL_CONFIG = load_params(config, file_name)
-        CALL_CONFIG['visual_type']=config['visual_type']
-        if config['mode']=='visual':
-            print(config['visual_type'])
+
 
     tik = time.time()
     # dir_list=['layer_grad_distribution','node_info']
@@ -59,9 +53,9 @@ def visualization(config, file_name):
     # weight_data=weight의 time list, layer list, element tensor
     # data read
     if True:
-        using_tensorboard(dataTensor, CALL_CONFIG, path, file_name)
+        using_tensorboard(dataTensor, config, path, file_name)
     else:
-        using_plt(dataTensor, CALL_CONFIG, path,file_name)
+        using_plt(dataTensor, config, path,file_name)
 
     tok = time.time()
     print("\n Visualization Time: {}s".format(tok-tik))

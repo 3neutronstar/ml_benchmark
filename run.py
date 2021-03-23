@@ -139,6 +139,16 @@ def main(args):
                }
     if configs['log_extraction'] == True and configs['mode']=='train':
         save_params(configs, time_data)
+    else:
+        if file_name is None:
+            CALL_CONFIG = configs
+        else:
+            CALL_CONFIG = load_params(configs, file_name)
+            CALL_CONFIG['visual_type']=configs['visual_type']
+            CALL_CONFIG['mode']=configs['mode']
+            if configs['mode']=='visual':
+                print(configs['visual_type'])
+            configs=CALL_CONFIG
         
     if flags.mode == 'visual':
         from visualization import visualization
