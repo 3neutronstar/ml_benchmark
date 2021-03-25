@@ -117,7 +117,7 @@ class Learner():
             self.grad_list.append([])
             # grad prune
             self.prune_grad_(p_groups,epoch,batch_idx)     
-            # grad save
+            # grad save(prune후 save)
             self.save_grad_(p_groups)
             # prune 이후 optimizer step
             self.optimizer.step()

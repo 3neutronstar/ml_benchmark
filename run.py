@@ -98,6 +98,7 @@ def main(args):
     if flags.file_name is None and (flags.mode == 'train'or flags.mode=='train_prune'):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
+        print(time_data)
         if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
             os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
     elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune'):  # load
