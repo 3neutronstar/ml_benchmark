@@ -21,6 +21,11 @@ class LeNet5(nn.Module):
                                momentum=config['momentum'], lr=config['lr'], nesterov=True)
         self.loss=nn.CrossEntropyLoss()
         self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
+        self.w_size_list = [150, 2400, 48000, 10080, 840]  # weight,bias size
+        self.b_size_list = [6, 16, 120, 84, 10]
+        self.NN_size_list = [1, 6, 16, 120, 84, 10]  # cnn과 fc_net out 작성
+        self.NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
+        self.kernel_size_list = [(5, 5), (5, 5), (5, 5)]
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -47,9 +52,4 @@ class LeNet5(nn.Module):
         return x,feature
 
     def get_configs(self):
-        w_size_list = [150, 2400, 48000, 10080, 840]  # weight,bias size
-        b_size_list = [6, 16, 120, 84, 10]
-        NN_size_list = [1, 6, 16, 120, 84, 10]  # cnn과 fc_net out 작성
-        NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
-        kernel_size_list = [(5, 5), (5, 5), (5, 5)]
-        return w_size_list,b_size_list,NN_size_list,NN_type_list,kernel_size_list
+        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list,self.kernel_size_list

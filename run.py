@@ -20,6 +20,7 @@ def parse_args(args):
     parser.add_argument(
         'mode', type=str,
         help='train or visual, cam, prune,visual_prune, train_prune, test')
+    
     #TRAIN SECTION
     parser.add_argument(
         '--seed', type=int, default=1,
@@ -108,7 +109,7 @@ def main(args):
     use_cuda = torch.cuda.is_available()
     device = torch.device(
         "cuda" if use_cuda and flags.device == 'gpu' else "cpu")
-    print("Using device: {}".format(device))
+    print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
     # Random Seed 설정
     random_seed = flags.seed
     random.seed(random_seed)
@@ -137,9 +138,9 @@ def main(args):
                'patience':flags.patience,
                'momentum':flags.momentum,
                }
-    if configs['log_extraction'] == True and configs['mode']=='train':
+    if configs['log_extraction'] == True and (configs['mode']=='train'or configs['mode']=='train_prune'):
         save_params(configs, time_data)
-        sys.stdout=open(os.path.join(os.path.abspath(__file__),'grad_data','log_{}.txt'.format(time_data)),'w')
+        sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
     else:
         if flags.file_name is not None:
             CALL_CONFIG = load_params(configs, file_name)
