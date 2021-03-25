@@ -2,6 +2,7 @@ import time
 import os
 import sys
 import time
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -34,11 +35,11 @@ class Learner():
 
         self.early_stopping = EarlyStopping(self.current_path,time_data,patience = self.config['patience'], verbose = True)
         if self.config['colab'] == True:
-            making_path = os.path.join('drive', 'MyDrive', 'grad_data')
+            self.making_path = os.path.join('drive', 'MyDrive', 'grad_data')
         else:
-            making_path = os.path.join(self.current_path, 'grad_data')
-        if os.path.exists(making_path) == False:
-            os.mkdir(making_path)
+            self.making_path = os.path.join(self.current_path, 'grad_data')
+        if os.path.exists(self.making_path) == False:
+            os.mkdir(self.making_path)
         # grad list
         self.grad_list=list()
 
@@ -90,10 +91,10 @@ class Learner():
 
             print("after prune")
             for mask_layer in self.grad_off_mask:
-                print("Pruned rate",torch.nonzero(mask_layer).size())
+                print("Pruned weight",torch.nonzero(mask_layer).size())
 
             for layer in self.optimizer.param_groups[0]['params']:
-                print("Weight Prune", torch.nonzero(layer).size())
+                print("After Weight Prune", torch.nonzero(layer).size())
             
         configs=self.save_grad()
         return configs
@@ -167,45 +168,43 @@ class Learner():
     
     def save_grad(self):
         # Save all grad to the file 
-        if self.config['grad_save']==True:
+        if self.config['grad_save']=='true':
             param_size = list()
             params_write = list()
 
             tik = time.time()
-            import numpy as np
-            if self.config['grad_save'] == True:
-                if self.config['nn_type']=='lenet5':
-                    for t, params in enumerate(self.grad_list):
-                        if t == 1:
-                            for i, p in enumerate(params):  # 각 layer의 params
-                                param_size.append(p.size())
-                        #elem
-                        # print(params)
-                        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
-                        #node
+            if self.config['nn_type']=='lenet5':
+                for t, params in enumerate(self.grad_list):
+                    if t == 1:
+                        for i, p in enumerate(params):  # 각 layer의 params
+                            param_size.append(p.size())
+                    #elem
+                    # print(params)
+                    params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+                    #node
 
-                        if t % 100 == 0:
-                            print("\r step {} done".format(t), end='')
-                    write_data = torch.cat(params_write, dim=0)
-                else: # lenet300 100 # vgg16
-                    for t, params in enumerate(self.grad_list):
-                        if t == 1:
-                            for i, p in enumerate(params):  # 각 layer의 params
-                                param_size.append(p.size())
-                        #elem
-                        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
-                        #node
+                    if t % 100 == 0:
+                        print("\r step {} done".format(t), end='')
+                write_data = torch.cat(params_write, dim=0)
+            else: # lenet300 100 # vgg16
+                for t, params in enumerate(self.grad_list):
+                    if t == 1:
+                        for i, p in enumerate(params):  # 각 layer의 params
+                            param_size.append(p.size())
+                    #elem
+                    params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+                    #node
 
-                        if t % 100 == 0:
-                            print("\r step {} done".format(t), end='')
-                    write_data = torch.cat(params_write, dim=0)
+                    if t % 100 == 0:
+                        print("\r step {} done".format(t), end='')
+                write_data = torch.cat(params_write, dim=0)
 
-                print("\n Write data size:", write_data.size())
-                np.save(os.path.join(making_path, 'grad_{}'.format(
-                    self.time_data)), write_data.numpy())#npy save
-                tok = time.time()
-                print('play_time for saving:', tok-tik, "s")
-                print('size: {}'.format(len(params_write)))
+            print("\n Write data size:", write_data.size())
+            np.save(os.path.join(self.making_path, 'grad_{}'.format(
+                self.time_data)), write_data.numpy())#npy save
+            tok = time.time()
+            print('play_time for saving:', tok-tik, "s")
+            print('size: {}'.format(len(params_write)))
 
             '''
             Save params
@@ -215,12 +214,12 @@ class Learner():
 
     def save_grad_(self,p_groups):
         # save grad to the list
-        if self.config['grad_save']==True:
+        if self.config['grad_save']=='true':
             for p in p_groups:
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
                         if len(p_layers.size())>1: #weight filtering
-                            p_node=p_layers.grad.view(-1).cpu().detach().clone()
+                            p_node=p_layers.view(-1).cpu().detach().clone()
                             # if i==0:
                             #     print(p_node[50:75])
                             #     print(p_node.size())
@@ -228,7 +227,7 @@ class Learner():
                     # node, rest
                     else:
                         if len(p_layers.size())>1: #weight filtering
-                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            p_nodes=p_layers.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n,p_node in enumerate(p_nodes):
                                 self.grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm(2).view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
@@ -241,45 +240,49 @@ class Learner():
         if self.config['mode']=='train_prune':
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
-                    if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
-                        l=int(i/2)
-                        p_nodes=p_layers.grad.cpu().detach().clone()
-                        for n,p_node in enumerate(p_nodes):
-                            #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
-                            if epoch<grad_turn_off_epoch+1:
-                                self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # cumulative value
-                            if epoch ==grad_turn_off_epoch+1 and batch_idx==0:
-                                if self.grad_norm_cum['{}l_{}n'.format(l,n)]<200: # 100 이하면
-                                    self.grad_off_mask[l][n]=True
-                                    print('{}l_{}n grad_off'.format(l,n))
-                                    self.grad_off_freq_cum+=1
+                    # first and last layer live
+                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size() or p['params'][0].size()==p_layers.size() or p['params'][1].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                        continue
+                    else:
+                        if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
+                            l=int(i/2)
+                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            for n,p_node in enumerate(p_nodes):
+                                #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
+                                if epoch<grad_turn_off_epoch+1:
+                                    self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # cumulative value
+                                if epoch ==grad_turn_off_epoch+1 and batch_idx==0:
+                                    if self.grad_norm_cum['{}l_{}n'.format(l,n)]<200: # 100 이하면
+                                        self.grad_off_mask[l][n]=True
+                                        print('{}l_{}n grad_off'.format(l,n))
+                                        self.grad_off_freq_cum+=1
 
-                            # #2. gradient의 gradient threshold 이후 종료
-                            # if epoch >5 and self.grad_off_mask[l][n]==False:
-                            #     self.grad_norm_dict['{}l_{}n'.format(l,n)].append(p_node.norm(2).view(-1))
-                            #     if len(self.grad_norm_dict['{}l_{}n'.format(l,n)])>1:
-                            #         # # 2-1. gradient 값의 norm 기준 prune
-                            #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]<1e-4:
-                            #         #     self.mask['{}l_{}n'.format(l,n)]+=1
-                            #         # # 2-2. difference of gradient norm 기준 prune
-                            #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]-self.grad_norm_dict['{}l_{}n'.format(l,n)][-2]<1e-7:
-                            #         #     self.mask['{}l_{}n'.format(l,n)]+=1
-                            #         # self.grad_norm_dict['{}l_{}n'.format(l,n)].pop(0)
+                                # #2. gradient의 gradient threshold 이후 종료
+                                # if epoch >5 and self.grad_off_mask[l][n]==False:
+                                #     self.grad_norm_dict['{}l_{}n'.format(l,n)].append(p_node.norm(2).view(-1))
+                                #     if len(self.grad_norm_dict['{}l_{}n'.format(l,n)])>1:
+                                #         # # 2-1. gradient 값의 norm 기준 prune
+                                #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]<1e-4:
+                                #         #     self.mask['{}l_{}n'.format(l,n)]+=1
+                                #         # # 2-2. difference of gradient norm 기준 prune
+                                #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]-self.grad_norm_dict['{}l_{}n'.format(l,n)][-2]<1e-7:
+                                #         #     self.mask['{}l_{}n'.format(l,n)]+=1
+                                #         # self.grad_norm_dict['{}l_{}n'.format(l,n)].pop(0)
 
-                            #     if self.mask['{}l_{}n'.format(l,n)]>100:
-                            #         self.grad_off_mask[l][n]=True
-                            #         self.grad_off_freq_cum+=1
-                            #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
+                                #     if self.mask['{}l_{}n'.format(l,n)]>100:
+                                #         self.grad_off_mask[l][n]=True
+                                #         self.grad_off_freq_cum+=1
+                                #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
 
-                            # #3. gradient의 moving average threshold 이후 종료
-                            # if epoch >5 and self.grad_off_mask[l][n]==False:
-                            #     self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # moving avg 하셈
-                            #     if self.grad_norm_cum['{}l_{}n'.format(l,n)]<1e-4: # moving avg가 일정 이하
-                            #         self.grad_off_mask[l][n]=True
-                            #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
-                            #         self.grad_off_freq_cum+=1
+                                # #3. gradient의 moving average threshold 이후 종료
+                                # if epoch >5 and self.grad_off_mask[l][n]==False:
+                                #     self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # moving avg 하셈
+                                #     if self.grad_norm_cum['{}l_{}n'.format(l,n)]<1e-4: # moving avg가 일정 이하
+                                #         self.grad_off_mask[l][n]=True
+                                #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
+                                #         self.grad_off_freq_cum+=1
 
-                        p_layers.to(self.device)
+                            p_layers.to(self.device)
             
             # Record Prune Rate
             self.logWriter.add_scalar('train/grad_off_freq_cum',self.grad_off_freq_cum,epoch)

@@ -44,11 +44,18 @@ def parse_args(args):
         '--num_workers', type=int, default=3,
         help='number of process you have')
     parser.add_argument(
-        '--log', type=bool, default=True,
+        '--log', type=str, default='true',
         help='generate log')
+    # save grad
     parser.add_argument(
-        '--grad_save', type=bool, default=True,
+        '--grad_save', type=str, default='true',
         help='generate grad_save')
+    # prune threshold
+    parser.add_argument(
+        '--threshold', type=int, default=128,
+        help='set prune threshold by cum of norm in elems')
+
+
     #TRAIN OPTION BY NN
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type == 'lenet5':
@@ -90,6 +97,7 @@ def parse_args(args):
     parser.add_argument(
         '--num_result', type=int, default=1,
         help='grad_data/grad_[].log file load')
+    
 
 
 
@@ -135,15 +143,16 @@ def main(args):
                'dataset': flags.dataset.lower(),
                'nn_type': flags.nn_type.lower(),
                'colab': flags.colab,
-               'log_extraction': flags.log,
+               'log_extraction': flags.log.lower(),
                'num_workers': flags.num_workers,
                'visual_type':flags.visual_type,
                'mode':flags.mode,
                'patience':flags.patience,
                'momentum':flags.momentum,
-               'grad_save':flags.grad_save,
+               'grad_save':flags.grad_save.lower(),
                }
-    if configs['log_extraction'] == True and (configs['mode']=='train'or configs['mode']=='train_prune'):
+    # print(flags.log)
+    if configs['log_extraction'] == 'true' and (configs['mode']=='train'or configs['mode']=='train_prune'):
         save_params(configs, time_data)
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
     else:
@@ -165,6 +174,7 @@ def main(args):
         if configs['nn_type'][:3] == 'vgg':
             from NeuralNet.vgg import VGG
             model = VGG(configs).to(configs['device'])
+            # print(model)
         if configs['nn_type']=='lenet300_100':
             from NeuralNet.lenet300_100 import LeNet_300_100
             model = LeNet_300_100(configs).to(configs['device'])
@@ -187,7 +197,7 @@ def main(args):
         visual_prune(model,file_path,file_name,configs)
     
     print("End the process")
-    if flags.log==True:
+    if flags.log.lower()=='true':
         sys.stdout.close()
 
 if __name__ == '__main__':
