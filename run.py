@@ -45,7 +45,10 @@ def parse_args(args):
         help='number of process you have')
     parser.add_argument(
         '--log', type=bool, default=True,
-        help='generate log(gradient save)')
+        help='generate log')
+    parser.add_argument(
+        '--grad_save', type=bool, default=True,
+        help='generate grad_save')
     #TRAIN OPTION BY NN
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type == 'lenet5':
@@ -138,6 +141,7 @@ def main(args):
                'mode':flags.mode,
                'patience':flags.patience,
                'momentum':flags.momentum,
+               'grad_save':flags.grad_save,
                }
     if configs['log_extraction'] == True and (configs['mode']=='train'or configs['mode']=='train_prune'):
         save_params(configs, time_data)

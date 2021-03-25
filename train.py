@@ -33,7 +33,12 @@ class Learner():
         self.time_data=time_data
 
         self.early_stopping = EarlyStopping(self.current_path,time_data,patience = self.config['patience'], verbose = True)
-
+        if self.config['colab'] == True:
+            making_path = os.path.join('drive', 'MyDrive', 'grad_data')
+        else:
+            making_path = os.path.join(self.current_path, 'grad_data')
+        if os.path.exists(making_path) == False:
+            os.mkdir(making_path)
         # grad list
         self.grad_list=list()
 
@@ -162,18 +167,13 @@ class Learner():
     
     def save_grad(self):
         # Save all grad to the file 
-        if self.config['log_extraction']==True:
+        if self.config['grad_save']==True:
             param_size = list()
             params_write = list()
-            if self.config['colab'] == True:
-                making_path = os.path.join('drive', 'MyDrive', 'grad_data')
-            else:
-                making_path = os.path.join(self.current_path, 'grad_data')
-            if os.path.exists(making_path) == False:
-                os.mkdir(making_path)
+
             tik = time.time()
             import numpy as np
-            if self.config['log_extraction'] == True:
+            if self.config['grad_save'] == True:
                 if self.config['nn_type']=='lenet5':
                     for t, params in enumerate(self.grad_list):
                         if t == 1:
@@ -215,7 +215,7 @@ class Learner():
 
     def save_grad_(self,p_groups):
         # save grad to the list
-        if self.config['log_extraction']==True:
+        if self.config['grad_save']==True:
             for p in p_groups:
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
