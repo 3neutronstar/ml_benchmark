@@ -219,7 +219,7 @@ class Learner():
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
                         if len(p_layers.size())>1: #weight filtering
-                            p_node=p_layers.view(-1).cpu().detach().clone()
+                            p_node=p_layers.grad.view(-1).cpu().detach().clone()
                             # if i==0:
                             #     print(p_node[50:75])
                             #     print(p_node.size())
@@ -227,10 +227,10 @@ class Learner():
                     # node, rest
                     else:
                         if len(p_layers.size())>1: #weight filtering
-                            p_nodes=p_layers.cpu().detach().clone()
+                            p_nodes=p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n,p_node in enumerate(p_nodes):
-                                self.grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm(2).view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
+                                self.grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm().view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
                     p_layers.to(self.device)
 
 
@@ -250,9 +250,9 @@ class Learner():
                             for n,p_node in enumerate(p_nodes):
                                 #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
                                 if epoch<grad_turn_off_epoch+1:
-                                    self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # cumulative value
+                                    self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm().view(-1) # cumulative value
                                 if epoch ==grad_turn_off_epoch+1 and batch_idx==0:
-                                    if self.grad_norm_cum['{}l_{}n'.format(l,n)]<200: # 100 이하면
+                                    if self.grad_norm_cum['{}l_{}n'.format(l,n)]<self.config['threshold']: # 100 이하면
                                         self.grad_off_mask[l][n]=True
                                         print('{}l_{}n grad_off'.format(l,n))
                                         self.grad_off_freq_cum+=1

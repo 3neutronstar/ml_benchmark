@@ -199,7 +199,7 @@ class Tensorboard_elem(Tensorboard):
             if t % 1000 == 0:
                 print('\r {} line complete'.format(t), end='')
             for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
-                # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
+                # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
                 if self.NN_type_list[l] == 'cnn':
                     # weight
                     tmp_w = tmp_data[:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
@@ -219,7 +219,7 @@ class Tensorboard_elem(Tensorboard):
                             l, n)].append(node_w.mean())
                         # print(node_w,t)
                         self.nodes_integrated['norm_{}l_{}n'.format(
-                            l, n)].append(node_w.norm(2))
+                            l, n)].append(node_w.norm())
                         self.nodes_integrated['var_{}l_{}n'.format(
                             l, n)].append(node_w.var())
                         tmp_w = tmp_w[(
@@ -242,7 +242,7 @@ class Tensorboard_elem(Tensorboard):
                         self.nodes_integrated['avg_{}l_{}n'.format(
                             l, n)].append( node_w.mean())
                         self.nodes_integrated['norm_{}l_{}n'.format(
-                            l, n)].append(node_w.norm(2))
+                            l, n)].append(node_w.norm())
                         self.nodes_integrated['var_{}l_{}n'.format(
                             l, n)].append (node_w.var())
                         tmp_w = tmp_w[self.NN_size_list[l]:]  # 내용제거
@@ -285,7 +285,7 @@ class Tensorboard_elem(Tensorboard):
 
         tmp_data = self.total_data.clone().detach()
         for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
-            # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(2),t)#norm in layer(all elem)
+            # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
             if self.NN_type_list[l] == 'cnn':
                 # weight
                 tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()

@@ -52,7 +52,7 @@ def parse_args(args):
         help='generate grad_save')
     # prune threshold
     parser.add_argument(
-        '--threshold', type=int, default=128,
+        '--threshold', type=int, default=100,
         help='set prune threshold by cum of norm in elems')
 
 
@@ -150,6 +150,7 @@ def main(args):
                'patience':flags.patience,
                'momentum':flags.momentum,
                'grad_save':flags.grad_save.lower(),
+               'threshold':flags.threshold,
                }
     # print(flags.log)
     if configs['log_extraction'] == 'true' and (configs['mode']=='train'or configs['mode']=='train_prune'):
