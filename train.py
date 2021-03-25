@@ -85,10 +85,10 @@ class Learner():
 
             print("after prune")
             for mask_layer in self.grad_off_mask:
-                print("Pruned rate",torch.nonzero(mask_layer).size())
+                print("Pruned weight",torch.nonzero(mask_layer).size())
 
             for layer in self.optimizer.param_groups[0]['params']:
-                print("Weight Prune", torch.nonzero(layer).size())
+                print("After Weight Prune", torch.nonzero(layer).size())
             
         configs=self.save_grad()
         return configs
@@ -122,7 +122,7 @@ class Learner():
             # prune 이후 optimizer step
             self.optimizer.step()
             # weight prune
-            self.prune_weight(p_groups,epoch)
+            # self.prune_weight(p_groups,epoch)
                             
             running_loss += loss.item()
             if batch_idx % self.log_interval == 0:
@@ -241,45 +241,48 @@ class Learner():
         if self.config['mode']=='train_prune':
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
-                    if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
-                        l=int(i/2)
-                        p_nodes=p_layers.grad.cpu().detach().clone()
-                        for n,p_node in enumerate(p_nodes):
-                            #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
-                            if epoch<grad_turn_off_epoch+1:
-                                self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # cumulative value
-                            if epoch ==grad_turn_off_epoch+1 and batch_idx==0:
-                                if self.grad_norm_cum['{}l_{}n'.format(l,n)]<200: # 100 이하면
-                                    self.grad_off_mask[l][n]=True
-                                    print('{}l_{}n grad_off'.format(l,n))
-                                    self.grad_off_freq_cum+=1
+                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                        continue
+                    else:
+                        if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
+                            l=int(i/2)
+                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            for n,p_node in enumerate(p_nodes):
+                                #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
+                                if epoch<grad_turn_off_epoch+1:
+                                    self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # cumulative value
+                                if epoch ==grad_turn_off_epoch+1 and batch_idx==0:
+                                    if self.grad_norm_cum['{}l_{}n'.format(l,n)]<200: # 100 이하면
+                                        self.grad_off_mask[l][n]=True
+                                        print('{}l_{}n grad_off'.format(l,n))
+                                        self.grad_off_freq_cum+=1
 
-                            # #2. gradient의 gradient threshold 이후 종료
-                            # if epoch >5 and self.grad_off_mask[l][n]==False:
-                            #     self.grad_norm_dict['{}l_{}n'.format(l,n)].append(p_node.norm(2).view(-1))
-                            #     if len(self.grad_norm_dict['{}l_{}n'.format(l,n)])>1:
-                            #         # # 2-1. gradient 값의 norm 기준 prune
-                            #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]<1e-4:
-                            #         #     self.mask['{}l_{}n'.format(l,n)]+=1
-                            #         # # 2-2. difference of gradient norm 기준 prune
-                            #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]-self.grad_norm_dict['{}l_{}n'.format(l,n)][-2]<1e-7:
-                            #         #     self.mask['{}l_{}n'.format(l,n)]+=1
-                            #         # self.grad_norm_dict['{}l_{}n'.format(l,n)].pop(0)
+                                # #2. gradient의 gradient threshold 이후 종료
+                                # if epoch >5 and self.grad_off_mask[l][n]==False:
+                                #     self.grad_norm_dict['{}l_{}n'.format(l,n)].append(p_node.norm(2).view(-1))
+                                #     if len(self.grad_norm_dict['{}l_{}n'.format(l,n)])>1:
+                                #         # # 2-1. gradient 값의 norm 기준 prune
+                                #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]<1e-4:
+                                #         #     self.mask['{}l_{}n'.format(l,n)]+=1
+                                #         # # 2-2. difference of gradient norm 기준 prune
+                                #         # if self.grad_norm_dict['{}l_{}n'.format(l,n)][-1]-self.grad_norm_dict['{}l_{}n'.format(l,n)][-2]<1e-7:
+                                #         #     self.mask['{}l_{}n'.format(l,n)]+=1
+                                #         # self.grad_norm_dict['{}l_{}n'.format(l,n)].pop(0)
 
-                            #     if self.mask['{}l_{}n'.format(l,n)]>100:
-                            #         self.grad_off_mask[l][n]=True
-                            #         self.grad_off_freq_cum+=1
-                            #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
+                                #     if self.mask['{}l_{}n'.format(l,n)]>100:
+                                #         self.grad_off_mask[l][n]=True
+                                #         self.grad_off_freq_cum+=1
+                                #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
 
-                            # #3. gradient의 moving average threshold 이후 종료
-                            # if epoch >5 and self.grad_off_mask[l][n]==False:
-                            #     self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # moving avg 하셈
-                            #     if self.grad_norm_cum['{}l_{}n'.format(l,n)]<1e-4: # moving avg가 일정 이하
-                            #         self.grad_off_mask[l][n]=True
-                            #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
-                            #         self.grad_off_freq_cum+=1
+                                # #3. gradient의 moving average threshold 이후 종료
+                                # if epoch >5 and self.grad_off_mask[l][n]==False:
+                                #     self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm(2).view(-1) # moving avg 하셈
+                                #     if self.grad_norm_cum['{}l_{}n'.format(l,n)]<1e-4: # moving avg가 일정 이하
+                                #         self.grad_off_mask[l][n]=True
+                                #         print('{}epoch {}iter {}l_{}n grad_off'.format(epoch,batch_idx,l,n))
+                                #         self.grad_off_freq_cum+=1
 
-                        p_layers.to(self.device)
+                            p_layers.to(self.device)
             
             # Record Prune Rate
             self.logWriter.add_scalar('train/grad_off_freq_cum',self.grad_off_freq_cum,epoch)
@@ -287,14 +290,17 @@ class Learner():
             if epoch >grad_turn_off_epoch:
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
-                        if len(p_layers.size())>1: #weight filtering
-                            l=int(i/2)
-                            p_layers.grad[self.grad_off_mask[l]]=0.0#weight prune
-                            # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                        if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                            continue
                         else:
-                            p_layers.grad[self.grad_off_mask[l]]=0.0 #bias prune
-                            # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                            #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
+                            if len(p_layers.size())>1: #weight filtering
+                                l=int(i/2)
+                                p_layers.grad[self.grad_off_mask[l]]=0.0#weight prune
+                                # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                            else:
+                                p_layers.grad[self.grad_off_mask[l]]=0.0 #bias prune
+                                # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                                #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
     
     def turn_requires_grad_(self,p_groups,on_off):
         if self.config['mode']=='train_prune':
@@ -322,13 +328,16 @@ class Learner():
                 self.turn_requires_grad_(p_groups,on_off=False)
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
-                        p_layers.requires_grad_(False)
-                        if len(p_layers.size())>1: #weight filtering
-                            l=int(i/2)
-                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                        else:# bias
-                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                            #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
+                        if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                            continue
+                        else:
+                            p_layers.requires_grad_(False)
+                            if len(p_layers.size())>1: #weight filtering
+                                l=int(i/2)
+                                p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                            else:# bias
+                                p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                                #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
                 self.turn_requires_grad_(p_groups,on_off=True)
 
 

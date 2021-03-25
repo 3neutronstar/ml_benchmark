@@ -138,6 +138,7 @@ def main(args):
                'patience':flags.patience,
                'momentum':flags.momentum,
                }
+    # print(flags.log)
     if configs['log_extraction'] == True and (configs['mode']=='train'or configs['mode']=='train_prune'):
         save_params(configs, time_data)
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
@@ -160,6 +161,7 @@ def main(args):
         if configs['nn_type'][:3] == 'vgg':
             from NeuralNet.vgg import VGG
             model = VGG(configs).to(configs['device'])
+            # print(model)
         if configs['nn_type']=='lenet300_100':
             from NeuralNet.lenet300_100 import LeNet_300_100
             model = LeNet_300_100(configs).to(configs['device'])
