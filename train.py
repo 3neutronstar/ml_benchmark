@@ -2,6 +2,7 @@ import time
 import os
 import sys
 import time
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -34,11 +35,11 @@ class Learner():
 
         self.early_stopping = EarlyStopping(self.current_path,time_data,patience = self.config['patience'], verbose = True)
         if self.config['colab'] == True:
-            making_path = os.path.join('drive', 'MyDrive', 'grad_data')
+            self.making_path = os.path.join('drive', 'MyDrive', 'grad_data')
         else:
-            making_path = os.path.join(self.current_path, 'grad_data')
-        if os.path.exists(making_path) == False:
-            os.mkdir(making_path)
+            self.making_path = os.path.join(self.current_path, 'grad_data')
+        if os.path.exists(self.making_path) == False:
+            os.mkdir(self.making_path)
         # grad list
         self.grad_list=list()
 
@@ -127,7 +128,7 @@ class Learner():
             # prune 이후 optimizer step
             self.optimizer.step()
             # weight prune
-            # self.prune_weight(p_groups,epoch)
+            self.prune_weight(p_groups,epoch)
                             
             running_loss += loss.item()
             if batch_idx % self.log_interval == 0:
@@ -167,45 +168,43 @@ class Learner():
     
     def save_grad(self):
         # Save all grad to the file 
-        if self.config['grad_save']==True:
+        if self.config['grad_save']=='true':
             param_size = list()
             params_write = list()
 
             tik = time.time()
-            import numpy as np
-            if self.config['grad_save'] == True:
-                if self.config['nn_type']=='lenet5':
-                    for t, params in enumerate(self.grad_list):
-                        if t == 1:
-                            for i, p in enumerate(params):  # 각 layer의 params
-                                param_size.append(p.size())
-                        #elem
-                        # print(params)
-                        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
-                        #node
+            if self.config['nn_type']=='lenet5':
+                for t, params in enumerate(self.grad_list):
+                    if t == 1:
+                        for i, p in enumerate(params):  # 각 layer의 params
+                            param_size.append(p.size())
+                    #elem
+                    # print(params)
+                    params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+                    #node
 
-                        if t % 100 == 0:
-                            print("\r step {} done".format(t), end='')
-                    write_data = torch.cat(params_write, dim=0)
-                else: # lenet300 100 # vgg16
-                    for t, params in enumerate(self.grad_list):
-                        if t == 1:
-                            for i, p in enumerate(params):  # 각 layer의 params
-                                param_size.append(p.size())
-                        #elem
-                        params_write.append(torch.cat(params,dim=0).unsqueeze(0))
-                        #node
+                    if t % 100 == 0:
+                        print("\r step {} done".format(t), end='')
+                write_data = torch.cat(params_write, dim=0)
+            else: # lenet300 100 # vgg16
+                for t, params in enumerate(self.grad_list):
+                    if t == 1:
+                        for i, p in enumerate(params):  # 각 layer의 params
+                            param_size.append(p.size())
+                    #elem
+                    params_write.append(torch.cat(params,dim=0).unsqueeze(0))
+                    #node
 
-                        if t % 100 == 0:
-                            print("\r step {} done".format(t), end='')
-                    write_data = torch.cat(params_write, dim=0)
+                    if t % 100 == 0:
+                        print("\r step {} done".format(t), end='')
+                write_data = torch.cat(params_write, dim=0)
 
-                print("\n Write data size:", write_data.size())
-                np.save(os.path.join(making_path, 'grad_{}'.format(
-                    self.time_data)), write_data.numpy())#npy save
-                tok = time.time()
-                print('play_time for saving:', tok-tik, "s")
-                print('size: {}'.format(len(params_write)))
+            print("\n Write data size:", write_data.size())
+            np.save(os.path.join(self.making_path, 'grad_{}'.format(
+                self.time_data)), write_data.numpy())#npy save
+            tok = time.time()
+            print('play_time for saving:', tok-tik, "s")
+            print('size: {}'.format(len(params_write)))
 
             '''
             Save params
@@ -215,12 +214,12 @@ class Learner():
 
     def save_grad_(self,p_groups):
         # save grad to the list
-        if self.config['grad_save']==True:
+        if self.config['grad_save']=='true':
             for p in p_groups:
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
                         if len(p_layers.size())>1: #weight filtering
-                            p_node=p_layers.grad.view(-1).cpu().detach().clone()
+                            p_node=p_layers.view(-1).cpu().detach().clone()
                             # if i==0:
                             #     print(p_node[50:75])
                             #     print(p_node.size())
@@ -228,7 +227,7 @@ class Learner():
                     # node, rest
                     else:
                         if len(p_layers.size())>1: #weight filtering
-                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            p_nodes=p_layers.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n,p_node in enumerate(p_nodes):
                                 self.grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm(2).view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
@@ -241,7 +240,8 @@ class Learner():
         if self.config['mode']=='train_prune':
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
-                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                    # first and last layer live
+                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size() or p['params'][0].size()==p_layers.size() or p['params'][1].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
                         continue
                     else:
                         if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
@@ -290,17 +290,14 @@ class Learner():
             if epoch >grad_turn_off_epoch:
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
-                        if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
-                            continue
+                        if len(p_layers.size())>1: #weight filtering
+                            l=int(i/2)
+                            p_layers.grad[self.grad_off_mask[l]]=0.0#weight prune
+                            # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
                         else:
-                            if len(p_layers.size())>1: #weight filtering
-                                l=int(i/2)
-                                p_layers.grad[self.grad_off_mask[l]]=0.0#weight prune
-                                # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                            else:
-                                p_layers.grad[self.grad_off_mask[l]]=0.0 #bias prune
-                                # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                                #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
+                            p_layers.grad[self.grad_off_mask[l]]=0.0 #bias prune
+                            # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                            #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
     
     def turn_requires_grad_(self,p_groups,on_off):
         if self.config['mode']=='train_prune':
@@ -328,16 +325,13 @@ class Learner():
                 self.turn_requires_grad_(p_groups,on_off=False)
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
-                        if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
-                            continue
-                        else:
-                            p_layers.requires_grad_(False)
-                            if len(p_layers.size())>1: #weight filtering
-                                l=int(i/2)
-                                p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                            else:# bias
-                                p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                                #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
+                        p_layers.requires_grad_(False)
+                        if len(p_layers.size())>1: #weight filtering
+                            l=int(i/2)
+                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                        else:# bias
+                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
+                            #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
                 self.turn_requires_grad_(p_groups,on_off=True)
 
 
