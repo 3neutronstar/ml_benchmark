@@ -15,20 +15,31 @@ def load_dataset(configs):
     elif configs['dataset'] == 'cifar100':
         transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ])
         train_data = datasets.CIFAR100(root='data', train=True,
                                        download=True, transform=transform)
         test_data = datasets.CIFAR100(root='data', train=False,
                                       download=False, transform=transform)
 
     elif configs['dataset'] == 'cifar10':
-        transform = transforms.Compose([
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                     std=[0.229, 0.224, 0.225])
+        train_transform=transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(32, 4),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
+            normalize,
+        ])
+        test_transform=transforms.Compose([
+            transforms.ToTensor(),
+            normalize,
+        ])
+        
         train_data = datasets.CIFAR10(root='data', train=True,
-                                      download=True, transform=transform)
+                                      download=True, transform=train_transform)
         test_data = datasets.CIFAR10(root='data', train=False,
-                                     download=False, transform=transform)
+                                     download=False, transform=test_transform)
 
     return train_data, test_data
 
