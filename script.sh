@@ -1,6 +1,8 @@
 apt-get update
 apt-get install python-pip
 ECHO
-pip install matplotlib
-pip install torch torchvision torchaudio
-pip install pandas
+conda install tensorboard
+conda install opencv
+conda install pytorch torchvision torchaudio cudatoolkit=11.1 -c pytorch -c conda-forge
+conda install matplotlib
+conda install numpy 
