@@ -45,7 +45,10 @@ def parse_args(args):
         help='number of process you have')
     parser.add_argument(
         '--log', type=bool, default=True,
-        help='generate log(gradient save)')
+        help='generate log')
+    parser.add_argument(
+        '--grad_save', type=bool, default=True,
+        help='generate grad_save')
     #TRAIN OPTION BY NN
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
     if nn_type == 'lenet5':
@@ -98,6 +101,7 @@ def main(args):
     if flags.file_name is None and (flags.mode == 'train'or flags.mode=='train_prune'):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
+        print(time_data)
         if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
             os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
     elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune'):  # load
@@ -137,6 +141,7 @@ def main(args):
                'mode':flags.mode,
                'patience':flags.patience,
                'momentum':flags.momentum,
+               'grad_save':flags.grad_save,
                }
     # print(flags.log)
     if configs['log_extraction'] == True and (configs['mode']=='train'or configs['mode']=='train_prune'):
