@@ -208,9 +208,12 @@ class Learner():
             else:# vgg16
                 self.w_picklefile.close()
                 r_picklefile=open(self.picklepath_name,'rb')
-                data=pickle.load(r_picklefile)
-                for line in data:
-                    params_write.append(torch.cat(line,dim=0).unsqueeze(0))
+                while True:
+                    try:
+                        data=pickle.load(r_picklefile)
+                    except EOFError:
+                        break
+                    params_write.append(torch.cat(data,dim=0).unsqueeze(0))
                 r_picklefile.close()
 
             write_data = torch.cat(params_write, dim=0)

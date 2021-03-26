@@ -350,24 +350,35 @@ class Tensorboard_elem(Tensorboard):
                             print('\r {}l_{}n_{}e complete'.format(l_idx,n,e),end='')
 
     def dist_write(self):
-        tmp_data = self.total_data.clone().detach()
+        tmp_cum_data = torch.cumsum(self.total_data.clone().detach(),dim=1)
+
         for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
-            # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
+
             if self.NN_type_list[l] == 'cnn':
                 # weight
-                tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
-                tmp_data = tmp_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
-                node_grad_in_elem=torch.split(tmp_w,self.kernel_size_list[l][0]*self.kernel_size_list[l][1],dim=1)
+                tmp_w = tmp_cum_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
+                tmp_cum_data = tmp_cum_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
+                node_grad_in_elem=torch.split(tmp_w,self.kernel_size_list[l][0]*self.kernel_size_list[l][1]*self.NN_size_list[l],dim=1)
                 node_grad_list=list()
-                for node in node_grad_in_elem:
-                    node_grad_list.append(node.norm())
-                node_grad=torch.cat(node_grad_list,dim=0)
-                self.wri                
-                
-
-
-
+                for t in self.time_list:
+                    if t%469==0: # math.ceil(60000.0/128.0) -> 1epoch당 하나
+                        for node in node_grad_in_elem[:,t]:
+                            node_grad_list.append(node.norm())
+                        node_grad=torch.cat(node_grad_list,dim=0)
+                        print(node_grad.size())
+                        self.distWriter.add_histogram('{}l_node_grad_dist'.format(l), node_grad,t)
+            
             elif self.NN_type_list[l] == 'fc':
                 # weight
-                tmp_w = tmp_data[:,:num_b*self.NN_size_list[l]].detach().clone()
-                tmp_data = tmp_data[:,num_b*self.NN_size_list[l]:]  # remove
+                tmp_w = tmp_cum_data[:,:num_b*self.NN_size_list[l]].detach().clone()
+                tmp_cum_data = tmp_cum_data[:,num_b*self.NN_size_list[l]:]  # remove
+                node_grad_in_elem=torch.split(tmp_w,self.NN_size_list[l],dim=1)
+                node_grad_list=list()
+                for t in self.time_list:
+                    if t%469==0: # math.ceil(60000.0/128.0) -> 1epoch당 하나
+                        for node in node_grad_in_elem[t,:]:
+                            node_grad_list.append(node.norm())
+                        node_grad=torch.cat(node_grad_list,dim=0)
+                        print(node_grad.size())
+                        self.distWriter.add_histogram('{}l_node_grad_dist'.format(l), node_grad,t)
+            self.distWriter.flush()
