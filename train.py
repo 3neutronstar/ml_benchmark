@@ -219,7 +219,7 @@ class Learner():
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
                         if len(p_layers.size())>1: #weight filtering
-                            p_node=p_layers.grad.view(-1).cpu().detach().clone()
+                            p_node=p_layers.view(-1).cpu().detach().clone()
                             # if i==0:
                             #     print(p_node[50:75])
                             #     print(p_node.size())
@@ -241,12 +241,12 @@ class Learner():
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
                     # first and last layer live
-                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size() or p['params'][0].size()==p_layers.size() or p['params'][1].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size() :#or p['params'][0].size()==p_layers.size() or p['params'][1].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
                         continue
                     else:
                         if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
                             l=int(i/2)
-                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            p_nodes=p_layers.grad.cpu().detach().clone() # prune in grad
                             for n,p_node in enumerate(p_nodes):
                                 #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
                                 if epoch<grad_turn_off_epoch+1:
