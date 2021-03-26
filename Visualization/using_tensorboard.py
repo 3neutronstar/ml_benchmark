@@ -170,8 +170,21 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     'avg_of_grads/{}l'.format(l), node_info[0], n)
                 self.nodeWriter.add_scalar(
                     'norm_of_grads/{}l'.format(l), node_info[1], n)
+                self.nodeWriter.add_scalar(
+                    'var_of_grads/{}l'.format(l), node_info[2], n)
             print('\r {} layer complete'.format(l+1), end='')
             self.nodeWriter.flush()
+
+    def dist_write(self):
+        avg_grad,norm_grad,var_grad=torch.split(self.total_data,[1,1,1],dim=2)
+        for t, norm_dist in enumerate(norm_grad):
+            self.nodeWriter.add_histogram('norm_of_grads_in_nodes_cum_distribution',norm_dist,t)
+        for t, avg_dist in enumerate(avg_grad):
+            self.nodeWriter.add_histogram('norm_of_grads_in_nodes_cum_distribution',avg_dist,t)
+        for t,var_dist in enumerate(var_grad):
+            self.nodeWriter.add_histogram('var_of_grads_in_nodes_cum_distribution',var_dist,t)
+
+
 
 
 class Tensorboard_elem(Tensorboard):
@@ -337,42 +350,24 @@ class Tensorboard_elem(Tensorboard):
                             self.timeWriter_cum[l_idx].flush()
                             print('\r {}l_{}n_{}e complete'.format(l_idx,n,e),end='')
 
-
-                    # t_data=dict()
-                    # t_data_cum=dict()
-                    # print('\r {} Layer {:7.0f}Time Complete'.format(l_idx,t),end='')
-                    # for e_idx in range(self.num_elem_list[l_idx]*num_node):
-                    #     t_data['{}l_{}e'.format(l_idx,e_idx)]=data_dict['{}l_{}e'.format(l_idx,e_idx)][t]
-                    # self.timeWriter[l_idx].add_scalars('elem_grad',t_data,t)
-                    # self.timeWriter[l_idx].flush()
-                    # del t_data
-
-                    # for e_idx in range(self.num_elem_list[l_idx]*num_node):
-                    #     t_data_cum['{}l_{}e'.format(l_idx,e_idx)]=data_dict['cum_{}l_{}e'.format(l_idx,e_idx)][t]
-                    # self.timeWriter_cum[l_idx].add_scalars('cum_elem_grad',t_data,t)
-                    # self.timeWriter_cum[l_idx].flush()
-                    # del t_data_cum
-
+    def dist_write(self):
+        tmp_data = self.total_data.clone().detach()
+        for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
+            # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
+            if self.NN_type_list[l] == 'cnn':
+                # weight
+                tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
+                tmp_data = tmp_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
+                node_grad_in_elem=torch.split(tmp_w,self.kernel_size_list[l][0]*self.kernel_size_list[l][1],dim=1)
+                node_grad_list=list()
+                for node in node_grad_in_elem:
+                    node_grad_list.append(node.norm())
                     
+                
 
 
-        # for l_idx,num_node in enumerate(self.b_size_list):
-        #     cum_save_path=os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))
-        #     save_path=os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))
-        #     if os.path.exists(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx))) == False:
-        #         os.mkdir(os.path.join(self.path,'time_elem_info_cum',self.file_name,'{}l'.format(l_idx)))
-        #     if os.path.exists(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx))) == False:
-        #         os.mkdir(os.path.join(self.path,'time_elem_info',self.file_name,'{}l'.format(l_idx)))
-        #     for e_idx in range(self.num_elem_list[l_idx]*num_node):
-        #         print('\r {} Layer {:4.0f}Elem Complete'.format(l_idx,e_idx),end='')
-        #         plt.clf()
-        #         plt.plot(self.time_list,data_dict['{}l_{}e'.format(l_idx,e_idx)])
-        #         plt.ylabel('grad_elem')
-        #         plt.xlabel('time')
-        #         plt.savefig(os.path.join(save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
 
-        #         plt.clf()
-        #         plt.plot(self.time_list,torch.cumsum(data_dict['{}l_{}e'.format(l_idx,e_idx)],dim=0))
-        #         plt.ylabel('grad_elem')
-        #         plt.xlabel('time')
-        #         plt.savefig(os.path.join(cum_save_path,'{}l_{}e.png'.format(l_idx,e_idx)),dpi=100)
+            elif self.NN_type_list[l] == 'fc':
+                # weight
+                tmp_w = tmp_data[:,:num_b*self.NN_size_list[l]].detach().clone()
+                tmp_data = tmp_data[:,num_b*self.NN_size_list[l]:]  # remove

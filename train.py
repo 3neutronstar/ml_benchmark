@@ -4,6 +4,7 @@ import sys
 import time
 import numpy as np
 import torch
+import pickle
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
@@ -58,6 +59,12 @@ class Learner():
         
         # gradient 꺼지는 빈도확인
         self.grad_off_freq_cum=0
+
+        # 용량이 큰 매체들은 pickle 사용
+        if self.config['nn_type']=='vgg16':
+            self.picklepath_name=os.path.join(self.current_path,'grad_data','grad_{}.bin'.format(time_data))
+            self.w_picklefile= open(self.picklepath_name,'wb')
+
 
 
     def run(self):
@@ -166,6 +173,7 @@ class Learner():
 
         return eval_accuracy, eval_loss
     
+#########################################################################################################
     def save_grad(self):
         # Save all grad to the file 
         if self.config['grad_save']=='true':
@@ -185,8 +193,7 @@ class Learner():
 
                     if t % 100 == 0:
                         print("\r step {} done".format(t), end='')
-                write_data = torch.cat(params_write, dim=0)
-            else: # lenet300 100 # vgg16
+            elif self.config['lenet300_100']: # lenet300 100
                 for t, params in enumerate(self.grad_list):
                     if t == 1:
                         for i, p in enumerate(params):  # 각 layer의 params
@@ -197,8 +204,16 @@ class Learner():
 
                     if t % 100 == 0:
                         print("\r step {} done".format(t), end='')
-                write_data = torch.cat(params_write, dim=0)
+            
+            else:# vgg16
+                self.w_picklefile.close()
+                r_picklefile=open(self.picklepath_name,'rb')
+                data=pickle.load(r_picklefile)
+                for line in data:
+                    params_write.append(torch.cat(line,dim=0).unsqueeze(0))
+                r_picklefile.close()
 
+            write_data = torch.cat(params_write, dim=0)
             print("\n Write data size:", write_data.size())
             np.save(os.path.join(self.making_path, 'grad_{}'.format(
                 self.time_data)), write_data.numpy())#npy save
@@ -211,7 +226,6 @@ class Learner():
             '''
         return self.config
 
-
     def save_grad_(self,p_groups):
         # save grad to the list
         if self.config['grad_save']=='true':
@@ -219,20 +233,41 @@ class Learner():
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
                         if len(p_layers.size())>1: #weight filtering
-                            p_node=p_layers.view(-1).cpu().detach().clone()
+                            p_node=p_layers.grad.view(-1).cpu().detach().clone()
                             # if i==0:
                             #     print(p_node[50:75])
                             #     print(p_node.size())
                             self.grad_list[-1].append(p_node)
                     # node, rest
-                    else:
+                    elif self.config['nn_type']=='lenet300_100':
                         if len(p_layers.size())>1: #weight filtering
                             p_nodes=p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n,p_node in enumerate(p_nodes):
                                 self.grad_list[-1].append(torch.cat([p_node.mean().view(-1),p_node.norm().view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
+                    
+                    else: # vgg
+                        if len(p_layers.size())>1:
+                            save_grad_list=list()
+                            p_nodes=p_layers.grad.cpu().detach().clone()
+                            # print(p_nodes.size())
+                            for n,p_node in enumerate(p_nodes):
+                                save_grad_list.append(torch.cat([p_node.mean().view(-1),p_node.norm().view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
+                            pickle.dump(save_grad_list,self.w_picklefile)
+                            del save_grad_list
+                            
                     p_layers.to(self.device)
 
+    def revert_grad_(self,p_groups):
+        if self.configs['mode']=='train_prune' and self.grad_off_mask.sum()>0 and len(self.grad_list)!=0:
+            for p in p_groups:
+                for i,p_layers in enumerate(p['params']):
+                    for p_nodes in p_layers:
+                        for p_node in p_nodes:
+                            p_node.grad=self.grad_list[-1][0]
+                            self.grad_list[-1].pop(0)
+                    self.grad_list.pop(-1)#node뽑기
+###########################################################################################################
 
     def prune_grad_(self,p_groups,epoch,batch_idx):
         # pruning mask generator
@@ -304,20 +339,6 @@ class Learner():
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
                     p_layers.requires_grad_(on_off)
-    
-    def save_prune_weight(self,p_groups,epoch):
-        if self.config['mode']=='train_prune' : 
-            if epoch > 5:
-                for p in p_groups:
-                    for i,p_layers in enumerate(p['params']):
-                        p_layers.requires_grad_(False)
-                        if len(p_layers.size())>1: #weight filtering
-                            l=int(i/2)
-                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                        else:# bias
-                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                
-        
 
     def prune_weight(self,p_groups,epoch):
         if self.config['mode']=='train_prune' :
@@ -334,14 +355,6 @@ class Learner():
                             #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
                 self.turn_requires_grad_(p_groups,on_off=True)
 
+###################################################################################################################
 
-    def revert_grad_(self,p_groups):
-        if self.configs['mode']=='train_prune' and self.grad_off_mask.sum()>0 and len(self.grad_list)!=0:
-            for p in p_groups:
-                for i,p_layers in enumerate(p['params']):
-                    for p_nodes in p_layers:
-                        for p_node in p_nodes:
-                            p_node.grad=self.grad_list[-1][0]
-                            self.grad_list[-1].pop(0)
-                    self.grad_list.pop(-1)#node뽑기
                 
