@@ -213,7 +213,7 @@ class Learner():
                         data=pickle.load(r_picklefile)
                     except EOFError:
                         break
-                    params_write.append(torch.cat(data,dim=0).unsqueeze(0))
+                    params_write.append(torch.cat(data,dim=1).unsqueeze(0))
                 r_picklefile.close()
 
             write_data = torch.cat(params_write, dim=0)
