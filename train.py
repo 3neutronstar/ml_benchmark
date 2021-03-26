@@ -193,7 +193,7 @@ class Learner():
 
                     if t % 100 == 0:
                         print("\r step {} done".format(t), end='')
-            elif self.config['lenet300_100']: # lenet300 100
+            elif self.config['nn_type']=='lenet300_100': # lenet300 100
                 for t, params in enumerate(self.grad_list):
                     if t == 1:
                         for i, p in enumerate(params):  # 각 layer의 params

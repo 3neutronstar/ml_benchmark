@@ -20,14 +20,16 @@ def using_tensorboard(fileTensor, config, path, file_name):
             logger.time_write()
         elif config['visual_type'] == 'time_elem_domain':
             logger.time_write_elem()
-        elif config['visual_type'] == 'node_domain':
-            logger.node_write()
+        elif config['visual_type']=='dist_domain':
+            logger.dist_write()
     else:
         logger = Tensorboard_node(fileTensor, path, file_name, config)
         if config['visual_type'] == 'time_domain':
             logger.time_write()
         elif config['visual_type'] == 'node_domain':
             logger.node_write()
+        elif config['visual_type']=='dist_domain':
+            logger.dist_write()
 
     print('\n ==Visualization Complete==')
 

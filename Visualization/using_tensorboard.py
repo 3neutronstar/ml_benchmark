@@ -28,6 +28,9 @@ class Tensorboard():
         if configs['visual_type'] == 'node_domain':
             self.nodeWriter = SummaryWriter(
                 log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
+        if configs['visual_type']=='dist_domain':
+            self.distWriter=SummaryWriter(
+                log_dir=os.path.join(path,'{}/dist_info'.format(file_name)))
         if configs['visual_type'] == 'time_domain':
             self.timeWriter=list()
             self.timeWriter_cum=list()
@@ -41,10 +44,6 @@ class Tensorboard():
                 self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info/{}/{}l'.format(file_name,l))))
                 self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info_cum/{}/{}l'.format(file_name,l))))
 
-        if configs['visual_type'] == 'node_domain_integrated':
-            # node value integrated for each layer
-            self.integratedNodeWriter = SummaryWriter(
-                log_dir='visualizing_data/{}/node_xaxis_Integrated'.format(file_name))
         self.total_data = dataTensor
         self.transposed_data = self.total_data.T
         self.nodes_integrated = dict()
@@ -362,7 +361,8 @@ class Tensorboard_elem(Tensorboard):
                 node_grad_list=list()
                 for node in node_grad_in_elem:
                     node_grad_list.append(node.norm())
-                    
+                node_grad=torch.cat(node_grad_list,dim=0)
+                self.wri                
                 
 
 
