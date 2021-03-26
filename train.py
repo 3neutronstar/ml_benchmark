@@ -213,7 +213,7 @@ class Learner():
                         data=pickle.load(r_picklefile)
                     except EOFError:
                         break
-                    params_write.append(torch.cat(data,dim=1).unsqueeze(0))
+                    params_write.append(torch.cat(data,dim=0).unsqueeze(0))
                 r_picklefile.close()
 
             write_data = torch.cat(params_write, dim=0)
@@ -232,6 +232,7 @@ class Learner():
     def save_grad_(self,p_groups):
         # save grad to the list
         if self.config['grad_save']=='true':
+            save_grad_list=list()
             for p in p_groups:
                 for l,p_layers in enumerate(p['params']):
                     if self.config['nn_type']=='lenet5':# or config['nn_type']=='lenet300_100':
@@ -251,15 +252,15 @@ class Learner():
                     
                     else: # vgg
                         if len(p_layers.size())>1:
-                            save_grad_list=list()
                             p_nodes=p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n,p_node in enumerate(p_nodes):
                                 save_grad_list.append(torch.cat([p_node.mean().view(-1),p_node.norm().view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
-                            pickle.dump(save_grad_list,self.w_picklefile)
-                            del save_grad_list
                             
                     p_layers.to(self.device)
+            if 'lenet' not in self.config['nn_type']:
+                pickle.dump(save_grad_list,self.w_picklefile)
+            del save_grad_list
 
     def revert_grad_(self,p_groups):
         if self.configs['mode']=='train_prune' and self.grad_off_mask.sum()>0 and len(self.grad_list)!=0:
