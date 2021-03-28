@@ -80,7 +80,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                             l, n)] = list()
                         self.nodes_integrated['var_{}l_{}n'.format(
                             l, n)] = list()
-                    print(n)
+            
                     self.nodes_integrated['avg_{}l_{}n'.format(
                         l, n)].append(node_w[n][0])
                     self.nodes_integrated['norm_{}l_{}n'.format(
