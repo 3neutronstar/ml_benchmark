@@ -77,7 +77,7 @@ class VGG(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def get_nn_config(self):
+    def get_configs(self):
         return self.w_size_list, self.b_size_list, self.NN_size_list, self.NN_type_list, self.kernel_size_list
 
 def test():

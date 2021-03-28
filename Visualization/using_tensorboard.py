@@ -18,7 +18,7 @@ class Tensorboard():
         elif configs['nn_type'][:3] == 'vgg':
             from NeuralNet.vgg import VGG
             model=VGG(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = model.get_configs(configs['nn_type'])
+            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = model.get_configs()
             self.kernel_size_list = kernel_size_list
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list
