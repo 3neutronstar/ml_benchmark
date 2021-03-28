@@ -121,7 +121,6 @@ def main(args):
     use_cuda = torch.cuda.is_available()
     device = torch.device(
         "cuda" if use_cuda and flags.device == 'gpu' else "cpu")
-    print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
     # Random Seed 설정
     random_seed = flags.seed
     random.seed(random_seed)
@@ -155,6 +154,7 @@ def main(args):
     # print(flags.log)
     if configs['log_extraction'] == 'true' and (configs['mode']=='train'or configs['mode']=='train_prune'):
         save_params(configs, time_data)
+        print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
     else:
         if flags.file_name is not None:
@@ -164,6 +164,7 @@ def main(args):
                 CALL_CONFIG['visual_type']=configs['visual_type']
                 print(configs['visual_type'])
             configs=CALL_CONFIG
+            print("Mode:{}, Type:{}".format(configs['mode'],configs['nn_type']))
         
     if flags.mode == 'visual':
         from visualization import visualization
