@@ -50,7 +50,7 @@ class VGG(nn.Module):
                 self.w_size_list.append(
                     self.kernel_size_list[-1][0]*self.kernel_size_list[-1][1]*self.b_size_list[-1])
 
-        for fc_info in [4096, 4096, 1000]:
+        for fc_info in [4096, 4096, 10]:
             self.NN_type_list.append('fc')
             self.NN_size_list.append(fc_info)
             self.b_size_list.append(fc_info)
