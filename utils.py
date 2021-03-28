@@ -26,7 +26,7 @@ def load_model(model,file_path,file_name):
 class EarlyStopping:
     """주어진 patience 이후로 train loss가 개선되지 않으면 학습을 조기 중지"""
 
-    def __init__(self, file_path,time_data,patience=7, verbose=False, delta=0):
+    def __init__(self, file_path,time_data,config,patience=7, verbose=False, delta=0,):
         """
         Args:
             patience (int): train loss가 개선된 후 기다리는 기간
@@ -38,6 +38,7 @@ class EarlyStopping:
             path (str): checkpoint저장 경로
                             Default: 'checkpoint.pt'
         """
+        self.config=config
         self.patience = patience
         self.verbose = verbose
         self.counter = 0
@@ -54,13 +55,15 @@ class EarlyStopping:
         if self.best_score is None:
             self.best_score = score
         elif score > self.best_score + self.delta:
+
             self.counter += 1
-            print(
-                f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.config['nn_type']!='vgg16':
+                print(
+                    f'EarlyStopping counter: {self.counter} out of {self.patience}')
+                if self.counter >= self.patience:
+                    self.early_stop = True
             print(
                 f'Eval loss not decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).')
-            if self.counter >= self.patience:
-                self.early_stop = True
         else:
             self.best_score = score
             self.save_checkpoint(val_loss,model)

@@ -34,7 +34,7 @@ class Learner():
             self.current_path, 'training_data', time_data))
         self.time_data=time_data
 
-        self.early_stopping = EarlyStopping(self.current_path,time_data,patience = self.config['patience'], verbose = True)
+        self.early_stopping = EarlyStopping(self.current_path,time_data,config,patience = self.config['patience'], verbose = True)
         if self.config['colab'] == True:
             self.making_path = os.path.join('drive', 'MyDrive', 'grad_data')
         else:
@@ -60,11 +60,10 @@ class Learner():
         # gradient 꺼지는 빈도확인
         self.grad_off_freq_cum=0
 
-        # 용량이 큰 매체들은 pickle 사용
-        if self.config['nn_type']=='vgg16':
-            self.picklepath_name=os.path.join(self.current_path,'grad_data','grad_{}.bin'.format(time_data))
-            self.w_picklefile= open(self.picklepath_name,'wb')
 
+        # For vgg specific
+        self.npy_path_exist=False
+        self.npy_path=os.path.join(self.current_path,'grad_data','{}.npy'.format(self.time_data))
 
 
     def run(self):
@@ -206,15 +205,8 @@ class Learner():
                         print("\r step {} done".format(t), end='')
             
             else:# vgg16
-                self.w_picklefile.close()
-                r_picklefile=open(self.picklepath_name,'rb')
-                while True:
-                    try:
-                        data=pickle.load(r_picklefile)
-                    except EOFError:
-                        break
-                    params_write.append(torch.cat(data,dim=0).unsqueeze(0))
-                r_picklefile.close()
+                print("All done in {}".format(self.config['nn_type']))
+
 
             write_data = torch.cat(params_write, dim=0)
             print("\n Write data size:", write_data.size())
@@ -259,8 +251,17 @@ class Learner():
                             
                     p_layers.to(self.device)
             if 'lenet' not in self.config['nn_type']:
-                pickle.dump(save_grad_list,self.w_picklefile)
-            del save_grad_list
+                row_data=torch.cat(save_grad_list,dim=0).unsqueeze(0)
+                if self.npy_path_exist==False:
+                    self.npy_path_exist=True
+                    np.save(self.npy_path,row_data.numpy())
+                else:
+                    load_data=np.load(self.npy_path)
+                    save_data=np.concatenate((load_data,row_data),axis=0)
+                    np.save(self.npy_path,save_data.numpy())
+                    
+
+                del save_grad_list
 
     def revert_grad_(self,p_groups):
         if self.configs['mode']=='train_prune' and self.grad_off_mask.sum()>0 and len(self.grad_list)!=0:
