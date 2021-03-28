@@ -53,16 +53,46 @@ class Tensorboard():
         self.info_type_list = [ 
                                'norm', 'norm_cum', ]#'var', 'var_cum','avg', 'avg_cum']
 
+class Tensorboard_node_big(Tensorboard):
+    def __init__(self, dataTensor, path, file_name, configs):
+        super(Tensorboard_node, self).__init__(
+            dataTensor, path, file_name, configs)
+    
+    def time_write(self):
+        self.cum_total_data=self.total_data.cumsum(dim=0)
+        cum_index_w=0
+        for l, num_w in enumerate(self.b_size_list):  # b인 이유: node관찰이므로
+            cum_index_w+=l*cum_index_w
+            cum_before_index_w=cum_index_w
+            for t, _ in enumerate(self.total_data):
+                node_grad_dict=dict()
+                node_grad_dict_cum=dict()
+                for n in range(num_w):
+                    if l==0 and n==0: 
+                        self.time_list.append(t)
+                    node_grad_dict['{}n'.format(n)]=self.total_data[t,cum_before_index_w:cum_index_w,0]
+                    node_grad_dict_cum['{}n'.format(n)]=self.cum_total_data[t,cum_before_index_w:cum_index_w,0]
+                self.timeWriter[l].add_scalars('norm',node_grad_dict,t)
+                self.timeWriter_cum[l].add_scalars('norm_cum',node_grad_dict,t)
+                if t%1000==0:
+                    print('\r{}l_{}t Complete'.format(l,t),end='')
+            self.timeWriter[l].flush()
+            self.timeWriter_cum[l].flush()
+        print('\n')
+
+        
 
 class Tensorboard_node(Tensorboard):  # norm avg기반
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_node, self).__init__(
             dataTensor, path, file_name, configs)
+                
         # dataTensor dim
         # 0: time
         # 1: w 1배
         # 2: avg,norm
 
+    def time_write_(self):
         for t, data in enumerate(self.total_data):
             self.time_list.append(t)
             tmp_data = data.detach().clone()
@@ -98,20 +128,8 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     self.nodes_integrated['norm_{}l_{}n'.format(l, n)]), dim=0)
         print("\nFile Visualization Start")
 
-    def time_write_(self, layer, node, info_type,t):
-        # plt.clf()
-        # plt.plot(self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(
-        #     info_type,layer, node)])
-        if 'cum' in info_type:
-            self.timeWriter_cum[layer].add_scalar(
-                '{}/{}l_{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
-            
-        else:
-            self.timeWriter[layer].add_scalar(
-                '{}/{}l_{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
-        #self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,layer, node))
-
     def time_write(self):
+        self.time_write_()
         for type_info in self.info_type_list:
             for l_idx,num_node in enumerate(self.b_size_list):
                 if 'cum' in type_info:
@@ -129,32 +147,6 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                         self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
                     self.timeWriter[l_idx].flush()
                 print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
-    
-    def time_write_integrated_(self, layer, node, info_type,t):
-        #TODO
-        # plt.clf()
-        # plt.plot(self.time_list, self.nodes_integrated['{}_{}l_{}n'.format(
-        #     info_type,layer, node)])
-        if 'cum' in info_type:
-            self.timeWriter_cum.add_scalars(
-                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
-            
-        else:
-            self.timeWriter.add_scalars(
-                '{}/{}l/{}n'.format(info_type,layer, node),self.nodes_integrated['{}_{}l_{}n'.format(info_type,layer, node)][t],t)
-        #self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,layer, node))
-
-    def time_write_integrated(self):
-        for info_type in self.info_type_list:
-            for l, num_node in enumerate(self.b_size_list):
-                for n in range(num_node):
-                    print("\rinfo_type: {}_{}l_{}n==========".format(info_type,l,n),end='')
-                    for t in self.time_list:
-                        self.time_write_(l, n, info_type,t)
-                    self.nodes_integrated.pop('{}_{}l_{}n'.format(info_type,l, n))
-            self.timeWriter.flush()
-            self.timeWriter_cum.flush()
-
 
     def node_write(self):
         # print(self.total_data.size())
