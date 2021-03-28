@@ -258,7 +258,7 @@ class Learner():
                 else:
                     load_data=np.load(self.npy_path)
                     save_data=np.concatenate((load_data,row_data),axis=0)
-                    np.save(self.npy_path,save_data.numpy())
+                    np.save(self.npy_path,save_data)
                     
 
                 del save_grad_list
