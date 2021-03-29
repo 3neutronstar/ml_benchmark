@@ -75,7 +75,7 @@ class Tensorboard_node_big(Tensorboard):
                     node_grad_dict['{}n'.format(n)]=self.total_data[t,cum_index_w+n,1]#avg=0 norm=1 var=2
                     node_grad_dict_cum['{}n'.format(n)]=self.cum_total_data[t,cum_index_w+n,1]
                 self.timeWriter[l].add_scalars('norm',node_grad_dict,t)
-                self.timeWriter_cum[l].add_scalars('norm_cum',node_grad_dict,t)
+                self.timeWriter_cum[l].add_scalars('norm_cum',node_grad_dict_cum,t)
                 if t%1000==0:
                     print('\r{}l_{}t Complete'.format(l,t),end='')
             self.timeWriter[l].flush()
