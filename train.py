@@ -386,10 +386,12 @@ class Learner():
                 for name,params in model.named_parameters():
                     if  name in ['weight']: #weight filtering
                         l+=1 #layer
+                        print(l,self.grad_off_mask[l])
                         params.data[self.grad_off_mask[l]]=torch.zeros_like(params.data[self.grad_off_mask[l]])
                         model.register_parameter(name,params)
                         
                     else:# bias
+                        print(l,self.grad_off_mask[l])
                         params.data[self.grad_off_mask[l]]=torch.zeros_like(params.data[self.grad_off_mask[l]])
                         model.register_parameter(name,params)
                         #print(l,"layer",torch.nonzero(params.grad).size()," ",params.grad.size())            
