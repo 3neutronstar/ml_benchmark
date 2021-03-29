@@ -41,6 +41,8 @@ class Learner():
             self.making_path = os.path.join(self.current_path, 'grad_data')
         if os.path.exists(self.making_path) == False:
             os.mkdir(self.making_path)
+        if os.path.exists(os.path.join(self.making_path,'tmp')) == False:
+            os.mkdir(os.path.join(self.making_path,'tmp'))
         # grad list
         self.grad_list=list()
 
@@ -60,10 +62,6 @@ class Learner():
         # gradient 꺼지는 빈도확인
         self.grad_off_freq_cum=0
 
-
-        # For vgg specific
-        self.npy_path_exist=False
-        self.npy_path=os.path.join(self.current_path,'grad_data','{}.npy'.format(self.time_data))
 
 
     def run(self):
@@ -102,7 +100,7 @@ class Learner():
             for layer in self.optimizer.param_groups[0]['params']:
                 print("After Weight Prune", torch.nonzero(layer).size())
             
-        configs=self.save_grad()
+        configs=self.save_grad(epoch)
         return configs
     
     def train_(self,epoch):
@@ -130,7 +128,7 @@ class Learner():
             # grad prune
             self.prune_grad_(p_groups,epoch,batch_idx)     
             # grad save(prune후 save)
-            self.save_grad_(p_groups)
+            self.save_grad_(p_groups,epoch,batch_idx)
             # prune 이후 optimizer step
             self.optimizer.step()
             # weight prune
@@ -173,8 +171,9 @@ class Learner():
         return eval_accuracy, eval_loss
     
 #########################################################################################################
-    def save_grad(self):
+    def save_grad(self,epoch):
         # Save all grad to the file 
+        self.config['end_epoch']=epoch
         if self.config['grad_save']=='true':
             param_size = list()
             params_write = list()
@@ -205,7 +204,26 @@ class Learner():
                         print("\r step {} done".format(t), end='')
             
             else:# vgg16
-                print("All done in {}".format(self.config['nn_type']))
+                import platform
+                for e in epoch:
+                    i=0
+                    epoch_data=list()
+                    # check exist
+                    while os.path.exists(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i)))==True:
+                        i+=1
+                        batch_idx_data=np.load(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i)))
+                        epoch_data.append(batch_idx_data)
+                        # remove
+                        if platform.platform()=='Windows':
+                            os.system('del {}'.format(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i))))
+                        else:
+                            os.system('rm {}'.format(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i))))
+                    if e==0:
+                        total_data=np.concatenate(epoch_data,axis=0)
+                    else:
+                        total_data=np.concatenate((total_data,np.concatenate(epoch_data,axis=0)),axis=0)
+                    print("{}epoch processing done")
+                np.save(os.path.join(self.making_path,'log_{}.npy'.format(self.time_data,e,i)),total_data)
 
 
             write_data = torch.cat(params_write, dim=0)
@@ -221,7 +239,7 @@ class Learner():
             '''
         return self.config
 
-    def save_grad_(self,p_groups):
+    def save_grad_(self,p_groups,epoch,batch_idx):
         # save grad to the list
         if self.config['grad_save']=='true':
             save_grad_list=list()
@@ -245,23 +263,18 @@ class Learner():
                     else: # vgg
                         if len(p_layers.size())>1:
                             p_nodes=p_layers.grad.cpu().detach().clone()
-                            # print(p_nodes.size())
                             for n,p_node in enumerate(p_nodes):
                                 save_grad_list.append(torch.cat([p_node.mean().view(-1),p_node.norm().view(-1),torch.nan_to_num(p_node.var()).view(-1)],dim=0).unsqueeze(0))
                             
                     p_layers.to(self.device)
             if 'lenet' not in self.config['nn_type']:
+                npy_path=os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,epoch,batch_idx))
                 row_data=torch.cat(save_grad_list,dim=0).unsqueeze(0)
-                if self.npy_path_exist==False:
-                    self.npy_path_exist=True
-                    np.save(self.npy_path,row_data.numpy())
-                else:
-                    load_data=np.load(self.npy_path)
-                    save_data=np.concatenate((load_data,row_data),axis=0)
-                    np.save(self.npy_path,save_data)
+                np.save(npy_path,row_data.numpy())
+                del save_grad_list
+                del row_data
                     
 
-                del save_grad_list
 
     def revert_grad_(self,p_groups):
         if self.configs['mode']=='train_prune' and self.grad_off_mask.sum()>0 and len(self.grad_list)!=0:
@@ -272,6 +285,7 @@ class Learner():
                             p_node.grad=self.grad_list[-1][0]
                             self.grad_list[-1].pop(0)
                     self.grad_list.pop(-1)#node뽑기
+
 ###########################################################################################################
 
     def prune_grad_(self,p_groups,epoch,batch_idx):

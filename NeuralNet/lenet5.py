@@ -26,6 +26,7 @@ class LeNet5(nn.Module):
         self.NN_size_list = [1, 6, 16, 120, 84, 10]  # cnn과 fc_net out 작성
         self.NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
         self.kernel_size_list = [(5, 5), (5, 5), (5, 5)]
+        self.node_size_list=[6,16,120,84,10]
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -52,4 +53,4 @@ class LeNet5(nn.Module):
         return x,feature
 
     def get_configs(self):
-        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list,self.kernel_size_list
+        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list,self.kernel_size_list,self.node_size_list

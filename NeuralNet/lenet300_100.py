@@ -21,6 +21,7 @@ class LeNet_300_100(nn.Module):
         self.b_size_list = [300, 100, 10]
         self.NN_size_list = [1, 300, 100 ,10]  # cnn과 fc_net out 작성
         self.NN_type_list = ['fc', 'fc', 'fc']
+        self.node_size_list=[300,100,10]
 
     def forward(self, x):
         x0 = x.view(-1, 32*32)
@@ -30,4 +31,4 @@ class LeNet_300_100(nn.Module):
         return F.log_softmax(x3, dim=1)
 
     def get_configs(self):
-        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list
+        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list,self.node_size_list

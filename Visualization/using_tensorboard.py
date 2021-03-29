@@ -9,21 +9,24 @@ class Tensorboard():
         if configs['nn_type'] == 'lenet5':
             from NeuralNet.lenet5 import LeNet5
             model=LeNet5(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list=model.get_configs()
+            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list,node_size_list=model.get_configs()
             self.kernel_size_list = kernel_size_list
         elif configs['nn_type'] == 'lenet300_100':
             from NeuralNet.lenet300_100 import LeNet_300_100
             model=LeNet_300_100(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list=model.get_configs()
+            w_size_list, b_size_list, NN_size_list, NN_type_list,node_size_list=model.get_configs()
         elif configs['nn_type'][:3] == 'vgg':
             from NeuralNet.vgg import VGG
             model=VGG(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = model.get_configs()
+            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list,node_size_list = model.get_configs()
             self.kernel_size_list = kernel_size_list
+            
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list
         self.NN_size_list = NN_size_list
         self.NN_type_list = NN_type_list
+        self.node_size_list=node_size_list
+        print("node size: ",node_size_list)
         self.path=path
         if configs['visual_type'] == 'node_domain':
             self.nodeWriter = SummaryWriter(
@@ -34,13 +37,13 @@ class Tensorboard():
         if configs['visual_type'] == 'time_domain':
             self.timeWriter=list()
             self.timeWriter_cum=list()
-            for l,_ in enumerate(b_size_list):
+            for l,_ in enumerate(node_size_list):
                 self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_info/{}/{}l'.format(file_name,l))))
                 self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_info_cum/{}/{}l'.format(file_name,l))))
         if configs['visual_type'] == 'time_elem_domain':
             self.timeWriter=list()
             self.timeWriter_cum=list()
-            for l,_ in enumerate(b_size_list):
+            for l,_ in enumerate(node_size_list):
                 self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info/{}/{}l'.format(file_name,l))))
                 self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info_cum/{}/{}l'.format(file_name,l))))
 
@@ -55,23 +58,22 @@ class Tensorboard():
 
 class Tensorboard_node_big(Tensorboard):
     def __init__(self, dataTensor, path, file_name, configs):
-        super(Tensorboard_node, self).__init__(
+        super(Tensorboard_node_big, self).__init__(
             dataTensor, path, file_name, configs)
     
     def time_write(self):
         self.cum_total_data=self.total_data.cumsum(dim=0)
         cum_index_w=0
-        for l, num_w in enumerate(self.b_size_list):  # b인 이유: node관찰이므로
-            cum_index_w+=l*cum_index_w
-            cum_before_index_w=cum_index_w
+        for l, num_w in enumerate(self.node_size_list):  # b인 이유: node관찰이므로
+            cum_index_w+=num_w
             for t, _ in enumerate(self.total_data):
                 node_grad_dict=dict()
                 node_grad_dict_cum=dict()
                 for n in range(num_w):
                     if l==0 and n==0: 
                         self.time_list.append(t)
-                    node_grad_dict['{}n'.format(n)]=self.total_data[t,cum_before_index_w:cum_index_w,0]
-                    node_grad_dict_cum['{}n'.format(n)]=self.cum_total_data[t,cum_before_index_w:cum_index_w,0]
+                    node_grad_dict['{}n'.format(n)]=self.total_data[t,cum_index_w+n,1]#avg=0 norm=1 var=2
+                    node_grad_dict_cum['{}n'.format(n)]=self.cum_total_data[t,cum_index_w+n,1]
                 self.timeWriter[l].add_scalars('norm',node_grad_dict,t)
                 self.timeWriter_cum[l].add_scalars('norm_cum',node_grad_dict,t)
                 if t%1000==0:
@@ -98,7 +100,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
             tmp_data = data.detach().clone()
             if t % 100 == 0:
                 print('\r {} line complete'.format(t), end='')
-            for l, num_w in enumerate(self.b_size_list):  # b인 이유: node관찰이므로
+            for l, num_w in enumerate(self.node_size_list):  # b인 이유: node관찰이므로
                 # weight
                 node_w = tmp_data[:num_w].detach().clone()
                 tmp_data = tmp_data[num_w:]
@@ -118,7 +120,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     self.nodes_integrated['var_{}l_{}n'.format(
                         l, n)].append(node_w[n][2])
 
-        for l, num_node in enumerate(self.b_size_list):
+        for l, num_node in enumerate(self.node_size_list):
             for n in range(num_node):
                 self.nodes_integrated['avg_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
                     self.nodes_integrated['avg_{}l_{}n'.format(l, n)]), dim=0)
@@ -131,7 +133,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
     def time_write(self):
         self.time_write_()
         for type_info in self.info_type_list:
-            for l_idx,num_node in enumerate(self.b_size_list):
+            for l_idx,num_node in enumerate(self.node_size_list):
                 if 'cum' in type_info:
                     for t in self.time_list:
                         layer_dict=dict()
@@ -153,7 +155,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
         sum_data = torch.mean(self.total_data, dim=0).squeeze(0)
         # print(sum_data.size())
         tmp_data = sum_data.detach().clone()
-        for l, num_w in enumerate(self.b_size_list):
+        for l, num_w in enumerate(self.node_size_list):
             node_w = tmp_data[:num_w].detach().clone()
             tmp_data = tmp_data[num_w:]
             for n, node_info in enumerate(node_w):  # node 단위
@@ -169,7 +171,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
     def dist_write(self):
         self.time_list=[i for i in range(self.total_data.size()[0])]
         tmp_data=self.total_data.detach().clone()
-        for l, num_w in enumerate(self.b_size_list):
+        for l, num_w in enumerate(self.node_size_list):
             node_w = tmp_data[:,:num_w].detach().clone()
             tmp_data = tmp_data[:,num_w:]
             avg_grad,norm_grad,var_grad=torch.split(torch.cumsum(node_w,dim=0),[1,1,1],dim=2)
@@ -208,7 +210,7 @@ class Tensorboard_elem(Tensorboard):
             tmp_data = data.clone().detach()
             if t % 1000 == 0:
                 print('\r {} line complete'.format(t), end='')
-            for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
+            for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.node_size_list)):
                 # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
                 if self.NN_type_list[l] == 'cnn':
                     # weight
@@ -260,7 +262,7 @@ class Tensorboard_elem(Tensorboard):
                 # node_b = tmp_data[:num_b].detach().clone()
                 # tmp_data = tmp_data[num_b:]  # remove
         for type_info in self.info_type_list:
-            for l,num_node in enumerate(self.b_size_list):
+            for l,num_node in enumerate(self.node_size_list):
                 for n in range(num_node):
                     self.nodes_integrated['{}_cum_{}l_{}n'.format(type_info,l,n)]=torch.cumsum(torch.tensor(self.nodes_integrated['{}_{}l_{}n'.format(type_info,l, n)]), dim=0).clone().tolist()
 
@@ -270,7 +272,7 @@ class Tensorboard_elem(Tensorboard):
     def time_write(self):
         self.time_write_()
         for type_info in self.info_type_list:
-            for l_idx,num_node in enumerate(self.b_size_list):
+            for l_idx,num_node in enumerate(self.node_size_list):
                 if 'cum' in type_info:
                     for t in self.time_list:
                         layer_dict=dict()
@@ -294,7 +296,7 @@ class Tensorboard_elem(Tensorboard):
             self.time_list.append(t)
 
         tmp_data = self.total_data.clone().detach()
-        for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
+        for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.node_size_list)):
             # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
             if self.NN_type_list[l] == 'cnn':
                 # weight
@@ -325,7 +327,7 @@ class Tensorboard_elem(Tensorboard):
     def time_write_elem(self):
         
         data_dict=self.time_write_elem_()
-        for l_idx,num_node in enumerate(self.b_size_list):
+        for l_idx,num_node in enumerate(self.node_size_list):
             if l_idx==2:
                 for n in range(num_node):
                     if self.NN_type_list[l_idx] == 'cnn':
@@ -351,7 +353,7 @@ class Tensorboard_elem(Tensorboard):
         for t in range(self.total_data.size()[0]):
             self.time_list.append(t)
         tmp_data = self.total_data.clone().detach()
-        for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.b_size_list)):
+        for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.node_size_list)):
 
             if self.NN_type_list[l] == 'cnn':
                 # weight

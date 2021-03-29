@@ -37,8 +37,10 @@ class VGG(nn.Module):
         self.kernel_size_list = list()
         self.NN_size_list = list()
         self.NN_type_list = list()
+        self.node_size_list=list()
+        self.input_channels=3
 
-        self.NN_size_list.append(3)  # 3개 채널 color
+        self.NN_size_list.append(self.input_channels)  # 3개 채널 color
 
         vgg_name=config['nn_type']
         for cnn_info in cfg[vgg_name]:
@@ -46,15 +48,18 @@ class VGG(nn.Module):
                 self.NN_type_list.append('cnn')
                 self.NN_size_list.append(cnn_info)
                 self.kernel_size_list.append((3, 3))
-                self.b_size_list.append(cnn_info)
+                for _ in range(self.input_channels):
+                    self.b_size_list.append(cnn_info)
                 self.w_size_list.append(
                     self.kernel_size_list[-1][0]*self.kernel_size_list[-1][1]*self.b_size_list[-1])
+                self.node_size_list.append(cnn_info)
 
         for fc_info in [4096, 4096, 10]:
             self.NN_type_list.append('fc')
             self.NN_size_list.append(fc_info)
             self.b_size_list.append(fc_info)
             self.w_size_list.append(self.b_size_list[-2]*self.b_size_list[-1])
+            self.node_size_list.append(fc_info)
 
     def forward(self, x):
         out = self.features(x)
@@ -78,7 +83,7 @@ class VGG(nn.Module):
         return nn.Sequential(*layers)
 
     def get_configs(self):
-        return self.w_size_list, self.b_size_list, self.NN_size_list, self.NN_type_list, self.kernel_size_list
+        return self.w_size_list, self.b_size_list, self.NN_size_list, self.NN_type_list, self.kernel_size_list,self.node_size_list
 
 def test():
     net = VGG('VGG11')
