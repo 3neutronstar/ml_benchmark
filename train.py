@@ -205,7 +205,7 @@ class Learner():
             
             else:# vgg16
                 import platform
-                for e in epoch:
+                for e in range(epoch):
                     i=0
                     epoch_data=list()
                     # check exist
