@@ -394,27 +394,6 @@ class Learner():
             for p in model.parameters():
                 p.requires_grad_(on_off)
 
-<<<<<<< HEAD
-    def prune_weight(self,model,epoch):
-        l=-1 # -1부터해서 0으로 시작하게함, for bias로 여겨지는 avgpooling,maxpooling회피용
-        if self.config['mode']=='train_prune':
-            if epoch ==self.grad_turn_off_epoch+1:
-                self.turn_requires_grad_(model,on_off=False)
-                for name,params in model.named_parameters():
-                    if  name in ['weight']: #weight filtering
-                        l+=1 #layer
-                        print(l,self.grad_off_mask[l])
-                        params.data[self.grad_off_mask[l]]=torch.zeros_like(params.data[self.grad_off_mask[l]])
-                        model.register_parameter(name,params)
-                        
-                    else:# bias
-                        print(l,self.grad_off_mask[l])
-                        params.data[self.grad_off_mask[l]]=torch.zeros_like(params.data[self.grad_off_mask[l]])
-                        model.register_parameter(name,params)
-                        #print(l,"layer",torch.nonzero(params.grad).size()," ",params.grad.size())            
-                self.turn_requires_grad_(model,on_off=True)
-        
-=======
     def prune_weight(self, model, epoch):
         l = -1  # -1부터해서 0으로 시작하게함, for bias로 여겨지는 avgpooling,maxpooling회피용
         if self.config['mode'] == 'train_prune':
@@ -433,7 +412,6 @@ class Learner():
                         model.register_parameter(name, params)
                         #print(l,"layer",torch.nonzero(params.grad).size()," ",params.grad.size())
                 self.turn_requires_grad_(model, on_off=True)
->>>>>>> 3c076df7a8fd5e7bd9ffe3f7be172c459b2ce7f2
 
 
 ###################################################################################################################
