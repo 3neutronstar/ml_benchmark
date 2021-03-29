@@ -171,9 +171,9 @@ class Learner():
         return eval_accuracy, eval_loss
     
 #########################################################################################################
-    def save_grad(self,epoch):
+    def save_grad(self,epochs):
         # Save all grad to the file 
-        self.config['end_epoch']=epoch
+        self.config['end_epoch']=epochs
         if self.config['grad_save']=='true':
             param_size = list()
             params_write = list()
@@ -205,26 +205,23 @@ class Learner():
             
             else:# vgg16
                 import platform
-                for e in range(epoch):
+                for e in range(epochs):
+                    epoch=e+1
                     i=0
                     epoch_data=list()
                     # check exist
-                    while os.path.exists(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i)))==True:
-                        i+=1
-                        batch_idx_data=np.load(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i)))
-                        epoch_data.append(batch_idx_data)
+                    while os.path.exists(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,epoch,i)))==True:
+                        batch_idx_data=np.load(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,epoch,i)))
+                        epoch_data.append(torch.from_numpy(batch_idx_data))
                         # remove
-                        if platform.platform()=='Windows':
-                            os.system('del {}'.format(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i))))
+                        if platform.system()=='Windows':
+                            os.system('del {}'.format(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,epoch,i))))
                         else:
-                            os.system('rm {}'.format(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,e,i))))
-                    if e==0:
-                        total_data=np.concatenate(epoch_data,axis=0)
-                    else:
-                        total_data=np.concatenate((total_data,np.concatenate(epoch_data,axis=0)),axis=0)
-                    print("{}epoch processing done")
-                np.save(os.path.join(self.making_path,'log_{}.npy'.format(self.time_data,e,i)),total_data)
+                            os.system('rm {}'.format(os.path.join(self.making_path,'tmp','{}_{}e_{}.npy'.format(self.time_data,epoch,i))))
+                        i+=1
 
+                    params_write.append(torch.cat(epoch_data,dim=0))
+                    print("{}epoch processing done".format(epoch))
 
             write_data = torch.cat(params_write, dim=0)
             print("\n Write data size:", write_data.size())

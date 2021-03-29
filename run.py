@@ -106,13 +106,13 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
-    if flags.file_name is None and (flags.mode == 'train'or flags.mode=='train_prune'):
+    if flags.file_name is None and (flags.mode == 'train' or flags.mode=='train_prune'):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
         print(time_data)
         if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
             os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
-    elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune'):  # load
+    elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune' or flags.mode=='extract_npy'):  # load
         time_data = flags.file_name
         file_name = flags.file_name
     else:
@@ -187,6 +187,11 @@ def main(args):
         from train import Learner
         learner=Learner(model,time_data,configs)
         configs=learner.run()
+    elif flags.mode=='extract_npy':
+        from train import Learner
+        learner=Learner(model,time_data,configs)
+        configs=learner.save_grad(flags.epochs)
+
 
     if flags.mode.lower() =='cam':
         configs['batch_size']=1 # 1장씩 extracting
