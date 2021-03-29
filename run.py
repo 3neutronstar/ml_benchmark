@@ -19,7 +19,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or visual, cam, prune,visual_prune, train_prune, test')
+        help='train or visual, cam, prune,visual_prune, train_prune, test, extract_npy')
     
     #TRAIN SECTION
     parser.add_argument(
@@ -111,13 +111,13 @@ def parse_args(args):
 def main(args):
     flags = parse_args(args)
     train_mode_list=['train','train_prune']
-    if flags.file_name is None and (flags.mode == 'train' or flags.mode=='train_prune'):
+    if flags.file_name is None and flags.mode in train_mode_list:
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
         print(time_data)
         if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
             os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
-    elif flags.file_name is not None and flags.mode not in train_mode_list:  # load
+    elif flags.file_name is not None and flags.mode not in train_mode_list:  # load param when not training
         time_data = flags.file_name
         file_name = flags.file_name
     else:

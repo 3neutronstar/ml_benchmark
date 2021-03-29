@@ -51,7 +51,7 @@ class Learner():
         self.mask=dict()
         self.grad_norm_dict=dict()
         self.grad_norm_cum=dict()
-        for l,num_nodes in enumerate(self.model.b_size_list):
+        for l,num_nodes in enumerate(self.model.node_size_list):
             for n in range(num_nodes):
                 self.grad_norm_dict['{}l_{}n'.format(l,n)]=list()
                 self.grad_norm_cum['{}l_{}n'.format(l,n)]=0.0
@@ -143,7 +143,7 @@ class Learner():
             # prune 이후 optimizer step
             self.optimizer.step()
             # weight prune
-            self.prune_weight(p_groups,epoch)
+            self.prune_weight(self.model,epoch)
                             
             running_loss += loss.item()
             if batch_idx % self.log_interval == 0:
@@ -362,34 +362,39 @@ class Learner():
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
                         if len(p_layers.size())>1: #weight filtering
-                            l=l+1#layer
-                            p_layers.grad[self.grad_off_mask[l]]=0.0#weight prune
+                            l+=1#layer
+                            if batch_idx ==0:
+                                print(torch.nonzero(p_layers).size())
+                            #     print(torch.nonzero(p_layers.grad).size())
+                            p_layers.grad[self.grad_off_mask[l]]=torch.zeros_like(p_layers.grad[self.grad_off_mask[l]])#weight prune
                             # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
                         else:
-                            p_layers.grad[self.grad_off_mask[l]]=0.0 #bias prune
+                            p_layers.grad[self.grad_off_mask[l]]=torch.zeros_like(p_layers.grad[self.grad_off_mask[l]]) #bias prune
                             # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
                             #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
     
-    def turn_requires_grad_(self,p_groups,on_off):
+    def turn_requires_grad_(self,model,on_off):
         if self.config['mode']=='train_prune':
-            for p in p_groups:
-                for i,p_layers in enumerate(p['params']):
-                    p_layers.requires_grad_(on_off)
+            for p in model.parameters():
+                p.requires_grad_(on_off)
 
-    def prune_weight(self,p_groups,epoch):
+    def prune_weight(self,model,epoch):
         l=-1 # -1부터해서 0으로 시작하게함, for bias로 여겨지는 avgpooling,maxpooling회피용
-        if self.config['mode']=='train_prune' :
+        if self.config['mode']=='train_prune':
             if epoch ==self.grad_turn_off_epoch+1:
-                self.turn_requires_grad_(p_groups,on_off=False)
-                for p in p_groups:
-                    for i,p_layers in enumerate(p['params']):
-                        if len(p_layers.size())>1: #weight filtering
-                            l+=1 #layer
-                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                        else:# bias
-                            p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
-                            #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
-                self.turn_requires_grad_(p_groups,on_off=True)
+                self.turn_requires_grad_(model,on_off=False)
+                for name,params in model.named_parameters():
+                    if  name in ['weight']: #weight filtering
+                        l+=1 #layer
+                        params.data[self.grad_off_mask[l]]=torch.zeros_like(params.data[self.grad_off_mask[l]])
+                        model.register_parameter(name,params)
+                        
+                    else:# bias
+                        params.data[self.grad_off_mask[l]]=torch.zeros_like(params.data[self.grad_off_mask[l]])
+                        model.register_parameter(name,params)
+                        #print(l,"layer",torch.nonzero(params.grad).size()," ",params.grad.size())            
+                self.turn_requires_grad_(model,on_off=True)
+        
 
 ###################################################################################################################
 
