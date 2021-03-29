@@ -1,7 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import torch
 
 class LeNet5(nn.Module):
     def __init__(self, config):
@@ -36,6 +36,8 @@ class LeNet5(nn.Module):
         x = F.relu(self.conv3(x))
         x = x.view(-1, 120)
         x = F.relu(self.fc1(x))
+        print(self.fc1.weight.size())
+        print(torch.nonzero(self.fc1.weight).size(),'weight')
         x = self.fc2(x)
         x = self.log_softmax(x)
         return x
