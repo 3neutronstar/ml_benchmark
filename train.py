@@ -62,6 +62,17 @@ class Learner():
         # gradient 꺼지는 빈도확인
         self.grad_off_freq_cum=0
 
+        # 꺼지는 시기
+        self.grad_turn_off_epoch=self.config['grad_off_epoch']
+
+        # # 다시켤 노드 지정
+        # self.grad_turn_on_dict=None
+        self.grad_turn_on_dict={
+            2:[0,31,58,68,73]
+            # 3:[2,12,27,31,50,82]
+        }
+        print(self.grad_turn_on_dict)
+
 
 
     def run(self):
@@ -271,8 +282,6 @@ class Learner():
                 del save_grad_list
                 del row_data
                     
-
-
     def revert_grad_(self,p_groups):
         if self.configs['mode']=='train_prune' and self.grad_off_mask.sum()>0 and len(self.grad_list)!=0:
             for p in p_groups:
@@ -287,26 +296,27 @@ class Learner():
 
     def prune_grad_(self,p_groups,epoch,batch_idx):
         # pruning mask generator
-        grad_turn_off_epoch=5
+        l=-1 # 처음 layer는 0으로 증가해서 maxpooling과 같은 요소를 피하기 위함 
         if self.config['mode']=='train_prune':
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
                     # first and last layer live
-                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size() :#or p['params'][0].size()==p_layers.size() or p['params'][1].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
+                    if p['params'][-1].size()==p_layers.size() or p['params'][-2].size()==p_layers.size():#or p['params'][0].size()==p_layers.size() or p['params'][1].size()==p_layers.size(): # 마지막 layer는 output이므로 배제
                         continue
                     else:
-                        if len(p_layers.size())>1 and epoch<=grad_turn_off_epoch+1: #weight filtering
-                            l=int(i/2)
+                        if len(p_layers.size())>1 and epoch<=self.grad_turn_off_epoch+1: #weight filtering
+                            l+=1#layer
                             p_nodes=p_layers.grad.cpu().detach().clone() # prune in grad
                             for n,p_node in enumerate(p_nodes):
                                 #1. gradient cumulative값이 일정 이하이면 모두 gradient prune
-                                if epoch<grad_turn_off_epoch+1:
+                                if epoch<self.grad_turn_off_epoch+1:
                                     self.grad_norm_cum['{}l_{}n'.format(l,n)]+=p_node.norm().view(-1) # cumulative value
-                                if epoch ==grad_turn_off_epoch+1 and batch_idx==0:
+                                if epoch ==self.grad_turn_off_epoch+1 and batch_idx==0:
                                     if self.grad_norm_cum['{}l_{}n'.format(l,n)]<self.config['threshold']: # 100 이하면
                                         self.grad_off_mask[l][n]=True
                                         print('{}l_{}n grad_off'.format(l,n))
                                         self.grad_off_freq_cum+=1
+                            
 
                                 # #2. gradient의 gradient threshold 이후 종료
                                 # if epoch >5 and self.grad_off_mask[l][n]==False:
@@ -334,15 +344,25 @@ class Learner():
                                 #         self.grad_off_freq_cum+=1
 
                             p_layers.to(self.device)
+
+            # 다시 켜는 것
+            if epoch ==self.grad_turn_off_epoch+1 and batch_idx==0 and self.grad_turn_on_dict is not None:
+                print("Turn on the designated node=====")
+                for l_key in self.grad_turn_on_dict.keys():
+                    for n in self.grad_turn_on_dict[l_key]:
+                        self.grad_off_mask[l_key][n]=False
+                        print("{}l_{}n grad Turn on and No Prune".format(l_key,n))
+                print("End Turn on=====================")
             
             # Record Prune Rate
             self.logWriter.add_scalar('train/grad_off_freq_cum',self.grad_off_freq_cum,epoch)
             # pruning the gradient
-            if epoch >grad_turn_off_epoch:
+            if epoch >self.grad_turn_off_epoch:
+                l=-1 # -1부터해서 0으로 시작하게함
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
                         if len(p_layers.size())>1: #weight filtering
-                            l=int(i/2)
+                            l=l+1#layer
                             p_layers.grad[self.grad_off_mask[l]]=0.0#weight prune
                             # p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
                         else:
@@ -357,14 +377,14 @@ class Learner():
                     p_layers.requires_grad_(on_off)
 
     def prune_weight(self,p_groups,epoch):
+        l=-1 # -1부터해서 0으로 시작하게함, for bias로 여겨지는 avgpooling,maxpooling회피용
         if self.config['mode']=='train_prune' :
-            if epoch >5:
+            if epoch ==self.grad_turn_off_epoch+1:
                 self.turn_requires_grad_(p_groups,on_off=False)
                 for p in p_groups:
                     for i,p_layers in enumerate(p['params']):
-                        p_layers.requires_grad_(False)
                         if len(p_layers.size())>1: #weight filtering
-                            l=int(i/2)
+                            l+=1 #layer
                             p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
                         else:# bias
                             p_layers[self.grad_off_mask[l]]=torch.zeros_like(p_layers[self.grad_off_mask[l]])
@@ -373,4 +393,3 @@ class Learner():
 
 ###################################################################################################################
 
-                

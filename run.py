@@ -54,6 +54,10 @@ def parse_args(args):
     parser.add_argument(
         '--threshold', type=int, default=100,
         help='set prune threshold by cum of norm in elems')
+    # prune threshold
+    parser.add_argument(
+        '--grad_off_epoch', type=int, default=5,
+        help='set gradient off and prune start epoch')
 
 
     #TRAIN OPTION BY NN
@@ -106,13 +110,14 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
+    train_mode_list=['train','train_prune']
     if flags.file_name is None and (flags.mode == 'train' or flags.mode=='train_prune'):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
         print(time_data)
         if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
             os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
-    elif flags.file_name is not None and (flags.mode == 'visual' or flags.mode=='cam' or flags.mode=='visual_prune' or flags.mode=='extract_npy'):  # load
+    elif flags.file_name is not None and flags.mode not in train_mode_list:  # load
         time_data = flags.file_name
         file_name = flags.file_name
     else:
@@ -150,9 +155,10 @@ def main(args):
                'momentum':flags.momentum,
                'grad_save':flags.grad_save.lower(),
                'threshold':flags.threshold,
+               'grad_off_epoch':flags.grad_off_epoch,
                }
     # print(flags.log)
-    if configs['log_extraction'] == 'true' and (configs['mode']=='train'or configs['mode']=='train_prune'):
+    if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
         save_params(configs, time_data)
         print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
