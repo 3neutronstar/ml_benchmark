@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import random
 import torch
 
 class LeNet5(nn.Module):
@@ -11,8 +12,21 @@ class LeNet5(nn.Module):
         self.subsampling = nn.MaxPool2d(kernel_size=(2, 2), stride=2)
         self.conv2 = nn.Conv2d(
             in_channels=6, out_channels=16, kernel_size=(5, 5))  # 5x5+1 params
+
+        random_seed=2
+        random.seed(random_seed)
+        torch.manual_seed(random_seed)
+        torch.random.manual_seed(random_seed)
+        torch.cuda.manual_seed_all(random_seed)
+
         self.conv3 = nn.Conv2d(
             in_channels=16, out_channels=120, kernel_size=(5, 5))  # 5x5+1 params
+            
+        random_seed=1
+        random.seed(random_seed)
+        torch.manual_seed(random_seed)
+        torch.random.manual_seed(random_seed)
+        torch.cuda.manual_seed_all(random_seed)
         self.fc1 = nn.Linear(120, 84)
         self.fc2 = nn.Linear(84, 10)
         
