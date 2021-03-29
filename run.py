@@ -190,7 +190,7 @@ def main(args):
     elif flags.mode=='extract_npy':
         from train import Learner
         learner=Learner(model,time_data,configs)
-        configs=learner.save_grad(flags.epochs)
+        configs=learner.save_grad(configs['end_epoch'])
 
 
     if flags.mode.lower() =='cam':
