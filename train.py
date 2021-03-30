@@ -193,19 +193,19 @@ class Learner():
             params_write = list()
 
             tik = time.time()
-            if self.config['nn_type'] == 'lenet5':
-                for t, params in enumerate(self.grad_list):
-                    if t == 1:
-                        for i, p in enumerate(params):  # 각 layer의 params
-                            param_size.append(p.size())
-                    # elem
-                    # print(params)
-                    params_write.append(torch.cat(params, dim=0).unsqueeze(0))
-                    # node
+            # if self.config['nn_type'] == 'lenet5': #TODO
+            #     for t, params in enumerate(self.grad_list):
+            #         if t == 1:
+            #             for i, p in enumerate(params):  # 각 layer의 params
+            #                 param_size.append(p.size())
+            #         # elem
+            #         # print(params)
+            #         params_write.append(torch.cat(params, dim=0).unsqueeze(0))
+            #         # node
 
             #         if t % 100 == 0:
             #             print("\r step {} done".format(t), end='')
-            if self.config['nn_type'] == 'lenet300_100' :#lenet300 100
+            if self.config['nn_type'] == 'lenet300_100' or self.config['nn_type']=='lenet5':#lenet300 100
                 for t, params in enumerate(self.grad_list):
                     if t == 1:
                         for i, p in enumerate(params):  # 각 layer의 params
@@ -260,16 +260,16 @@ class Learner():
             for p in p_groups:
                 for l, p_layers in enumerate(p['params']):
                     
-                    if self.config['nn_type'] == 'lenet5':
-                        if len(p_layers.size()) > 1:  # weight filtering
-                            p_node = p_layers.grad.view(
-                                -1).cpu().detach().clone()
-                            # if i==0:
-                            #     print(p_node[50:75])
-                            #     print(p_node.size())
-                            self.grad_list[-1].append(p_node)
+                    # if self.config['nn_type'] == 'lenet5':#TODO
+                    #     if len(p_layers.size()) > 1:  # weight filtering
+                    #         p_node = p_layers.grad.view(
+                    #             -1).cpu().detach().clone()
+                    #         # if i==0:
+                    #         #     print(p_node[50:75])
+                    #         #     print(p_node.size())
+                    #         self.grad_list[-1].append(p_node)
                     # node, rest
-                    if self.config['nn_type'] == 'lenet300_100':
+                    if self.config['nn_type'] == 'lenet300_100' or self.config['nn_type']=='lenet5':
                         if len(p_layers.size()) > 1:  # weight filtering
                             p_nodes = p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())

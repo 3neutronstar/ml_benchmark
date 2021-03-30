@@ -102,6 +102,11 @@ def parse_args(args):
         '--num_result', type=int, default=1,
         help='grad_data/grad_[].log file load')
     
+    parser.add_argument(
+        '--test_seed', type=int, default=1,
+        help='remove')#TODO
+    
+    
     return parser.parse_known_args(args)[0]
 
 
@@ -153,7 +158,9 @@ def main(args):
                'grad_save':flags.grad_save.lower(),
                'threshold':flags.threshold,
                'grad_off_epoch':flags.grad_off_epoch,
+               'test_seed':flags.test_seed,
                }
+    print("SEED:",flags.test_seed)
     # print(flags.log)
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
         save_params(configs, time_data)

@@ -13,7 +13,7 @@ class LeNet5(nn.Module):
         self.conv2 = nn.Conv2d(
             in_channels=6, out_channels=16, kernel_size=(5, 5))  # 5x5+1 params
 
-        random_seed=2
+        random_seed=config['test_seed']
         random.seed(random_seed)
         torch.manual_seed(random_seed)
         torch.random.manual_seed(random_seed)
@@ -50,8 +50,8 @@ class LeNet5(nn.Module):
         x = F.relu(self.conv3(x))
         x = x.view(-1, 120)
         x = F.relu(self.fc1(x))
-        #print(self.fc1.weight.size())
-        #print(torch.nonzero(self.fc1.weight).size(),'weight')
+        # print(self.fc1.weight.size())
+        # print(torch.nonzero(self.fc1.weight).size(),'weight')
         x = self.fc2(x)
         x = self.log_softmax(x)
         return x
