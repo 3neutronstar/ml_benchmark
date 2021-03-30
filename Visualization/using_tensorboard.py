@@ -106,28 +106,28 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                 tmp_data = tmp_data[num_w:]
                 for n in range(num_w):  # node 단위
                     if t == 0:
-                        self.nodes_integrated['avg_{}l_{}n'.format(
-                            l, n)] = list()
+                        # self.nodes_integrated['avg_{}l_{}n'.format(
+                        #     l, n)] = list()
                         self.nodes_integrated['norm_{}l_{}n'.format(
                             l, n)] = list()
-                        self.nodes_integrated['var_{}l_{}n'.format(
-                            l, n)] = list()
+                        # self.nodes_integrated['var_{}l_{}n'.format(
+                        #     l, n)] = list()
             
-                    self.nodes_integrated['avg_{}l_{}n'.format(
-                        l, n)].append(node_w[n][0])
+                    # self.nodes_integrated['avg_{}l_{}n'.format(
+                    #     l, n)].append(node_w[n][0])
                     self.nodes_integrated['norm_{}l_{}n'.format(
                         l, n)].append(node_w[n][1])
-                    self.nodes_integrated['var_{}l_{}n'.format(
-                        l, n)].append(node_w[n][2])
+                    # self.nodes_integrated['var_{}l_{}n'.format(
+                    #     l, n)].append(node_w[n][2])
 
         for l, num_node in enumerate(self.node_size_list):
             for n in range(num_node):
-                self.nodes_integrated['avg_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
-                    self.nodes_integrated['avg_{}l_{}n'.format(l, n)]), dim=0)
-                self.nodes_integrated['var_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
-                    self.nodes_integrated['var_{}l_{}n'.format(l, n)]), dim=0)
+                # self.nodes_integrated['avg_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
+                #     self.nodes_integrated['avg_{}l_{}n'.format(l, n)]), dim=0)
                 self.nodes_integrated['norm_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
                     self.nodes_integrated['norm_{}l_{}n'.format(l, n)]), dim=0)
+                # self.nodes_integrated['var_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
+                #     self.nodes_integrated['var_{}l_{}n'.format(l, n)]), dim=0)
         print("\nFile Visualization Start")
 
     def time_write(self):
@@ -138,14 +138,18 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     for t in self.time_list:
                         layer_dict=dict()
                         for n_idx in range(num_node):
-                            layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                            if l_idx==2 and n_idx==4:#TODO #REVERT
+                                layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                                break
                         self.timeWriter_cum[l_idx].add_scalars(type_info,layer_dict,t)
                     self.timeWriter_cum[l_idx].flush()
                 else:
                     for t in self.time_list:
                         layer_dict=dict()
                         for n_idx in range(num_node):
-                            layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                            if l_idx==2 and n_idx==4:#TODO #REVERT
+                                layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
+                                break
                         self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
                     self.timeWriter[l_idx].flush()
                 print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')

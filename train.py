@@ -124,9 +124,12 @@ class Learner():
         # defalut is mean of mini-batchsamples, loss type설정
         # loss함수에 softmax 함수가 포함되어있음
         # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
+        p_groups=self.optimizer.param_groups
         for batch_idx, (data, target) in enumerate(self.train_loader):
             data, target = data.to(self.device), target.to(
                 self.device)  # gpu로 올림
+            # weight prune #TODO
+            self.prune_weight(p_groups,epoch,batch_idx)
             self.optimizer.zero_grad()  # optimizer zero로 초기화
             # model에서 입력과 출력이 나옴 batch 수만큼 들어가서 batch수만큼 결과가 나옴 (1개 인풋 1개 아웃풋 아님)
             output = self.model(data)
@@ -144,8 +147,6 @@ class Learner():
             self.save_grad_(p_groups, epoch, batch_idx)
             # prune 이후 optimizer step
             self.optimizer.step()
-            # weight prune
-            self.prune_weight(p_groups,epoch)
 
             running_loss += loss.item()
             if batch_idx % self.log_interval == 0:
@@ -192,19 +193,19 @@ class Learner():
             params_write = list()
 
             tik = time.time()
-            # if self.config['nn_type'] == 'lenet5': #TODO REVERT
-            #     for t, params in enumerate(self.grad_list):
-            #         if t == 1:
-            #             for i, p in enumerate(params):  # 각 layer의 params
-            #                 param_size.append(p.size())
-            #         # elem
-            #         # print(params)
-            #         params_write.append(torch.cat(params, dim=0).unsqueeze(0))
-            #         # node
+            if self.config['nn_type'] == 'lenet5':
+                for t, params in enumerate(self.grad_list):
+                    if t == 1:
+                        for i, p in enumerate(params):  # 각 layer의 params
+                            param_size.append(p.size())
+                    # elem
+                    # print(params)
+                    params_write.append(torch.cat(params, dim=0).unsqueeze(0))
+                    # node
 
             #         if t % 100 == 0:
             #             print("\r step {} done".format(t), end='')
-            if self.config['nn_type'] == 'lenet300_100' or self.config['nn_type']=='lenet5':  # lenet300 100
+            if self.config['nn_type'] == 'lenet300_100' :#lenet300 100
                 for t, params in enumerate(self.grad_list):
                     if t == 1:
                         for i, p in enumerate(params):  # 각 layer의 params
@@ -258,17 +259,17 @@ class Learner():
             save_grad_list = list()
             for p in p_groups:
                 for l, p_layers in enumerate(p['params']):
-                    # or config['nn_type']=='lenet300_100': #TODO REVERT
-                    # if self.config['nn_type'] == 'lenet5':
-                    #     if len(p_layers.size()) > 1:  # weight filtering
-                    #         p_node = p_layers.grad.view(
-                    #             -1).cpu().detach().clone()
-                    #         # if i==0:
-                    #         #     print(p_node[50:75])
-                    #         #     print(p_node.size())
-                    #         self.grad_list[-1].append(p_node)
+                    
+                    if self.config['nn_type'] == 'lenet5':
+                        if len(p_layers.size()) > 1:  # weight filtering
+                            p_node = p_layers.grad.view(
+                                -1).cpu().detach().clone()
+                            # if i==0:
+                            #     print(p_node[50:75])
+                            #     print(p_node.size())
+                            self.grad_list[-1].append(p_node)
                     # node, rest
-                    if self.config['nn_type'] == 'lenet300_100' or self.config['nn_type']=='lenet5':
+                    if self.config['nn_type'] == 'lenet300_100':
                         if len(p_layers.size()) > 1:  # weight filtering
                             p_nodes = p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())
@@ -396,7 +397,7 @@ class Learner():
                 for i,p_layers in enumerate(p['params']):
                     p_layers.requires_grad_(on_off)
 
-    def prune_weight(self, p_groups,epoch):
+    def prune_weight(self, p_groups,epoch,batch_idx):
         l = -1  # -1부터해서 0으로 시작하게함, for bias로 여겨지는 avgpooling,maxpooling회피용
         if self.config['mode'] == 'train_prune':
             if epoch >= self.grad_turn_off_epoch+1:
@@ -411,7 +412,7 @@ class Learner():
                             p_layers.data[self.grad_off_mask[l]]=torch.zeros_like(p_layers.data[self.grad_off_mask[l]])
                             #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
                 self.turn_requires_grad_(p_groups,on_off=True)
-                    
+                
                 #     if 'weight' in name:  # weight filtering
                 #         l += 1  # layer
                 #         params.data[self.grad_off_mask[l]] = torch.zeros_like(
