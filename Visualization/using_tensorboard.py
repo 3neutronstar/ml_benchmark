@@ -107,28 +107,28 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                 tmp_data = tmp_data[num_w:]
                 for n in range(num_w):  # node 단위
                     if t == 0:
-                        # self.nodes_integrated['avg_{}l_{}n'.format(
-                        #     l, n)] = list()
+                        self.nodes_integrated['avg_{}l_{}n'.format(
+                            l, n)] = list()
                         self.nodes_integrated['norm_{}l_{}n'.format(
                             l, n)] = list()
-                        # self.nodes_integrated['var_{}l_{}n'.format(
-                        #     l, n)] = list()
+                        self.nodes_integrated['var_{}l_{}n'.format(
+                            l, n)] = list()
             
-                    # self.nodes_integrated['avg_{}l_{}n'.format(
-                    #     l, n)].append(node_w[n][0])
+                    self.nodes_integrated['avg_{}l_{}n'.format(
+                        l, n)].append(node_w[n][0])
                     self.nodes_integrated['norm_{}l_{}n'.format(
                         l, n)].append(node_w[n][1])
-                    # self.nodes_integrated['var_{}l_{}n'.format(
-                    #     l, n)].append(node_w[n][2])
+                    self.nodes_integrated['var_{}l_{}n'.format(
+                        l, n)].append(node_w[n][2])
 
         for l, num_node in enumerate(self.node_size_list):
             for n in range(num_node):
-                # self.nodes_integrated['avg_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
-                #     self.nodes_integrated['avg_{}l_{}n'.format(l, n)]), dim=0)
+                self.nodes_integrated['avg_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
+                    self.nodes_integrated['avg_{}l_{}n'.format(l, n)]), dim=0)
                 self.nodes_integrated['norm_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
                     self.nodes_integrated['norm_{}l_{}n'.format(l, n)]), dim=0)
-                # self.nodes_integrated['var_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
-                #     self.nodes_integrated['var_{}l_{}n'.format(l, n)]), dim=0)
+                self.nodes_integrated['var_cum_{}l_{}n'.format(l, n)] = torch.cumsum(torch.tensor(
+                    self.nodes_integrated['var_{}l_{}n'.format(l, n)]), dim=0)
         print("\nFile Visualization Start")
 
     def time_write(self):
