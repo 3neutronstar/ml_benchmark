@@ -2,6 +2,7 @@ import time
 import torch
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 
 class Tensorboard():
@@ -38,14 +39,14 @@ class Tensorboard():
             self.timeWriter=list()
             self.timeWriter_cum=list()
             for l,_ in enumerate(node_size_list):
-                self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_info/{}/{}l'.format(file_name,l))))
-                self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_info_cum/{}/{}l'.format(file_name,l))))
+                self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_info/{}l'.format(file_name,l))))
+                self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_info_cum/{}l'.format(file_name,l))))
         if configs['visual_type'] == 'time_elem_domain':
             self.timeWriter=list()
             self.timeWriter_cum=list()
             for l,_ in enumerate(node_size_list):
-                self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info/{}/{}l'.format(file_name,l))))
-                self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'time_elem_info_cum/{}/{}l'.format(file_name,l))))
+                self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_elem_info/{}l'.format(file_name,l))))
+                self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_elem_info_cum/{}l'.format(file_name,l))))
 
         self.total_data = dataTensor
         self.transposed_data = self.total_data.T
@@ -178,12 +179,16 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
         for l, num_w in enumerate(self.node_size_list):
             node_w = tmp_data[:,:num_w].detach().clone()
             tmp_data = tmp_data[:,num_w:]
-            avg_grad,norm_grad,var_grad=torch.split(torch.cumsum(node_w,dim=0),[1,1,1],dim=2)
+            avg_grad_cum,norm_grad_cum,var_grad_cum=torch.split(torch.cumsum(node_w,dim=0),[1,1,1],dim=2)
+            avg_grad,norm_grad,var_grad=torch.split(node_w,[1,1,1],dim=2)
             for t in self.time_list:
                 if t%469==0:
-                    self.distWriter.add_histogram('{}l/norm_of_grads_in_nodes_cum_distribution'.format(l),norm_grad[t],t)
-                    self.distWriter.add_histogram('{}l/avg_of_grads_in_nodes_cum_distribution'.format(l),avg_grad[t],t)
-                    self.distWriter.add_histogram('{}l/var_of_grads_in_nodes_cum_distribution'.format(l),var_grad[t],t)
+                    self.distWriter.add_histogram('{}l/norm_of_grads_in_nodes_cum_distribution'.format(l),norm_grad_cum[t],t)#,bins=np.arange(0,650,10)
+                    self.distWriter.add_histogram('{}l/avg_of_grads_in_nodes_cum_distribution'.format(l),avg_grad_cum[t],t)
+                    self.distWriter.add_histogram('{}l/var_of_grads_in_nodes_cum_distribution'.format(l),var_grad_cum[t],t)
+                    self.distWriter.add_histogram('{}l/norm_of_grads_in_nodes_distribution'.format(l),norm_grad[t],t)
+                    self.distWriter.add_histogram('{}l/avg_of_grads_in_nodes_distribution'.format(l),avg_grad[t],t)
+                    self.distWriter.add_histogram('{}l/var_of_grads_in_nodes_distribution'.format(l),var_grad[t],t)
                     self.distWriter.flush()
             
             print('{} time complete'.format(t))

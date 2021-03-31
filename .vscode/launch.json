@@ -5,23 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "args": [
-                "task"
-            ],
-            "name": "Gulp task",
-            "program": "${workspaceFolder}/node_modules/gulp/bin/gulp.js",
-            "request": "launch",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "type": "pwa-node"
-        },
-        {
-            "name": "Python: Current File",
+            "name": "Train Prune",
             "type": "python",
             "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal"
+            "program": "${workspaceFolder}/run.py",
+            "console": "integratedTerminal",
+            "args": [
+                "train_prune",
+                "--nn_type",
+                "lenet5",
+                "--log",
+                "false",
+                "--grad_save",
+                "false",
+                "--grad_off_epoch",
+                "1",
+                "--threshold",
+                "10"]
         }
     ]
 }

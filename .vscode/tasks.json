@@ -1,0 +1,58 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Train Run",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "${workspaceFolder}/run.py","train","--nn_type ","lenet5",
+            ],
+            "options": {
+                "env": {
+                    "PYTHONIOENCODING": "UTF-8"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true               
+            }
+        },
+        {
+            "label": "Visualizing Run",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "${workspaceFolder}/run.py","visual","--file_name","lenet5",
+            ],
+            "options": {
+                "env": {
+                    "PYTHONIOENCODING": "UTF-8"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true               
+            }
+        },
+        {
+            "label": "Pruning",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "${workspaceFolder}/run.py","visual_prune","--nn_type","lenet5",
+            ],
+            "options": {
+                "env": {
+                    "PYTHONIOENCODING": "UTF-8"
+                }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true               
+            }
+        },
+    ]
+}
