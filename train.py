@@ -224,8 +224,7 @@ class Learner():
 
             else:  # vgg16
                 import platform
-                for e in range(epochs):
-                    epoch = e+1
+                for epoch in range(1,epochs):
                     i = 0
                     epoch_data = list()
                     # check exist
@@ -233,6 +232,18 @@ class Learner():
                         batch_idx_data = np.load(os.path.join(
                             self.making_path, 'tmp', '{}_{}e_{}.npy'.format(self.time_data, epoch, i)))
                         epoch_data.append(torch.from_numpy(batch_idx_data))
+                        i += 1
+
+                    params_write.append(torch.cat(epoch_data, dim=0))
+                    print("{}epoch processing done".format(epoch))
+
+            write_data = torch.cat(params_write, dim=0)
+            if self.config['nn_type'] != 'lenet300_100' and self.config['nn_type']!='lenet5':
+                for epoch in range(1,epochs):
+                    i = 0
+                    epoch_data = list()
+                    # check exist
+                    while os.path.exists(os.path.join(self.making_path, 'tmp', '{}_{}e_{}.npy'.format(self.time_data, epoch, i))) == True:
                         # remove
                         if platform.system() == 'Windows':
                             os.system('del {}'.format(os.path.join(
@@ -240,12 +251,6 @@ class Learner():
                         else:
                             os.system('rm {}'.format(os.path.join(
                                 self.making_path, 'tmp', '{}_{}e_{}.npy'.format(self.time_data, epoch, i))))
-                        i += 1
-
-                    params_write.append(torch.cat(epoch_data, dim=0))
-                    print("{}epoch processing done".format(epoch))
-
-            write_data = torch.cat(params_write, dim=0)
             print("\n Write data size:", write_data.size())
             np.save(os.path.join(self.making_path, 'grad_{}'.format(
                 self.time_data)), write_data.numpy())  # npy save

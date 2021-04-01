@@ -97,16 +97,11 @@ def parse_args(args):
         help='grad_data/grad_[].log for VISUAL and grad_[].pt file load for CAM')
     parser.add_argument(
         '--visual_type', type=str, default='time_domain',
-        help='visualization domain decision [time,node,node_integrated]')
+        help='visualization domain decision [time,node')
     parser.add_argument(
         '--num_result', type=int, default=1,
         help='grad_data/grad_[].log file load')
-    
-    parser.add_argument(
-        '--test_seed', type=int, default=1,
-        help='remove')#TODO
-    
-    
+        
     return parser.parse_known_args(args)[0]
 
 
@@ -158,11 +153,11 @@ def main(args):
                'grad_save':flags.grad_save.lower(),
                'threshold':flags.threshold,
                'grad_off_epoch':flags.grad_off_epoch,
-               'test_seed':flags.test_seed,
                }
-    print("SEED:",flags.test_seed)
+    print("SEED:",flags.seed)
     # print(flags.log)
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
+
         save_params(configs, time_data)
         print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
@@ -200,7 +195,7 @@ def main(args):
     elif flags.mode=='extract_npy':
         from train import Learner
         learner=Learner(model,time_data,configs)
-        configs=learner.save_grad(configs['end_epoch'])
+        configs=learner.save_grad(300)
 
 
     if flags.mode.lower() =='cam':
