@@ -2,9 +2,13 @@
 benchmark repository
 
 ### Implementation
-- Training Process
+- Training Process 
 `python run.py train`
 
+- Choose Algorithm
+```shell script
+    python run.py train --nn_type [lenet5 lenet300_100 vgg16]
+```
 - Visualizing the gradient of weight for each layer
 ```shell script
     python run.py visual --file_name [date you train]
