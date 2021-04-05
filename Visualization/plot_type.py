@@ -29,6 +29,15 @@ def print_all_exp(fileTensor,path,file_name,config):
                 nodes_integrated['norm_{}l_{}n'.format(
                     l, n)].append(node_w[n][1])
 
+    for l, num_w in enumerate(node_size_list):  # b인 이유: node관찰이므로
+        if l==2:
+            for n in range(num_w):  # node 단위
+                write_str=file_name+"_{:>3}n: ".format(n)+str(torch.tensor(nodes_integrated['norm_{}l_{}n'.format(l,n)]).mean())+" 468 "+str(nodes_integrated['norm_{}l_{}n'.format(l,n)][468])+" 936 "+str(nodes_integrated['norm_{}l_{}n'.format(l,n)][936])
+                dataFile.write(write_str)
+                dataFile.flush()
+    dataFile.write(" ")
+    dataFile.close()
+
 
 def using_tensorboard(fileTensor, config, path, file_name):
     print('Using tensorboard')

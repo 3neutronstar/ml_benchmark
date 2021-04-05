@@ -35,7 +35,7 @@ for %%a in (03-30_03-55-57,
 03-30_09-46-03,
 03-30_09-57-49,
 03-30_10-10-28) do (
-    CALL python run.py visual --file_name %%a
+    CALL python run.py visual --visual_type expectation --file_name %%a
 )
 
 PAUSE 
