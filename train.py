@@ -1,50 +1,14 @@
 import time
 import os
-import sys
 import time
 import numpy as np
 import torch
-import pickle
-import torch.nn as nn
-import torch.optim as optim
-from torch.optim import lr_scheduler
-from torch.utils.tensorboard import SummaryWriter
-from six.moves import urllib
-from utils import EarlyStopping
-from DataSet.data_load import data_loader
+from base_learner import BaseLearner
 
 
-class Learner():
+class ClassicLearner(BaseLearner):
     def __init__(self, model, time_data, config):
-        self.model = model
-        self.optimizer = self.model.optim
-        self.criterion = self.model.loss
-        self.scheduler = self.model.scheduler
-        self.config = config
-        self.grad_list = list()
-        self.log_interval = 100
-        self.device = self.config['device']
-        # data
-        opener = urllib.request.build_opener()
-        opener.addheaders = [('User-agent', 'Mozilla/5.0')]
-        urllib.request.install_opener(opener)
-        self.train_loader, self.test_loader = data_loader(self.config)
-        # Tensorboard
-        self.current_path = os.path.dirname(os.path.abspath(__file__))
-        self.logWriter = SummaryWriter(os.path.join(
-            self.current_path, 'training_data', time_data))
-        self.time_data = time_data
-
-        self.early_stopping = EarlyStopping(
-            self.current_path, time_data, config, patience=self.config['patience'], verbose=True)
-        if self.config['colab'] == True:
-            self.making_path = os.path.join('drive', 'MyDrive', 'grad_data')
-        else:
-            self.making_path = os.path.join(self.current_path, 'grad_data')
-        if os.path.exists(self.making_path) == False:
-            os.mkdir(self.making_path)
-        if os.path.exists(os.path.join(self.making_path, 'tmp')) == False:
-            os.mkdir(os.path.join(self.making_path, 'tmp'))
+        super(ClassicLearner,self).__init__(model,time_data,config)
         # grad list
         self.grad_list = list()
 
@@ -68,15 +32,12 @@ class Learner():
         # 꺼지는 시기
         self.grad_turn_off_epoch = self.config['grad_off_epoch']
 
-        # # 다시켤 노드 지정
+        # # 다시 켤 노드 지정
         self.grad_turn_on_dict=None
         # self.grad_turn_on_dict = {
         #     2: [0, 31, 58, 68, 73]
         #     # 3:[2,12,27,31,50,82]
         # }
-        self.grad_turn_on_dict={
-            0:[2],
-        }
         print(self.grad_turn_on_dict)
 
     def run(self):
@@ -87,8 +48,8 @@ class Learner():
         grad_list = list()
         # Train
         for epoch in range(1, self.config['epochs'] + 1):
-            train_accuracy, train_loss = self.train_(epoch)
-            eval_accuracy, eval_loss = self.eval_()
+            train_accuracy, train_loss = self._train(epoch)
+            eval_accuracy, eval_loss = self._eval()
             self.scheduler.step()
             loss_dict = {'train': train_loss, 'eval': eval_loss}
             accuracy_dict = {'train': train_accuracy, 'eval': eval_accuracy}
@@ -118,7 +79,7 @@ class Learner():
         configs = self.save_grad(epoch)
         return configs
 
-    def train_(self, epoch):
+    def _train(self, epoch):
         tik = time.time()
         self.model.train()  # train모드로 설정
         running_loss = 0.0
@@ -145,9 +106,9 @@ class Learner():
             p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
             self.grad_list.append([])
             # grad prune
-            self.prune_grad_(p_groups, epoch, batch_idx)
+            self._prune_grad(p_groups, epoch, batch_idx)
             # grad save(prune후 save)
-            self.save_grad_(p_groups, epoch, batch_idx)
+            self._save_grad(p_groups, epoch, batch_idx)
             # prune 이후 optimizer step
             if epoch==2 and batch_idx==0:
                 print("hi")
@@ -165,7 +126,7 @@ class Learner():
             tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
         return running_accuracy, running_loss
 
-    def eval_(self):
+    def _eval(self):
         self.model.eval()
         eval_loss = 0
         correct = 0
@@ -209,6 +170,7 @@ class Learner():
 
                     if t % 100 == 0:
                         print("\r step {} done".format(t), end='')
+                        
             # elif self.config['nn_type'] == 'lenet5': #TODO
             #     for t, params in enumerate(self.grad_list):
             #         if t == 1:
@@ -224,7 +186,7 @@ class Learner():
 
             else:  # vgg16
                 import platform
-                for epoch in range(1,epochs):
+                for epoch in range(1,epochs+1):
                     i = 0
                     epoch_data = list()
                     # check exist
@@ -235,11 +197,12 @@ class Learner():
                         i += 1
 
                     params_write.append(torch.cat(epoch_data, dim=0))
-                    print("{}epoch processing done".format(epoch))
+                    print("\r {}epoch processing done".format(epoch),end='')
+                print("\n")
 
             write_data = torch.cat(params_write, dim=0)
             if self.config['nn_type'] != 'lenet300_100' and self.config['nn_type']!='lenet5':
-                for epoch in range(1,epochs):
+                for epoch in range(1,epochs+1):
                     i = 0
                     epoch_data = list()
                     # check exist
@@ -251,6 +214,8 @@ class Learner():
                         else:
                             os.system('rm {}'.format(os.path.join(
                                 self.making_path, 'tmp', '{}_{}e_{}.npy'.format(self.time_data, epoch, i))))
+                        i+=1
+                    print("\r {}epoch processing done".format(epoch),end='')
             print("\n Write data size:", write_data.size())
             np.save(os.path.join(self.making_path, 'grad_{}'.format(
                 self.time_data)), write_data.numpy())  # npy save
@@ -263,7 +228,7 @@ class Learner():
             '''
         return self.config
 
-    def save_grad_(self, p_groups, epoch, batch_idx):
+    def _save_grad(self, p_groups, epoch, batch_idx):
         # save grad to the list
         if self.config['grad_save'] == 'true':
             save_grad_list = list()
@@ -315,7 +280,7 @@ class Learner():
 
 ###########################################################################################################
 
-    def prune_grad_(self, p_groups, epoch, batch_idx):
+    def _prune_grad(self, p_groups, epoch, batch_idx):
         # pruning mask generator
         l = -1  # 처음 layer는 0으로 증가해서 maxpooling과 같은 요소를 피하기 위함
         if self.config['mode'] == 'train_prune':
@@ -435,18 +400,3 @@ class Learner():
                         #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
             self.turn_requires_grad_(p_groups,on_off=True)
     
-            
-            #     if 'weight' in name:  # weight filtering
-            #         l += 1  # layer
-            #         params.data[self.grad_off_mask[l]] = torch.zeros_like(
-            #             params.data[self.grad_off_mask[l]])
-                    
-
-            #     else:  # bias
-            #         params.data[self.grad_off_mask[l]] = torch.zeros_like(
-            #             params.data[self.grad_off_mask[l]])
-            #         model.register_parameter(name, params)
-            #         #print(l,"layer",torch.nonzero(params.grad).size()," ",params.grad.size())
-
-
-###################################################################################################################

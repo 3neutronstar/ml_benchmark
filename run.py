@@ -19,7 +19,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or visual, cam, prune,visual_prune, train_prune, test, extract_npy')
+        help='train or visual, prune, train_prune, test, extract_npy')
     
     #TRAIN SECTION
     parser.add_argument(
@@ -77,6 +77,11 @@ def parse_args(args):
         epochs = 60
         lr=1e-2
         momentum=0.9
+    elif nn_type=='resnet18':
+        dataset='cifar10'
+        lr=1e-3
+        momentum=0.9
+        epochs=300
 
     parser.add_argument(
         '--lr', type=float, default=lr,
@@ -175,38 +180,25 @@ def main(args):
         from visualization import visualization
         configs = visualization(configs, file_name)
     else:
-        if configs['nn_type'] == 'lenet5':
-            from NeuralNet.lenet5 import LeNet5
-            model = LeNet5(configs).to(configs['device'])
-        if configs['nn_type'][:3] == 'vgg':
-            from NeuralNet.vgg import VGG
-            model = VGG(configs).to(configs['device'])
-            # print(model)
-        if configs['nn_type']=='lenet300_100':
-            from NeuralNet.lenet300_100 import LeNet_300_100
-            model = LeNet_300_100(configs).to(configs['device'])
+        from NeuralNet.baseNet import BaseNet
+        model=BaseNet(configs).model
     # time_data
     # sys.
 
     if flags.mode == 'train' or flags.mode=='train_prune':
-        from train import Learner
-        learner=Learner(model,time_data,configs)
+        from train import ClassicLearner
+        learner=ClassicLearner(model,time_data,configs)
         configs=learner.run()
     elif flags.mode=='extract_npy':
-        from train import Learner
-        learner=Learner(model,time_data,configs)
+        from train import ClassicLearner
+        learner=ClassicLearner(model,time_data,configs)
         configs=learner.save_grad(300)
+    elif flags.mode=='train_snn':
+        from train import ClassicLearner
+        learner=ClassicLearner(model,time_data,configs)
+        configs=learner.run()
 
 
-    if flags.mode.lower() =='cam':
-        configs['batch_size']=1 # 1장씩 extracting
-        file_path=os.path.dirname(os.path.abspath(__file__))
-        create_cam(model,file_path,file_name,flags.num_result,configs)
-    if flags.mode.lower()=='visual_prune':
-        from Visualization.visual_prune import visual_prune
-        configs['batch_size']=1 # 1장씩 extracting
-        file_path=os.path.dirname(os.path.abspath(__file__))
-        visual_prune(model,file_path,file_name,configs)
     
     print("End the process")
     if flags.log.lower()=='true':
