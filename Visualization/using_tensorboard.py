@@ -194,8 +194,6 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
             print('{} time complete'.format(t))
 
 
-
-
 class Tensorboard_elem(Tensorboard):
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_elem, self).__init__(
