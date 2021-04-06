@@ -35,13 +35,12 @@ class Tensorboard():
 class Tensorboard_node_norm(Tensorboard):
     def __init__(self,path,file_name,configs):
         super(Tensorboard_node_norm,self).__init__(path,configs)
-        ckpt=torch.load(os.path.join(path,'grad_data',file_name,'{}-class_grads.pth.tar'.format(self.class_idx)))
-        self.dataTensor=['ckpt_{}'.format(idx)] = ckpt.detach().numpy()
+        self.dataTensor=torch.load(os.path.join(path,'grad_data',file_name,'{}-class_grads.pth.tar'.format(self.class_idx)))
         self.timeWriter=list()
         self.timeWriter_cum=list()
         for l,_ in enumerate(self.node_size_list):
             self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/{}l'.format(file_name,l))))
-    def plot(self):
+    def time_write(self):
         cum_index_w=0
         for l, num_w in enumerate(self.node_size_list):  # b인 이유: node관찰이므로
             cum_index_w+=num_w

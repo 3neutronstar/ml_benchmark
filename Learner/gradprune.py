@@ -1,60 +1,19 @@
-import torch
 import time
-import sys
-from Learner.base_learner import BaseLearner
 import os
-class LookUpGrad():
-    def __init__(self, optimizer):
-        self._optim = optimizer
-        print('Instantiate Grad Profiler')
+import sys
 
-    @property
-    def optimizer(self):
-        return self._optim
-
-    def step(self):
-        return self._optim.step()
-    
-    ### Original
-    def look_backward(self, loss):
-        grads, shapes, has_grads = self._pack_grad(loss)
-        #grad = self._unflatten_grad(grads, shapes)
-        #self._set_grad(grad)
-        n_grads = []
-        for g in grads:
-            if len(g.size())==2 or len(g.size())==4:
-                for i in range(g.size(0)):
-                    n_grads.append(g[i].norm())
-        return n_grads
-      
-    ### Original
-    def _pack_grad(self, loss):
-        self._optim.zero_grad(set_to_none=True)
-        loss.backward()
-        grad, shape, has_grad = self._retrieve_grad()
-        return grad, shape, has_grad
-     
-    ### Original
-    def _retrieve_grad(self):
-        grad, shape, has_grad = [], [], []
-        for group in self._optim.param_groups:
-            for p in group['params']:
-                # if p.grad is None: continue
-                # tackle the multi-head scenario
-                if p.grad is None:
-                    shape.append(p.shape)
-                    grad.append(torch.zeros_like(p).to(p.device))
-                    has_grad.append(torch.zeros_like(p).to(p.device))
-                    continue
-                shape.append(p.grad.shape)
-                grad.append(p.grad.clone())
-                has_grad.append(torch.ones_like(p).to(p.device))
-        return grad, shape, has_grad
+import torch
+from Learner.base_learner import BaseLearner
+from Pruning.lookupgrad import LookUpGrad
+from Pruning.lateral_inhibition import LateralInhibition
 
 class GradPruneLearner(BaseLearner):
-    def __init__(self, model, time_data, configs):
-        super(GradPruneLearner,self).__init__(model,time_data,configs)
-        self.optimizer=LookUpGrad(optimizer=self.optimizer)
+    def __init__(self, model, time_data,file_path, configs):
+        super(GradPruneLearner,self).__init__(model,time_data,file_path,configs)
+        if configs['mode']=='train_grad_visual':
+            self.optimizer=LookUpGrad(optimizer=self.optimizer)
+        elif configs['mode']=='train_grad_prune':
+            self.optimizer=LateralInhibition(optimizer=self.optimizer)
         self.class_idx=1
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
             os.mkdir(os.path.join(self.making_path,time_data))
@@ -62,36 +21,37 @@ class GradPruneLearner(BaseLearner):
     def run(self):
         print("Training {} epochs".format(self.configs['epochs']))
 
-        eval_accuracy, eval_loss = 0.0, 0.0
-        train_accuracy, train_loss = 0.0, 0.0
         best_accuracy=0.0
         # Train
         for epoch in range(1, self.configs['epochs'] + 1):
                 
             print('Learning rate: {}'.format(self.scheduler.optimizer.param_groups[0]['lr']))
-            train_accuracy, train_loss,b_grad = self._train(epoch)
-            eval_accuracy, eval_loss = self._eval()
+            train_metric = self._train(epoch)
+            eval_metric = self._eval()
 
             self.scheduler.step()
-            loss_dict = {'train': train_loss, 'eval': eval_loss}
-            accuracy_dict = {'train': train_accuracy, 'eval': eval_accuracy}
+            loss_dict = {'train': train_metric['loss'], 'eval': eval_metric['loss']}
+            accuracy_dict = {'train': train_metric['accuracy'], 'eval': eval_metric['accuracy']}
             self.logWriter.add_scalars('loss', loss_dict, epoch)
             self.logWriter.add_scalars('accuracy', accuracy_dict, epoch)
-            best_accuracy=max(eval_accuracy,best_accuracy)
+            best_accuracy=max(eval_metric['accuracy'],best_accuracy)
 
-            self.early_stopping(eval_loss, self.model)
-            if epoch==1:
-                grads_pool=b_grad.detach().clone()
-            else:
-                grads_pool=torch.cat((grads_pool,b_grad),dim=0)
-            
+            self.early_stopping(eval_metric['loss'], self.model)
+            if isinstance(self.optimizer,LookUpGrad):
+                if epoch==1:
+                    grads_pool=train_metric['batch_grad'].detach().clone()
+                else:
+                    grads_pool=torch.cat((grads_pool,train_metric['batch_grad']),dim=0)
+
 
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
             if self.device == 'gpu':
                 torch.cuda.empty_cache()
-            torch.save(grads_pool,os.path.join(self.making_path,self.time_data,'{}-class_grads.pth.tar'.format(self.class_idx)))
+
+            if isinstance(self.optimizer,LookUpGrad):
+                torch.save(grads_pool,os.path.join(self.making_path,self.time_data,'{}-class_grads.pth.tar'.format(self.class_idx)))
         print("Best Accuracy: "+str(best_accuracy))
         self.configs['train_end_epoch']=epoch
         return self.configs
@@ -111,12 +71,20 @@ class GradPruneLearner(BaseLearner):
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
             
-            batch_n_grad=self.optimizer.look_backward(loss)
-            if batch_idx==0:
-                batch_grads=torch.tensor(batch_n_grad,device=self.device).unsqueeze(0)
-            else:
-                batch_grads=torch.cat([batch_grads,torch.tensor(batch_n_grad,device=self.device).unsqueeze(0)],dim=0)
-
+            if isinstance(self.optimizer,LookUpGrad):
+                batch_n_grad=self.optimizer.look_backward(loss)
+                if batch_idx==0:
+                    batch_grads=torch.tensor(batch_n_grad,device=self.device).unsqueeze(0)
+                else:
+                    batch_grads=torch.cat([batch_grads,torch.tensor(batch_n_grad,device=self.device).unsqueeze(0)],dim=0)
+            elif isinstance(self.optimizer,LateralInhibition):
+                self.optimizer.backward(loss)
+                
+                p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
+                self.grad_list.append([])
+                # grad save(prune후 save)
+                self._save_grad(p_groups, epoch, batch_idx)
+                
             self.optimizer.step()
 
             running_loss += loss.item()
@@ -131,7 +99,8 @@ class GradPruneLearner(BaseLearner):
             tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
         if self.configs['log_extraction']=='true':
             sys.stdout.flush()
-        return running_accuracy, running_loss,batch_grads
+        train_metric={'accuracy':running_accuracy,'loss': running_loss,'batch_grad':batch_grads}
+        return train_metric
 
     def _eval(self):
         self.model.eval()
@@ -154,5 +123,5 @@ class GradPruneLearner(BaseLearner):
             eval_loss, correct, len(self.test_loader.dataset),
             100.0 * correct / float(len(self.test_loader.dataset))))
         eval_accuracy = 100.0*correct/float(len(self.test_loader.dataset))
-
-        return eval_accuracy, eval_loss
+        eval_metric={'accuracy':eval_accuracy,'loss': eval_loss}
+        return eval_metric

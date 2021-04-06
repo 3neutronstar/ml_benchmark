@@ -13,7 +13,9 @@
             "args": [
                 "train_grad_prune",
                 "--nn_type",
-                "lenet5",
+                "vgg16",
+                "--epochs",
+                "1",
                 "--log",
                 "false",]
         }

@@ -45,7 +45,7 @@ def load_dataset(configs):
     return train_data, test_data
 
 def split_class_data_loader(train_data,test_data,configs):
-    if configs['dataset']=='mnist':
+    if configs['dataset']=='mnist' or configs['dataset']=='cifar10':
         data_classes = [i for i in range(10)] # MNIST
         idx =1 # split class index
         locals()['train_subset_per_class_{}'.format(1)] = list()
@@ -92,5 +92,5 @@ def data_loader(configs):
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
-        
+
     return train_data_loader, test_data_loader
