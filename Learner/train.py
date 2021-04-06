@@ -3,12 +3,12 @@ import os
 import time
 import numpy as np
 import torch
-from base_learner import BaseLearner
+from Learner.base_learner import BaseLearner
 import sys
 
 class ClassicLearner(BaseLearner):
-    def __init__(self, model, time_data, config):
-        super(ClassicLearner,self).__init__(model,time_data,config)
+    def __init__(self, model, time_data, configs):
+        super(ClassicLearner,self).__init__(model,time_data,configs)
         # grad list
         self.grad_list = list()
 
@@ -30,7 +30,7 @@ class ClassicLearner(BaseLearner):
         self.grad_off_freq_cum = 0
 
         # 꺼지는 시기
-        self.grad_turn_off_epoch = self.config['grad_off_epoch']
+        self.grad_turn_off_epoch = self.configs['grad_off_epoch']
 
         # # 다시 켤 노드 지정
         self.grad_turn_on_dict=None
@@ -41,13 +41,13 @@ class ClassicLearner(BaseLearner):
         print(self.grad_turn_on_dict)
 
     def run(self):
-        print("Training {} epochs".format(self.config['epochs']))
+        print("Training {} epochs".format(self.configs['epochs']))
 
         eval_accuracy, eval_loss = 0.0, 0.0
         train_accuracy, train_loss = 0.0, 0.0
         grad_list = list()
         # Train
-        for epoch in range(1, self.config['epochs'] + 1):
+        for epoch in range(1, self.configs['epochs'] + 1):
             train_accuracy, train_loss = self._train(epoch)
             eval_accuracy, eval_loss = self._eval()
             self.scheduler.step()
@@ -64,7 +64,7 @@ class ClassicLearner(BaseLearner):
             if self.device == 'gpu':
                 torch.cuda.empty_cache()
 
-        if self.config['mode'] == 'train_prune':
+        if self.configs['mode'] == 'train_weight_prune':
             print("before prune")
             for layer in self.optimizer.param_groups[0]['params']:
                 print(layer.size())
@@ -110,8 +110,6 @@ class ClassicLearner(BaseLearner):
             # grad save(prune후 save)
             self._save_grad(p_groups, epoch, batch_idx)
             # prune 이후 optimizer step
-            if epoch==2 and batch_idx==0:
-                print("hi")
             self.optimizer.step()
 
             running_loss += loss.item()
@@ -124,7 +122,8 @@ class ClassicLearner(BaseLearner):
         running_accuracy = 100.0 * correct / float(num_training_data)
         print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
             tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
-        if self.config['log_extraction']=='true':
+            
+        if self.configs['log_extraction']=='true':
             sys.stdout.flush()
         return running_accuracy, running_loss
 
@@ -155,13 +154,13 @@ class ClassicLearner(BaseLearner):
 #########################################################################################################
     def save_grad(self, epochs):
         # Save all grad to the file
-        self.config['end_epoch'] = epochs
-        if self.config['grad_save'] == 'true':
+        self.configs['end_epoch'] = epochs
+        if self.configs['grad_save'] == 'true':
             param_size = list()
             params_write = list()
 
             tik = time.time()
-            if self.config['nn_type'] == 'lenet300_100' or self.config['nn_type']=='lenet5':#lenet300 100
+            if self.configs['nn_type'] == 'lenet300_100' or self.configs['nn_type']=='lenet5':#lenet300 100
                 for t, params in enumerate(self.grad_list):
                     if t == 1:
                         for i, p in enumerate(params):  # 각 layer의 params
@@ -172,8 +171,8 @@ class ClassicLearner(BaseLearner):
 
                     if t % 100 == 0:
                         print("\r step {} done".format(t), end='')
-                        
-            # elif self.config['nn_type'] == 'lenet5': #TODO
+
+            # elif self.configs['nn_type'] == 'lenet5': #TODO
             #     for t, params in enumerate(self.grad_list):
             #         if t == 1:
             #             for i, p in enumerate(params):  # 각 layer의 params
@@ -203,7 +202,7 @@ class ClassicLearner(BaseLearner):
                 print("\n")
 
             write_data = torch.cat(params_write, dim=0)
-            if self.config['nn_type'] != 'lenet300_100' and self.config['nn_type']!='lenet5':
+            if self.configs['nn_type'] != 'lenet300_100' and self.configs['nn_type']!='lenet5':
                 for epoch in range(1,epochs+1):
                     i = 0
                     epoch_data = list()
@@ -228,24 +227,24 @@ class ClassicLearner(BaseLearner):
             '''
             Save params
             '''
-        return self.config
+        return self.configs
 
     def _save_grad(self, p_groups, epoch, batch_idx):
         # save grad to the list
-        if self.config['grad_save'] == 'true':
+        if self.configs['grad_save'] == 'true':
             save_grad_list = list()
             for p in p_groups:
                 for l, p_layers in enumerate(p['params']):
                     
                     # node, rest
-                    if self.config['nn_type'] == 'lenet300_100' or self.config['nn_type']=='lenet5':
+                    if self.configs['nn_type'] == 'lenet300_100' or self.configs['nn_type']=='lenet5':
                         if len(p_layers.size()) > 1:  # weight filtering
                             p_nodes = p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n, p_node in enumerate(p_nodes):
                                 self.grad_list[-1].append(torch.cat([p_node.mean().view(-1), p_node.norm(
                                 ).view(-1), torch.nan_to_num(p_node.var()).view(-1)], dim=0).unsqueeze(0))
-                    # elif self.config['nn_type'] == 'lenet5':#TODO
+                    # elif self.configs['nn_type'] == 'lenet5':#TODO
                     #     if len(p_layers.size()) > 1:  # weight filtering
                     #         p_node = p_layers.grad.view(
                     #             -1).cpu().detach().clone()
@@ -262,7 +261,7 @@ class ClassicLearner(BaseLearner):
                                 ).view(-1), torch.nan_to_num(p_node.var()).view(-1)], dim=0).unsqueeze(0))
 
                     p_layers.to(self.device)
-            if 'lenet' not in self.config['nn_type']:
+            if 'lenet' not in self.configs['nn_type']:
                 npy_path = os.path.join(self.making_path, 'tmp', '{}_{}e_{}.npy'.format(
                     self.time_data, epoch, batch_idx))
                 row_data = torch.cat(save_grad_list, dim=0).unsqueeze(0)
@@ -271,7 +270,7 @@ class ClassicLearner(BaseLearner):
                 del row_data
 
     def revert_grad_(self, p_groups):
-        if self.configs['mode'] == 'train_prune' and self.grad_off_mask.sum() > 0 and len(self.grad_list) != 0:
+        if self.configs['mode'] == 'train_weight_prune' and self.grad_off_mask.sum() > 0 and len(self.grad_list) != 0:
             for p in p_groups:
                 for i, p_layers in enumerate(p['params']):
                     for p_nodes in p_layers:
@@ -285,7 +284,7 @@ class ClassicLearner(BaseLearner):
     def _prune_grad(self, p_groups, epoch, batch_idx):
         # pruning mask generator
         l = -1  # 처음 layer는 0으로 증가해서 maxpooling과 같은 요소를 피하기 위함
-        if self.config['mode'] == 'train_prune':
+        if self.configs['mode'] == 'train_weight_prune':
             for p in p_groups:
                 for i, p_layers in enumerate(p['params']):
                     # first and last layer live
@@ -353,13 +352,13 @@ class ClassicLearner(BaseLearner):
                             # print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())
 
     def turn_requires_grad_(self,p_groups,on_off):
-        if self.config['mode']=='train_prune':
+        if self.configs['mode']=='train_weight_prune':
             for p in p_groups:
                 for i,p_layers in enumerate(p['params']):
                     p_layers.requires_grad_(on_off)
 
     def prune_weight(self, p_groups,epoch,batch_idx):
-        if self.config['mode'] == 'train_prune' and epoch >= self.grad_turn_off_epoch+1:
+        if self.configs['mode'] == 'train_weight_prune' and epoch >= self.grad_turn_off_epoch+1:
             l = -1  # -1부터해서 0으로 시작하게함, for bias로 여겨지는 avgpooling,maxpooling회피용
             #turn off judgement
             if epoch == self.grad_turn_off_epoch+1 and batch_idx == 0:
@@ -370,7 +369,7 @@ class ClassicLearner(BaseLearner):
                         if len(p_layers.size())>1: #weight filtering
                             l+=1
                             for n, p_node in enumerate(p_layers):
-                                if self.grad_norm_cum['{}l_{}n'.format(l, n)] < self.config['threshold']:
+                                if self.grad_norm_cum['{}l_{}n'.format(l, n)] < self.configs['threshold']:
                                     self.grad_off_mask[l][n] = True
                                     print('{}l_{}n grad_off'.format(l, n))
                                     self.grad_off_freq_cum += 1

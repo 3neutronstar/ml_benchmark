@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 class Tensorboard():
-    def __init__(self, dataTensor, path, file_name, configs):
+    def __init__(self, path, configs):
         if configs['nn_type'] == 'lenet5':
             from NeuralNet.lenet5 import LeNet5
             model=LeNet5(configs)
@@ -27,8 +27,34 @@ class Tensorboard():
         self.NN_size_list = NN_size_list
         self.NN_type_list = NN_type_list
         self.node_size_list=node_size_list
-        print("node size: ",node_size_list)
         self.path=path
+        print("node size: ",node_size_list)
+
+
+###############train_grad_prune##########################################################
+class Tensorboard_node_norm(Tensorboard):
+    def __init__(self,path,file_name,configs):
+        super(Tensorboard_node_norm,self).__init__(path,configs)
+        ckpt=torch.load(os.path.join(path,'grad_data',file_name,'{}-class_grads.pth.tar'.format(self.class_idx)))
+        self.dataTensor=['ckpt_{}'.format(idx)] = ckpt.detach().numpy()
+        self.timeWriter=list()
+        self.timeWriter_cum=list()
+        for l,_ in enumerate(self.node_size_list):
+            self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/{}l'.format(file_name,l))))
+    def plot(self):
+        cum_index_w=0
+        for l, num_w in enumerate(self.node_size_list):  # b인 이유: node관찰이므로
+            cum_index_w+=num_w
+            for t, dataTensor in enumerate(self.dataTensor):
+                node_interest=dict()
+                for n in range(num_w):
+                    node_interest['{}n'.format(n)]=dataTensor[cum_index_w+n]
+                self.timeWriter[l].add_scalars('norm_{}l',node_interest,t)
+
+#############################################train,train_prune,train_weight_prune mode############################
+class Tensorboard_node_base(Tensorboard):
+    def __init__(self, dataTensor, path, file_name, configs):
+        super(Tensorboard_node_base,self).__init__(path,configs)
         if configs['visual_type'] == 'node_domain':
             self.nodeWriter = SummaryWriter(
                 log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
@@ -38,13 +64,13 @@ class Tensorboard():
         if configs['visual_type'] == 'time_domain':
             self.timeWriter=list()
             self.timeWriter_cum=list()
-            for l,_ in enumerate(node_size_list):
+            for l,_ in enumerate(self.node_size_list):
                 self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_info/{}l'.format(file_name,l))))
                 self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_info_cum/{}l'.format(file_name,l))))
         if configs['visual_type'] == 'time_elem_domain':
             self.timeWriter=list()
             self.timeWriter_cum=list()
-            for l,_ in enumerate(node_size_list):
+            for l,_ in enumerate(self.node_size_list):
                 self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_elem_info/{}l'.format(file_name,l))))
                 self.timeWriter_cum.append(SummaryWriter(log_dir=os.path.join(path,'{}/time_elem_info_cum/{}l'.format(file_name,l))))
 
@@ -57,10 +83,11 @@ class Tensorboard():
         self.info_type_list = [ 
                                'norm', 'norm_cum', ]#'var', 'var_cum','avg', 'avg_cum']
 
-class Tensorboard_node_big(Tensorboard):
+
+class Tensorboard_node_big(Tensorboard_node_base):
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_node_big, self).__init__(
-            dataTensor, path, file_name, configs)
+             path, configs)
     
     def time_write(self):
         self.cum_total_data=self.total_data.cumsum(dim=0)

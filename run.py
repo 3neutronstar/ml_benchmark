@@ -1,4 +1,3 @@
-from Visualization.create_cam import create_cam
 import argparse
 import json
 import os
@@ -19,7 +18,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or visual, prune, train_prune, test, extract_npy')
+        help='train or visual, prune, train_prune, test')
     
     #TRAIN SECTION
     parser.add_argument(
@@ -112,7 +111,7 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
-    train_mode_list=['train','train_prune']
+    train_mode_list=['train','train_weight_prune','train_grad_prune']
     if flags.file_name is None and flags.mode in train_mode_list:
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
@@ -159,16 +158,15 @@ def main(args):
                'threshold':flags.threshold,
                'grad_off_epoch':flags.grad_off_epoch,
                }
-    print("SEED:",flags.seed)
-    # print(flags.log)
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
-
+        print("SEED:",flags.seed)
         save_params(configs, time_data)
         print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
     else:
         if flags.file_name is not None:
             CALL_CONFIG = load_params(configs, file_name)
+            CALL_CONFIG['visual_mode']=CALL_CONFIG['mode'] # training종류 선택
             CALL_CONFIG['mode']=configs['mode']
             if configs['mode']=='visual':
                 CALL_CONFIG['visual_type']=configs['visual_type']
@@ -185,18 +183,19 @@ def main(args):
     # time_data
     # sys.
 
-    if flags.mode == 'train' or flags.mode=='train_prune':
-        from train import ClassicLearner
+    if flags.mode == 'train' or flags.mode=='train_weight_prune':
+        from Learner.train import ClassicLearner
         learner=ClassicLearner(model,time_data,configs)
         configs=learner.run()
-    elif flags.mode=='extract_npy':
-        from train import ClassicLearner
-        learner=ClassicLearner(model,time_data,configs)
-        configs=learner.save_grad(300)
     elif flags.mode=='train_snn':
-        from train import ClassicLearner
+        from Learner.train import ClassicLearner
         learner=ClassicLearner(model,time_data,configs)
         configs=learner.run()
+    elif flags.mode=='train_grad_prune':
+        from Learner.gradprune import GradPruneLearner
+        learner=GradPruneLearner(model,time_data,configs)
+        configs=learner.run()
+        save_params(configs, time_data)
 
 
     

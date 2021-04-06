@@ -32,25 +32,29 @@ def print_all_exp(fileTensor,path,file_name,config):
     for l, num_w in enumerate(node_size_list):  # b인 이유: node관찰이므로
         if l==2:
             for n in range(num_w):  # node 단위
-                write_str=file_name+"_{:>3}n: ".format(n)+str(torch.tensor(nodes_integrated['norm_{}l_{}n'.format(l,n)]).mean())+" 468 "+str(nodes_integrated['norm_{}l_{}n'.format(l,n)][468])+" 936 "+str(nodes_integrated['norm_{}l_{}n'.format(l,n)][936])
+                write_str=file_name+"_{:>3}n: ".format(n)+str(float(torch.tensor(nodes_integrated['norm_{}l_{}n'.format(l,n)]).mean()))+" 468 "+str(float(nodes_integrated['norm_{}l_{}n'.format(l,n)][468]))+" 936 "+str(float(nodes_integrated['norm_{}l_{}n'.format(l,n)][936]))+"\n"
                 dataFile.write(write_str)
                 dataFile.flush()
     dataFile.write(" ")
     dataFile.close()
 
 
-def using_tensorboard(fileTensor, config, path, file_name):
+def using_tensorboard(config, path, file_name):
     print('Using tensorboard')
     epoch_rows = math.ceil(60000.0/float(config['batch_size']))
     config['epoch_rows'] = epoch_rows
     if file_name is None:
         file_name = 'grad'
     if config['visual_type']=='expectation':#TEST
-        print_all_exp(fileTensor,path,file_name)#expectation of norm print #TODO REmove
+        from visualization import load_npy
+        dataTensor = load_npy(path, file_name)
+        print_all_exp(dataTensor,path,file_name,config)#expectation of norm print #TODO REmove
     else:
+        from visualization import load_npy
+        fileTensor = load_npy(path, file_name)
 
         if config['nn_type'] == 'lenet5':
-            logger = Tensorboard_node(fileTensor, path, file_name, config) #TODO REMOVE #Tensorboard_elem(fileTensor, path, file_name, config)
+            logger = Tensorboard_node(fileTensor,path, file_name, config) #TODO REMOVE #Tensorboard_elem(fileTensor, path, file_name, config)
             if config['visual_type'] == 'time_domain':
                 logger.time_write()
             elif config['visual_type'] == 'time_elem_domain':

@@ -34,27 +34,16 @@ def load_npy(path, file_name):
 
 def visualization(config, file_name):
     current_path = os.path.dirname(os.path.abspath(__file__))
+    tik = time.time()
     if config['colab'] == True:
         path = os.path.join('drive', 'MyDrive', 'grad_data')
     else:
         path = os.path.join(current_path, 'grad_data')
-    # dataFile,dataTensor=load_csv(path,file_name)
-    dataTensor = load_npy(path, file_name)
 
-
-    tik = time.time()
-    # dir_list=['layer_grad_distribution','node_info']
-    # for dir_name in dir_list:
-    #     if os.path.exists(os.path.join(path,dir_name)) == False:
-    #         os.mkdir(os.path.join(path,dir_name))
-    # Structure
-    # time layer element
-    # grad_data = weight ,bias 순서의 layer별 데이터
-    # weight_data=weight의 time list, layer list, element tensor
-    # data read
     if True:
-        using_tensorboard(dataTensor, config, path, file_name)
+        using_tensorboard(config, path, file_name)
     else:
+        dataTensor = load_npy(path, file_name)
         using_plt(dataTensor, config, path,file_name)
 
     tok = time.time()

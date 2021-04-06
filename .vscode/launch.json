@@ -11,17 +11,11 @@
             "program": "${workspaceFolder}/run.py",
             "console": "integratedTerminal",
             "args": [
-                "train_prune",
+                "train_grad_prune",
                 "--nn_type",
                 "lenet5",
                 "--log",
-                "false",
-                "--grad_save",
-                "false",
-                "--grad_off_epoch",
-                "1",
-                "--threshold",
-                "10"]
+                "false",]
         }
     ]
 }
