@@ -54,7 +54,8 @@ class GradPruneLearner(BaseLearner):
                 torch.save(grads_pool,os.path.join(self.making_path,self.time_data,'{}-class_grads.pth.tar'.format(self.class_idx)))
         print("Best Accuracy: "+str(best_accuracy))
         self.configs['train_end_epoch']=epoch
-        return self.configs
+        configs = self.save_grad(epoch)
+        return configs
 
     def _train(self, epoch):
         tik = time.time()
@@ -79,7 +80,7 @@ class GradPruneLearner(BaseLearner):
                     batch_grads=torch.cat([batch_grads,torch.tensor(batch_n_grad,device=self.device).unsqueeze(0)],dim=0)
             elif isinstance(self.optimizer,LateralInhibition):
                 self.optimizer.backward(loss)
-                
+
                 p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
                 self.grad_list.append([])
                 # grad save(prune후 save)
@@ -99,7 +100,9 @@ class GradPruneLearner(BaseLearner):
             tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
         if self.configs['log_extraction']=='true':
             sys.stdout.flush()
-        train_metric={'accuracy':running_accuracy,'loss': running_loss,'batch_grad':batch_grads}
+        train_metric={'accuracy':running_accuracy,'loss': running_loss}
+        if isinstance(self.optimizer,LookUpGrad):
+            train_metric['batch_grad']=batch_grads
         return train_metric
 
     def _eval(self):

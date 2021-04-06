@@ -40,6 +40,7 @@ class Tensorboard_node_norm(Tensorboard):
         self.timeWriter_cum=list()
         for l,_ in enumerate(self.node_size_list):
             self.timeWriter.append(SummaryWriter(log_dir=os.path.join(path,'{}/{}l'.format(file_name,l))))
+
     def time_write(self):
         cum_index_w=0
         for l, num_w in enumerate(self.node_size_list):  # b인 이유: node관찰이므로
@@ -54,7 +55,7 @@ class Tensorboard_node_norm(Tensorboard):
 class Tensorboard_node_base(Tensorboard):
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_node_base,self).__init__(path,configs)
-        if configs['visual_type'] == 'node_domain':
+        if 'node_domain' in configs['visual_type']:
             self.nodeWriter = SummaryWriter(
                 log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
         if configs['visual_type']=='dist_domain':
@@ -111,7 +112,7 @@ class Tensorboard_node_big(Tensorboard_node_base):
 
         
 
-class Tensorboard_node(Tensorboard):  # norm avg기반
+class Tensorboard_node(Tensorboard_node_base):  # norm avg기반
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_node, self).__init__(
             dataTensor, path, file_name, configs)
@@ -198,6 +199,19 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
                     'var_of_grads/{}l'.format(l), node_info[2], n)
             print('\r {} layer complete'.format(l+1), end='')
             self.nodeWriter.flush()
+    
+    def node_write_time(self):
+        # 시간에 따라 다른축
+        tmp_data=self.total_data.detach().clone()
+        for l,num_w in enumerate(self.node_size_list):
+            node_w=tmp_data[:num_w].detach().clone()
+            tmp_data = tmp_data[num_w:]
+            for n, node_info in enumerate(node_w):  # node 단위
+                node={}
+                for t in self.time_list:
+                    node['{}l/{}n'.format()]=node_info[1]
+                self.nodeWriter.add_scalars('{}iter_norm',node,n)
+            
 
     def dist_write(self):
         self.time_list=[i for i in range(self.total_data.size()[0])]
@@ -220,7 +234,7 @@ class Tensorboard_node(Tensorboard):  # norm avg기반
             print('{} time complete'.format(t))
 
 
-class Tensorboard_elem(Tensorboard):
+class Tensorboard_elem(Tensorboard_node_base):
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_elem, self).__init__(
             dataTensor, path, file_name, configs)

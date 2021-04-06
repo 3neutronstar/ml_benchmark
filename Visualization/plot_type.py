@@ -61,6 +61,10 @@ def using_tensorboard(config, path, file_name):
                 logger.time_write_elem()
             elif config['visual_type']=='dist_domain':
                 logger.dist_write()
+            elif config['visual_type'] == 'node_domain':
+                logger.node_write()
+            elif config['visual_type'] == 'node_domain_time': #TODO only in Tensorboard_node
+                logger.node_write_time()
         elif config['nn_type'] == 'lenet300_100':
             logger = Tensorboard_node(fileTensor, path, file_name, config)
             if config['visual_type'] == 'time_domain':
