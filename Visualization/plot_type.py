@@ -81,6 +81,8 @@ def using_tensorboard(config, path, file_name):
                 logger.node_write()
             elif config['visual_type']=='dist_domain':
                 logger.dist_write()
+            elif config['visual_type'] == 'node_domain_time':
+                logger.node_write_time()
 
 
     print('\n ==Visualization Complete==')

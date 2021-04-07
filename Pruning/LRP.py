@@ -32,7 +32,7 @@ class LateralInhibition():
                 p.grad=b_matrix.clone()
 
     def _lateral_inhibition(self,grad_layers):
-        k,alpha,beta,num=2,1e-4,0.75,5
+        k,alpha,beta,num=2, 1e-4, 0.75, 5
         b_matrix=torch.zeros_like(grad_layers)
         for n,g_node in enumerate(grad_layers):
             lower_idx=int(max(0,n-num/2))

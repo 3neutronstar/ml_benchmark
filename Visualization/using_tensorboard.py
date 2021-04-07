@@ -55,9 +55,14 @@ class Tensorboard_node_norm(Tensorboard):
 class Tensorboard_node_base(Tensorboard):
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_node_base,self).__init__(path,configs)
-        if 'node_domain' in configs['visual_type']:
+        if configs['visual_type']=='node_domain':
             self.nodeWriter = SummaryWriter(
                 log_dir=os.path.join(path,'{}/node_info'.format(file_name)))
+        elif configs['visual_type']=='node_domain_time':
+            self.nodeWriter=list()
+            for l,_ in enumerate(self.node_size_list):
+                self.nodeWriter.append(SummaryWriter(
+                    log_dir=os.path.join(path,'{}/node_info/{}l'.format(file_name,l))))
         if configs['visual_type']=='dist_domain':
             self.distWriter=SummaryWriter(
                 log_dir=os.path.join(path,'{}/dist_info'.format(file_name)))
@@ -82,18 +87,19 @@ class Tensorboard_node_base(Tensorboard):
         self.file_name=file_name
         self.info_type_list = [ 
                                'norm', 'norm_cum', ]#'var', 'var_cum','avg', 'avg_cum']
+        for t ,_ in enumerate(self.total_data):
+            self.time_list.append(t)
 
 
 class Tensorboard_node_big(Tensorboard_node_base):
     def __init__(self, dataTensor, path, file_name, configs):
         super(Tensorboard_node_big, self).__init__(
-             path, configs)
+             dataTensor,path,file_name, configs)
     
     def time_write(self):
         self.cum_total_data=self.total_data.cumsum(dim=0)
         cum_index_w=0
         for l, num_w in enumerate(self.node_size_list):  # b인 이유: node관찰이므로
-            cum_index_w+=num_w
             for t, _ in enumerate(self.total_data):
                 node_grad_dict=dict()
                 node_grad_dict_cum=dict()
@@ -106,11 +112,28 @@ class Tensorboard_node_big(Tensorboard_node_base):
                 self.timeWriter_cum[l].add_scalars('norm_cum',node_grad_dict_cum,t)
                 if t%1000==0:
                     print('\r{}l_{}t Complete'.format(l,t),end='')
-            self.timeWriter[l].flush()
-            self.timeWriter_cum[l].flush()
+                self.timeWriter[l].flush()
+                self.timeWriter_cum[l].flush()
+            self.timeWriter[l].close()
+            self.timeWriter_cum[l].close()
+            cum_index_w+=num_w
         print('\n')
 
-        
+    def node_write_time(self):
+        # 시간에 따라 다른축
+        cum_index_w=0
+        for l,num_w in enumerate(self.node_size_list):
+            if l<13:
+                for n in range(num_w):  # node 단위
+                    node={}
+                    for t in self.time_list:
+                        if t<10:
+                            node['{}iter'.format(t)]=self.total_data[t,cum_index_w+n,1]
+                    self.nodeWriter[l].add_scalars('{}l_norm'.format(l),node,n)   
+                    self.nodeWriter[l].flush()
+            cum_index_w+=num_w
+            self.nodeWriter[l].close()
+            print('\r{} layer complete'.format(l),end='') 
 
 class Tensorboard_node(Tensorboard_node_base):  # norm avg기반
     def __init__(self, dataTensor, path, file_name, configs):
@@ -180,6 +203,7 @@ class Tensorboard_node(Tensorboard_node_base):  # norm avg기반
                                 break
                         self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
                     self.timeWriter[l_idx].flush()
+                self.timeWriter[l_idx].close()
                 print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
 
     def node_write(self):
@@ -334,6 +358,8 @@ class Tensorboard_elem(Tensorboard_node_base):
                             layer_dict['{}n'.format(n_idx)]=self.nodes_integrated['{}_{}l_{}n'.format(type_info,l_idx,n_idx)][t]
                         self.timeWriter[l_idx].add_scalars(type_info,layer_dict,t)
                     self.timeWriter[l_idx].flush()
+                self.timeWriter[l_idx].close()
+                self.timeWriter_cum[l_idx].close()
                 print('\r{}_{}l Complete====='.format(type_info,l_idx),end='')
         del self.nodes_integrated
     
@@ -395,6 +421,8 @@ class Tensorboard_elem(Tensorboard_node_base):
                             self.timeWriter[l_idx].flush()
                             self.timeWriter_cum[l_idx].flush()
                             print('\r {}l_{}n_{}e complete'.format(l_idx,n,e),end='')
+            self.timeWriter[l_idx].close()
+            self.timeWriter_cum[l_idx].close()
 
     def dist_write(self):
         for t in range(self.total_data.size()[0]):

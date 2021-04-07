@@ -5,7 +5,7 @@ import sys
 import torch
 from Learner.base_learner import BaseLearner
 from Pruning.lookupgrad import LookUpGrad
-from Pruning.lateral_inhibition import LateralInhibition
+from Pruning.LRP import LateralInhibition
 
 class GradPruneLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
