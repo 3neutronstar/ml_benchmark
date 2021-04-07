@@ -14,9 +14,9 @@ benchmark repository
     python run.py visual --file_name [date you train]
     tensorboard --logdir grad_data/[data you train]
 ```
-- Training the gradient prune with threshold
+- Training the gradient lateral inhibition with threshold
 ```shell script
-    python run.py train_grad_prune --threshold 100
+    python run.py train_lrp --nn_type vgg16    
 ```
 
 - Pruning weight and gradient while training by cumulative value of gradient (vgg16 is available, but not recommended)

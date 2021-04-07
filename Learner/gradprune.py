@@ -12,7 +12,7 @@ class GradPruneLearner(BaseLearner):
         super(GradPruneLearner,self).__init__(model,time_data,file_path,configs)
         if configs['mode']=='train_grad_visual':
             self.optimizer=LookUpGrad(optimizer=self.optimizer)
-        elif configs['mode']=='train_grad_prune':
+        elif configs['mode']=='train_lrp':
             self.optimizer=LateralInhibition(optimizer=self.optimizer)
         self.class_idx=1
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
