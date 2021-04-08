@@ -20,7 +20,7 @@ class LeNet5(nn.Module):
         self.log_softmax = nn.LogSoftmax(dim=-1)
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=config['momentum'], lr=config['lr'], nesterov=True, weight_decay=1e-4)
-        self.loss=nn.CrossEntropyLoss()
+        self.loss=nn.CrossEntropyLoss(reduction='none')
         self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
         self.w_size_list = [150, 2400, 48000, 10080, 840]  # weight,bias size
         self.b_size_list = [6, 16, 120, 84, 10]

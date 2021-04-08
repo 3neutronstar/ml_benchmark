@@ -88,7 +88,7 @@ def base_data_loader(train_data,test_data,configs):
 
 def data_loader(configs):
     train_data, test_data = load_dataset(configs)
-    if configs['mode']=='train' or configs['mode']=='train_weight_prune':
+    if configs['mode']=='train' or configs['mode']=='train_weight_prune' or configs['mode']=='train_moo':
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)

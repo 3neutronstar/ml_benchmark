@@ -76,7 +76,7 @@ def parse_args(args):
         epochs = 60
         lr=1e-2
         momentum=0.9
-    elif nn_type=='resnet18':
+    elif 'resnet' in nn_type:
         dataset='cifar10'
         lr=1e-3
         momentum=0.9
@@ -111,7 +111,7 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
-    train_mode_list=['train','train_weight_prune','train_lrp','train_grad_visual']
+    train_mode_list=['train','train_weight_prune','train_lrp','train_grad_visual','train_moo']
     if flags.file_name is None and flags.mode in train_mode_list:
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
@@ -191,6 +191,11 @@ def main(args):
     elif flags.mode=='train_lrp' or flags.mode=='train_grad_visual':
         from Learner.gradprune import GradPruneLearner
         learner=GradPruneLearner(model,time_data,file_path,configs)
+        configs=learner.run()
+        save_params(configs, time_data)
+    elif flags.mode=='train_moo':
+        from Learner.moo import MOOLearner
+        learner=MOOLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
 

@@ -11,11 +11,11 @@
             "program": "${workspaceFolder}/run.py",
             "console": "integratedTerminal",
             "args": [
-                "train_grad_prune",
+                "train_moo",
                 "--nn_type",
-                "vgg16",
-                "--epochs",
-                "1",
+                "resnet18",
+                //"--epochs",
+                //"1",
                 "--log",
                 "false",]
         }

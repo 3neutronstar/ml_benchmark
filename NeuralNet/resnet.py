@@ -35,9 +35,9 @@ class Bottleneck(nn.Module):
         self.block = bottleneck_block(in_dim, mid_dim, out_dim, down=down)
         self.relu = nn.ReLU(inplace=True)
         if down:
-            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=2, padding=0), # size 줄어듬
+            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=2, padding=0) # size 줄어듬
         else:
-            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=1, padding=0), # size 줄어들지 않음
+            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=1, padding=0) # size 줄어들지 않음
 
         self.changedim = nn.Sequential(conn_layer, nn.BatchNorm2d(out_dim))
 
@@ -134,7 +134,7 @@ class ResNet(nn.Module):
             self.conv5 = deep_make_layer(base_dim*16, base_dim*8, base_dim*32, repeats[3])
         
         # 3번
-        self.avgpool = nn.AvgPool2d(kernel_size=7, stride=1)
+        self.avgpool = nn.AvgPool2d(kernel_size=4, stride=1)
         self.classifer = nn.Linear(2048, self.num_classes)
 
         self.optim=optim.SGD(self.parameters(),configs['lr'],configs['momentum'],nesterov=True)
