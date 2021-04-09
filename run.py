@@ -111,7 +111,7 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
-    train_mode_list=['train','train_weight_prune','train_lrp','train_grad_visual','train_moo']
+    train_mode_list=['train','train_weight_prune','train_lrp','train_grad_visual','train_mtl']
     if flags.file_name is None and flags.mode in train_mode_list:
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
