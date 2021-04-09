@@ -54,10 +54,6 @@ class ClassicLearner(BaseLearner):
                 break
             if self.device == 'gpu':
                 torch.cuda.empty_cache()
-            #TODO REMOVE for checking lateral inhibition
-            if epoch ==1:
-                break
-
 
         if self.configs['mode'] == 'train_weight_prune':
             print("before prune")
