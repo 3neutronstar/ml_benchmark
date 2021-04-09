@@ -112,9 +112,8 @@ class ClassicLearner(BaseLearner):
         running_accuracy = 100.0 * correct / float(num_training_data)
         print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
             tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
-            
         if self.configs['log_extraction']=='true':
-            sys.stdout.flush()
+            sys.stdout.flush()         
         return running_accuracy, running_loss
 
     def _eval(self):

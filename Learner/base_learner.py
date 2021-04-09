@@ -49,7 +49,7 @@ class BaseLearner():
     def save_grad(self, epochs):
         # Save all grad to the file
         self.configs['end_epoch'] = epochs
-        if self.configs['grad_save'] == 'true':
+        if self.configs['grad_save'] == True:
             param_size = list()
             params_write = list()
 
@@ -125,7 +125,7 @@ class BaseLearner():
 
     def _save_grad(self, p_groups, epoch, batch_idx):
         # save grad to the list
-        if self.configs['grad_save'] == 'true':
+        if self.configs['grad_save'] == True:
             save_grad_list = list()
             for p in p_groups:
                 for l, p_layers in enumerate(p['params']):

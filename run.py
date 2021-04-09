@@ -47,7 +47,7 @@ def parse_args(args):
         help='generate log')
     # save grad
     parser.add_argument(
-        '--grad_save', type=str, default='false',
+        '--grad_save', type=bool, default=False,
         help='generate grad_save')
     # prune threshold
     parser.add_argument(
@@ -78,7 +78,7 @@ def parse_args(args):
         momentum=0.9
     elif 'resnet' in nn_type:
         dataset='cifar10'
-        lr=1e-1
+        lr=1e-2
         epochs=300
         momentum=0.9
 
@@ -154,7 +154,7 @@ def main(args):
                'mode':flags.mode,
                'patience':flags.patience,
                'momentum':flags.momentum,
-               'grad_save':flags.grad_save.lower(),
+               'grad_save':flags.grad_save,
                'threshold':flags.threshold,
                'grad_off_epoch':flags.grad_off_epoch,
                }
