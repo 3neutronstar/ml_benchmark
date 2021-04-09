@@ -193,9 +193,9 @@ def main(args):
         learner=GradPruneLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif flags.mode=='train_moo':
-        from Learner.moo import MOOLearner
-        learner=MOOLearner(model,time_data,file_path,configs)
+    elif flags.mode=='train_mtl':
+        from Learner.mtl import MTLLearner
+        learner=MTLLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
 
