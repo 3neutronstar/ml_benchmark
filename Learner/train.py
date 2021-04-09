@@ -96,7 +96,6 @@ class ClassicLearner(BaseLearner):
             # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
-            print(loss)
             loss.backward()  # 역전파
             p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
             self.grad_list.append([])

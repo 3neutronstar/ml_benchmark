@@ -35,14 +35,16 @@ class PCGrad():
         '''
 
         grads, shapes, has_grads = self._pack_grad(objectives,labels)
-        total_grad=list()
+        total_grads=list()
         for label_idx,grad in enumerate(grads):
-            pc_grad = self._project_conflicting(grad, has_grads[label_idx])
-            pc_grad = self._unflatten_grad(pc_grad, shapes[label_idx][0])
-            total_grad.append(pc_grad)
+            if len(has_grads[label_idx])==0:
+                continue
+            pc_grad = self._project_conflicting(grad, has_grads[label_idx])# 각 클래스당 surgery
+            pc_grad = self._unflatten_grad(pc_grad, shapes[label_idx][0])# 각 클래스당 surgery
+            total_grads.append(pc_grad)
         # 여기까지 각 label에 대한 grad 설정
-        total_grad_tensor=torch.cat(total_grad,dim=0)
-        self._set_grad(total_grad)
+        self._set_grad(total_grads)
+        
         return
 
     def _project_conflicting(self, grads, has_grads, shapes=None):
@@ -61,21 +63,19 @@ class PCGrad():
                                             for g in pc_grad]).sum(dim=0)
         return merged_grad
 
-    def _set_grad(self, grads):
+    def _set_grad(self, total_grads):
         '''
         set the modified gradients to the network
         '''
         #scalarization
-        if True:
-            grads=grads.mean(dim=0)
-        else:
-            grads=grads.sum(dim=0)
-
         idx = 0
-        for group in self._optim.param_groups:
-            for p in group['params']:
-                # if p.grad is None: continue
-                p.grad = grads[idx]
+        for total_grad in total_grads:
+            for group in self._optim.param_groups:
+                for p,grad in zip(group['params'],total_grad):
+                    # if p.grad is None: continue
+                    if idx==0:
+                        p.grad=torch.zeros_like(p.grad)
+                p.grad += grad[idx].cuda()
                 idx += 1
         return
 
@@ -88,8 +88,7 @@ class PCGrad():
         - shape: a list of the shape of the parameters
         - has_grad: a list of mask represent whether the parameter has gradient
         '''
-
-        grads, shapes, has_grads = [[] for _ in len(labels)], [[] for _ in len(labels)], [[] for _ in len(labels)]
+        grads, shapes, has_grads = [[] for _ in set(labels.tolist())], [[] for _ in set(labels.tolist())], [[] for _ in set(labels.tolist())]
         for obj, label in zip(objectives,labels):
             self._optim.zero_grad(set_to_none=True)
             obj.backward(retain_graph=True)
@@ -97,6 +96,7 @@ class PCGrad():
             grads[label].append(self._flatten_grad(grad, shape))
             has_grads[label].append(self._flatten_grad(has_grad, shape))
             shapes[label].append(shape)
+
         return grads, shapes, has_grads
 
     def _unflatten_grad(self, grads, shapes):
@@ -125,6 +125,7 @@ class PCGrad():
         grad, shape, has_grad = [], [], []
         for group in self._optim.param_groups:
             for p in group['params']:
+                p=p.to('cpu')
                 # if p.grad is None: continue
                 # tackle the multi-head scenario
                 if p.grad is None:
@@ -136,3 +137,4 @@ class PCGrad():
                 grad.append(p.grad.clone())
                 has_grad.append(torch.ones_like(p).to(p.device))
         return grad, shape, has_grad
+

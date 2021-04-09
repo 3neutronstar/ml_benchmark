@@ -64,10 +64,10 @@ class MOOLearner(BaseLearner):
             self.optimizer.pc_backward(loss,target)
             self.optimizer.step()
 
-            running_loss += loss.item()
+            running_loss += loss.sum().item()
             if batch_idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
-                    data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.item()), end='')
+                    data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.sum().item()), end='')
 
         running_loss /= num_training_data
         tok = time.time()

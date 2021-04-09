@@ -2,153 +2,130 @@ import torch
 import torch.nn as nn
 from torch.nn.modules.loss import MSELoss
 import torch.optim as optim
-def conv_start():
-    return nn.Sequential(
-        nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
-        nn.BatchNorm2d(64),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d(kernel_size=3, stride=2),
-    )
+import torch.nn.functional as F
 
-def bottleneck_block(in_dim, mid_dim, out_dim, down=False):
-    layers = []
-    if down:
-        layers.append(nn.Conv2d(in_dim, mid_dim, kernel_size=1, stride=2, padding=0))
-    else:
-        layers.append(nn.Conv2d(in_dim, mid_dim, kernel_size=1, stride=1, padding=0))
-    layers.extend([
-        nn.BatchNorm2d(mid_dim),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(mid_dim, mid_dim, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(mid_dim),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(mid_dim, out_dim, kernel_size=1, stride=1, padding=0),
-        nn.BatchNorm2d(out_dim),
-    ])
-    return nn.Sequential(*layers)
+
+class BasicBlock(nn.Module):
+    expansion = 1
+
+    def __init__(self, in_planes, planes, stride=1):
+        super(BasicBlock, self).__init__()
+        self.conv1 = nn.Conv2d(
+            in_planes, planes, kernel_size=3, stride=stride, padding=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
+                               stride=1, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
+
+    def forward(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.bn2(self.conv2(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
+
 
 class Bottleneck(nn.Module):
-    def __init__(self, in_dim, mid_dim, out_dim, down:bool = False, starting:bool=False) -> None:
+    expansion = 4
+
+    def __init__(self, in_planes, planes, stride=1):
         super(Bottleneck, self).__init__()
-        if starting:
-            down = False
-        self.block = bottleneck_block(in_dim, mid_dim, out_dim, down=down)
-        self.relu = nn.ReLU(inplace=True)
-        if down:
-            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=2, padding=0) # size 줄어듬
-        else:
-            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=1, padding=0) # size 줄어들지 않음
+        self.conv1 = nn.Conv2d(in_planes, planes, kernel_size=1, bias=False)
+        self.bn1 = nn.BatchNorm2d(planes)
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
+                               stride=stride, padding=1, bias=False)
+        self.bn2 = nn.BatchNorm2d(planes)
+        self.conv3 = nn.Conv2d(planes, self.expansion *
+                               planes, kernel_size=1, bias=False)
+        self.bn3 = nn.BatchNorm2d(self.expansion*planes)
 
-        self.changedim = nn.Sequential(conn_layer, nn.BatchNorm2d(out_dim))
-
-    def forward(self, x):
-        identity = self.changedim(x)
-        x = self.block(x)
-        x += identity
-        x = self.relu(x)
-        return x
-
-def deep_make_layer(in_dim, mid_dim, out_dim, repeats, starting=False):
-    layers = []
-    layers.append(Bottleneck(in_dim, mid_dim, out_dim, down=True, starting=starting))
-    for _ in range(1, repeats):
-        layers.append(Bottleneck(out_dim, mid_dim, out_dim, down=False))
-    return nn.Sequential(*layers)
-
-#shallow residual
-def residual_block(in_dim,out_dim,down=False):
-    layers = []
-    if down:
-        layers.append(nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=2, padding=0))
-    else:
-        layers.append(nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=1, padding=1))
-    layers.extend([
-        nn.BatchNorm2d(out_dim),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
-        nn.BatchNorm2d(out_dim),
-    ])
-    return nn.Sequential(*layers)
-
-class Residual(nn.Module):
-    def __init__(self,in_dim,out_dim,down:bool=False,starting:bool=False):
-        super(Residual,self).__init__()
-        if starting:
-            down=False
-        layers = []
-        if down:
-            layers.append(nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=2, padding=0))
-        else:
-            layers.append(nn.Conv2d(in_dim, out_dim, kernel_size=3, stride=1, padding=1))
-        layers.extend([
-            nn.BatchNorm2d(out_dim),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(out_dim, out_dim, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm2d(out_dim),
-        ])
-        self.block=nn.Sequential(*layers)
-    
-        self.relu = nn.ReLU(inplace=True)
-        if down:
-            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=2, padding=1)# size 줄어듬
-        else:
-            conn_layer = nn.Conv2d(in_dim, out_dim, kernel_size=1, stride=1, padding=1)# size 줄어들지 않음
-
-        self.changedim = nn.Sequential(conn_layer, nn.BatchNorm2d(out_dim))
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_planes != self.expansion*planes:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_planes, self.expansion*planes,
+                          kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(self.expansion*planes)
+            )
 
     def forward(self, x):
-        identity = self.changedim(x)
-        x = self.block(x)
-        x += identity
-        x = self.relu(x)
-        return x
-
-def shallow_make_layer(in_dim, out_dim, repeats, starting=False):
-    layers = []
-    layers.append(Residual(in_dim, out_dim, down=True, starting=starting))
-    for _ in range(1, repeats):
-        layers.append(Residual(out_dim, out_dim, down=False))
-    return nn.Sequential(*layers)
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = F.relu(self.bn2(self.conv2(out)))
+        out = self.bn3(self.conv3(out))
+        out += self.shortcut(x)
+        out = F.relu(out)
+        return out
 
 class ResNet(nn.Module):
     def __init__(self, configs):
-        repeats_dict={'resnet18':[2,2,2,2],'resnet34':[3,4,6,3],'resnet50':[3,4,6,3],'resnet101':[3,4,23,3],'resnet152':[3,8,36,3]}
-        repeats=repeats_dict[configs['nn_type']]
-        num_classes=configs['num_classes']
         super(ResNet, self).__init__()
-        self.num_classes = num_classes
-        # 1번
-        self.conv1 = conv_start()
+        type_dict={'resnet18':([2,2,2,2],64,BasicBlock),
+        'resnet34':([3,4,6,3],64,BasicBlock),
+        'resnet50':([3,4,6,3],64,Bottleneck),
+        'resnet101':([3,4,23,3],64,Bottleneck),
+        'resnet152':([3,8,36,3],64,Bottleneck),
+        'resnet20':([3,3,3],16,BasicBlock),
+        'resnet32':([5,5,5],16,BasicBlock),
+        'resnet44':([7,7,7],16,BasicBlock),
+        'resnet56':([9,9,9],16,BasicBlock),
+        'resnet110':([18,18,18],16,BasicBlock),
+        'resnet1202':([200,200,200],16,BasicBlock)
+        }
+        resnet_type=configs['nn_type']
+        num_classes=configs['num_classes']
+        self.residual_len=len(type_dict[resnet_type][0])
+        if self.residual_len==4:
+            self.in_planes = 64
+            self.conv1 = nn.Conv2d(3, 64, kernel_size=3,
+                                stride=1, padding=1, bias=False)
+            self.bn1 = nn.BatchNorm2d(64)
+            plane_list=[64,128,256,512]
+            stride_list=[1,2,2,2]
+        elif self.residual_len==3:
+            self.in_planes=16
+            self.in_planes = 16
+            self.conv1 = nn.Conv2d(3, 16, kernel_size=3, stride=1, padding=1, bias=False)
+            self.bn1 = nn.BatchNorm2d(16)
+            plane_list=[16,32,64]
+            stride_list=[1,2,2]
+        self.device=configs['device']        
+        block=type_dict[resnet_type][2]
+        self.linear = nn.Linear(plane_list[-1]*block.expansion, num_classes)
+        residual=list()
+        for planes,num_blocks,strides in zip(plane_list,type_dict[resnet_type][0],stride_list):
+            residual.append(self._make_layer(type_dict[resnet_type][2],planes,num_blocks,strides))
+        self.residual_layer=nn.Sequential(*residual)
+        self.optim = optim.SGD(params=self.parameters(),
+                               momentum=configs['momentum'], lr=configs['lr'], nesterov=True, weight_decay=1e-4)
         
-        # 2번
-        base_dim = 64
-        if configs['nn_type']=='resnet18' or configs['nn_type']=='resnet34':
-            self.conv2 = shallow_make_layer(base_dim, base_dim, repeats[0], starting=True)
-            self.conv3 = shallow_make_layer(base_dim, base_dim*2, repeats[1])
-            self.conv4 = shallow_make_layer(base_dim*2, base_dim*4, repeats[2])
-            self.conv5 = shallow_make_layer(base_dim*4, base_dim*8, repeats[3])
+        if configs['mode']=='train_moo':
+            reduction='none'
         else:
-            self.conv2 = deep_make_layer(base_dim, base_dim, base_dim*4, repeats[0], starting=True)
-            self.conv3 = deep_make_layer(base_dim*4, base_dim*2, base_dim*8, repeats[1])
-            self.conv4 = deep_make_layer(base_dim*8, base_dim*4, base_dim*16, repeats[2])
-            self.conv5 = deep_make_layer(base_dim*16, base_dim*8, base_dim*32, repeats[3])
-        
-        # 3번
-        self.avgpool = nn.AvgPool2d(kernel_size=4, stride=1)
-        self.classifer = nn.Linear(2048, self.num_classes)
+            reduction='mean'
+        self.loss=nn.CrossEntropyLoss(reduction=reduction)
+        self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
+                                100, 150], gamma=0.1)
 
-        self.optim=optim.SGD(self.parameters(),configs['lr'],configs['momentum'],nesterov=True)
-        self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=50,gamma=0.1)
-        self.loss=nn.CrossEntropyLoss()
+
+    def _make_layer(self, block, planes, num_blocks, stride):
+        strides = [stride] + [1]*(num_blocks-1)
+        layers = []
+        for stride in strides:
+            layers.append(block(self.in_planes, planes, stride).to(self.device))
+            self.in_planes = planes * block.expansion
+        return nn.Sequential(*layers)
 
     def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = self.conv5(x)
-        x = self.avgpool(x)
-        # 3번 2048x1 -> 1x2048
-        x = x.view(x.size(0), -1)
-        x = self.classifer(x)
-        return x
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.residual_layer(out)
+        out = F.avg_pool2d(out, out.size()[3])
+        out = out.view(out.size(0), -1)
+        out = self.linear(out)
+        return out

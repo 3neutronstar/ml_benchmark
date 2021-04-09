@@ -78,7 +78,7 @@ def parse_args(args):
         momentum=0.9
     elif 'resnet' in nn_type:
         dataset='cifar10'
-        lr=1e-3
+        lr=1e-1
         momentum=0.9
         epochs=300
 
