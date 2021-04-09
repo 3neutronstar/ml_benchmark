@@ -44,7 +44,13 @@ class PCGrad():
             total_grads.append(pc_grad)
         # 여기까지 각 label에 대한 grad 설정
         self._set_grad(total_grads)
-        
+
+        #summation
+        #그냥진행
+        #avg
+        for group in self._optim.param_groups:
+            for p in group['params']:
+                p.grad=torch.div(p.grad,len(labels))
         return
 
     def _project_conflicting(self, grads, has_grads, shapes=None):
@@ -69,7 +75,7 @@ class PCGrad():
         '''
         #scalarization
         idx = 0
-        for total_grad in total_grads:
+        for label_idx,total_grad in enumerate(total_grads):
             for group in self._optim.param_groups:
                 for p,grad in zip(group['params'],total_grad):
                     # if p.grad is None: continue
