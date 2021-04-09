@@ -75,7 +75,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
             locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
                                                     locals()['train_subset_per_class_{}'.format(idx)])
 
-            train_data_loader.append( torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
+            train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
                                                     batch_size=configs['batch_size'],
                                                     shuffle=True
                                                     ))
