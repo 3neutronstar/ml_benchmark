@@ -44,6 +44,20 @@ class MTLLearner_v2(BaseLearner):
         self.configs['train_end_epoch']=epoch
         configs = self.save_grad(epoch)
         return configs
+    def _class_wise_write(self,loader):
+        data,target=next(loader)
+        data,target = data.to(self.device), target.to(
+                self.device)
+        output = self.model(data)
+        loss = self.criterion(output, target) 
+
+        pred = output.argmax(dim=1, keepdim=True)
+        correct = pred.eq(target.view_as(pred)).sum().item()
+
+        self.optimizer.pc_backward(loss,target)
+        data_num=len(data)
+        return correct,loss,data_num
+
 
     def _train(self, epoch):
         tik = time.time()
@@ -51,22 +65,19 @@ class MTLLearner_v2(BaseLearner):
         running_loss = 0.0
         correct = 0
         num_training_data = len(self.train_loader[0].dataset)*len(self.train_loader)
-        for batch_idx, (data, target) in enumerate(self.train_loader):
-            data, target = data.to(self.device), target.to(
-                self.device)  # gpu로 올림
-            output = self.model(data)
-            loss = self.criterion(output, target) 
-
-            pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
-
-            self.optimizer.pc_backward(loss,target)
-            self.optimizer.step()
-
-            running_loss += loss.sum().item()
+        while True:
+            for loader_idx,loader in enumerate(self.train_loader):
+                _correct,loss,data_num=self._class_wise_write(loader)
+                correct+=_correct
+                running_loss += loss.sum().item()
+                
+                batch_idx=loader.__iter__()
             if batch_idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
-                    data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.sum().item()), end='')
+                    data_num*loader_idx), num_training_data, 100.0 * correct / len(self.train_loader), loss.sum().item()), end='')
+            self.optimizer.step()
+            if self.train_loader[batch_idx].__getitem__()==self.train_loader[-1][-1]:
+                break
 
         running_loss /= num_training_data
         tok = time.time()
@@ -77,7 +88,6 @@ class MTLLearner_v2(BaseLearner):
             sys.stdout.flush()
         train_metric={'accuracy':running_accuracy,'loss': running_loss}
         return train_metric
-
     def _eval(self):
         self.model.eval()
         eval_loss = 0
@@ -87,7 +97,7 @@ class MTLLearner_v2(BaseLearner):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
-                eval_loss += loss.item()
+                eval_loss += loss.sum().item()
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()

@@ -68,7 +68,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
         data_classes = [i for i in range(10)] # MNIST
         train_data_loader=list()
         for idx in data_classes:
-            locals()['train_subset_per_class_{}'.format(1)] = list()
+            locals()['train_subset_per_class_{}'.format(idx)] = list()
             for j in range(len(train_data)):
                 if int(train_data[j][1]) == idx:
                     locals()['train_subset_per_class_{}'.format(idx)].append(j)
@@ -82,6 +82,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
 
         test_data_loader = torch.utils.data.DataLoader(test_data,
                         batch_size=configs['batch_size'], shuffle=False)
+        print("Finish Load splitted dataset")
     else:
         raise NotImplementedError
     return train_data_loader, test_data_loader #list(loader),loader return

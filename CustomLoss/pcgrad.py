@@ -134,10 +134,22 @@ class PCGrad(): # mtl_v2 only
 class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
-        self.pc_grad_list=list()
+        self.saving_pc_grad_list=list()
     
     def step(self):
-        return self._optim.step()
+        new_pc_grad=list()
+        for idx,savings in enumerate(self.saving_pc_grad_list):
+            for layer_idx,pc_grads in enumerate(self.saving_pc_grad_list[idx]):
+                if idx==0:
+                    new_pc_grad.append(list())
+                new_pc_grad[layer_idx].append(pc_grads)
+
+        for layer_grad in new_pc_grad:
+            layer_grad=torch.cat(layer_grad,dim=0).mean(dim=0)
+        self._set_grad(new_pc_grad)
+        self._optim.step()
+        self.saving_pc_grad_list=list()
+        return 
 
     def pc_backward(self, objectives,labels):
         '''
@@ -148,12 +160,12 @@ class PCGrad_v2(PCGrad):
         
         grads, shapes, has_grads = self._pack_grad(objectives)
         pc_grad = self._project_conflicting(grads, has_grads)
-        self.pc_grad_list.append(self._unflatten_grad(pc_grad, shapes[0]))
-        new_pc_grad=list()
-        for idx,grad_layer in enumerate(self.pc_grad_list[0]):
-            new_pc_grad.append(torch.zeros_like(grad_layer))
-            for pc_grad_ in self.pc_grad_list:
-                new_pc_grad[idx]+=pc_grad_[idx]
-        self.pc_grad_list=list()
-        self._set_grad(new_pc_grad)
+        pc_grad=self._unflatten_grad(pc_grad, shapes[0])
+        pc_grad_list=list()
+        for idx,grad_layer in enumerate(pc_grad[0]):
+            pc_grad_list.append(torch.zeros_like(grad_layer))
+            for pc_grad_ in self.saving_pc_grad_list:
+                pc_grad_list[idx]+=pc_grad_[idx]
+            pc_grad_list[idx]=torch.div(pc_grad_list[idx],len(self.saving_pc_grad_list))
+        self.saving_pc_grad_list.append(pc_grad_list)
         return
