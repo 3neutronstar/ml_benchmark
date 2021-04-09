@@ -1,10 +1,12 @@
+import enum
 import torch
 import torch.nn as nn
 import copy
 import random
 import numpy as np
 
-class PCGrad():
+
+class PCGrad_v1(): # mtl_v2 only
     def __init__(self, optimizer):
         self._optim = optimizer
         return
@@ -34,23 +36,10 @@ class PCGrad():
         - objectives: a list of objectives
         '''
 
-        grads, shapes, has_grads = self._pack_grad(objectives,labels)
-        total_grads=list()
-        for label_idx,grad in enumerate(grads):
-            if len(has_grads[label_idx])==0:
-                continue
-            pc_grad = self._project_conflicting(grad, has_grads[label_idx])# 각 클래스당 surgery
-            pc_grad = self._unflatten_grad(pc_grad, shapes[label_idx][0])# 각 클래스당 surgery
-            total_grads.append(pc_grad)
-        # 여기까지 각 label에 대한 grad 설정
-        self._set_grad(total_grads)
-
-        #summation
-        #그냥진행
-        #avg
-        for group in self._optim.param_groups:
-            for p in group['params']:
-                p.grad=torch.div(p.grad,len(labels))
+        grads, shapes, has_grads = self._pack_grad(objectives)
+        pc_grad = self._project_conflicting(grads, has_grads)
+        pc_grad = self._unflatten_grad(pc_grad, shapes[0])
+        self._set_grad(pc_grad)
         return
 
     def _project_conflicting(self, grads, has_grads, shapes=None):
@@ -69,23 +58,20 @@ class PCGrad():
                                             for g in pc_grad]).sum(dim=0)
         return merged_grad
 
-    def _set_grad(self, total_grads):
+    def _set_grad(self, grads):
         '''
         set the modified gradients to the network
         '''
-        #scalarization
+
         idx = 0
-        for label_idx,total_grad in enumerate(total_grads):
-            for group in self._optim.param_groups:
-                for p,grad in zip(group['params'],total_grad):
-                    # if p.grad is None: continue
-                    if idx==0:
-                        p.grad=torch.zeros_like(p.grad)
-                p.grad += grad[idx].cuda()
+        for group in self._optim.param_groups:
+            for p in group['params']:
+                # if p.grad is None: continue
+                p.grad = grads[idx].cuda()
                 idx += 1
         return
 
-    def _pack_grad(self, objectives,labels):
+    def _pack_grad(self, objectives):
         '''
         pack the gradient of the parameters of the network for each objective
         
@@ -94,15 +80,15 @@ class PCGrad():
         - shape: a list of the shape of the parameters
         - has_grad: a list of mask represent whether the parameter has gradient
         '''
-        grads, shapes, has_grads = [[] for _ in set(labels.tolist())], [[] for _ in set(labels.tolist())], [[] for _ in set(labels.tolist())]
-        for obj, label in zip(objectives,labels):
+
+        grads, shapes, has_grads = [], [], []
+        for obj in objectives:
             self._optim.zero_grad(set_to_none=True)
             obj.backward(retain_graph=True)
             grad, shape, has_grad = self._retrieve_grad()
-            grads[label].append(self._flatten_grad(grad, shape))
-            has_grads[label].append(self._flatten_grad(has_grad, shape))
-            shapes[label].append(shape)
-
+            grads.append(self._flatten_grad(grad, shape))
+            has_grads.append(self._flatten_grad(has_grad, shape))
+            shapes.append(shape)
         return grads, shapes, has_grads
 
     def _unflatten_grad(self, grads, shapes):
@@ -131,9 +117,9 @@ class PCGrad():
         grad, shape, has_grad = [], [], []
         for group in self._optim.param_groups:
             for p in group['params']:
-                p=p.to('cpu')
                 # if p.grad is None: continue
                 # tackle the multi-head scenario
+                p.to('cpu')
                 if p.grad is None:
                     shape.append(p.shape)
                     grad.append(torch.zeros_like(p).to(p.device))
@@ -144,3 +130,30 @@ class PCGrad():
                 has_grad.append(torch.ones_like(p).to(p.device))
         return grad, shape, has_grad
 
+
+class PCGrad_v2(PCGrad_v1):
+    def __init__(self,optimizer):
+        super(PCGrad_v2,self).__init__(optimizer)
+        self.pc_grad_list=list()
+    
+    def step(self):
+        return self._optim.step()
+
+    def pc_backward(self, objectives,labels):
+        '''
+        calculate the gradient of the parameters
+        input:
+        - objectives: a list of objectives
+        '''
+        
+        grads, shapes, has_grads = self._pack_grad(objectives)
+        pc_grad = self._project_conflicting(grads, has_grads)
+        self.pc_grad_list.append(self._unflatten_grad(pc_grad, shapes[0]))
+        new_pc_grad=list()
+        for idx,grad_layer in enumerate(self.pc_grad_list[0]):
+            new_pc_grad.append(torch.zeros_like(grad_layer))
+            for pc_grad_ in self.pc_grad_list:
+                new_pc_grad[idx]+=pc_grad_[idx]
+        self.pc_grad_list=list()
+        self._set_grad(new_pc_grad)
+        return

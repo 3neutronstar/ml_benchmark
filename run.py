@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 import numpy as np
 from utils import load_params, save_params
-
+TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2']
 def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -18,7 +18,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='train or visual, prune, test, [train_weight_prune, train_grad_visual, train_lrp]')
+        help='visual, or test, {}'.format(TRAIN_MODE))
     
     #TRAIN SECTION
     parser.add_argument(
@@ -111,7 +111,7 @@ def parse_args(args):
 
 def main(args):
     flags = parse_args(args)
-    train_mode_list=['train','train_weight_prune','train_lrp','train_grad_visual','train_mtl']
+    train_mode_list=TRAIN_MODE
     if flags.file_name is None and flags.mode in train_mode_list:
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
@@ -196,6 +196,11 @@ def main(args):
     elif flags.mode=='train_mtl':
         from Learner.mtl import MTLLearner
         learner=MTLLearner(model,time_data,file_path,configs)
+        configs=learner.run()
+        save_params(configs, time_data)
+    elif flags.mode=='train_mtl_v2':
+        from Learner.mtl_v2 import MTLLearner_v2
+        learner=MTLLearner_v2(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
 

@@ -63,6 +63,28 @@ def split_class_data_loader(train_data,test_data,configs):
         test_data_loader = torch.utils.data.DataLoader(test_data,
                         batch_size=configs['batch_size'], shuffle=False)
     return train_data_loader, test_data_loader
+def split_class_list_data_loader(train_data,test_data,configs):
+    if configs['dataset']=='mnist' or configs['dataset']=='cifar10':
+        data_classes = [i for i in range(10)] # MNIST
+        train_data_loader=list()
+        for idx in data_classes:
+            locals()['train_subset_per_class_{}'.format(1)] = list()
+            for j in range(len(train_data)):
+                if int(train_data[j][1]) == idx:
+                    locals()['train_subset_per_class_{}'.format(idx)].append(j)
+            locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
+                                                    locals()['train_subset_per_class_{}'.format(idx)])
+
+            train_data_loader.append( torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
+                                                    batch_size=configs['batch_size'],
+                                                    shuffle=True
+                                                    ))
+
+        test_data_loader = torch.utils.data.DataLoader(test_data,
+                        batch_size=configs['batch_size'], shuffle=False)
+    else:
+        raise NotImplementedError
+    return train_data_loader, test_data_loader #list(loader),loader return
 
 def base_data_loader(train_data,test_data,configs):
     if configs['device'] == 'gpu':
@@ -92,5 +114,8 @@ def data_loader(configs):
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
+    elif configs['mode']=='train_mtl_v2':
+        train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
+
 
     return train_data_loader, test_data_loader

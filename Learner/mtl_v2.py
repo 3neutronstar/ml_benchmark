@@ -3,12 +3,12 @@ import os
 import sys
 import torch
 from Learner.base_learner import BaseLearner
-from CustomLoss.pcgrad import PCGrad
+from CustomLoss.pcgrad import PCGrad_v2
 
-class MTLLearner(BaseLearner):
+class MTLLearner_v2(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
-        super(MTLLearner,self).__init__(model,time_data,file_path,configs)
-        self.optimizer=PCGrad(self.optimizer)
+        super(MTLLearner_v2,self).__init__(model,time_data,file_path,configs)
+        self.optimizer=PCGrad_v2(self.optimizer)
         self.class_idx=1
         self.criterion=self.criterion.__class__(reduction='none')#grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
@@ -50,7 +50,7 @@ class MTLLearner(BaseLearner):
         self.model.train()  # train모드로 설정
         running_loss = 0.0
         correct = 0
-        num_training_data = len(self.train_loader.dataset)
+        num_training_data = len(self.train_loader[0].dataset)*len(self.train_loader)
         for batch_idx, (data, target) in enumerate(self.train_loader):
             data, target = data.to(self.device), target.to(
                 self.device)  # gpu로 올림
@@ -87,7 +87,7 @@ class MTLLearner(BaseLearner):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
-                eval_loss += loss.sum().item()
+                eval_loss += loss.item()
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
