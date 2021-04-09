@@ -6,7 +6,7 @@ import random
 import numpy as np
 
 
-class PCGrad_v1(): # mtl_v2 only
+class PCGrad(): # mtl_v2 only
     def __init__(self, optimizer):
         self._optim = optimizer
         return
@@ -131,7 +131,7 @@ class PCGrad_v1(): # mtl_v2 only
         return grad, shape, has_grad
 
 
-class PCGrad_v2(PCGrad_v1):
+class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
         self.pc_grad_list=list()
