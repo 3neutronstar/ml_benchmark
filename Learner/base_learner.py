@@ -21,6 +21,8 @@ class BaseLearner():
         self.grad_list = list()
         if configs['mode']=='train_mtl_v2':
             self.log_interval=1
+        elif configs['mode']=='train_mtl':
+            self.log_interval=10
         else:
             self.log_interval = 50
         self.device = self.configs['device']
