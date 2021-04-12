@@ -104,8 +104,8 @@ class ResNet(nn.Module):
         self.residual_layer=nn.Sequential(*residual)
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=configs['momentum'], lr=configs['lr'], nesterov=True, weight_decay=1e-4)
-        
-        if configs['mode']=='train_moo':
+        mtl_list=['train_mtl','train_mtl_v2']
+        if configs['mode'] in mtl_list:
             reduction='none'
         else:
             reduction='mean'

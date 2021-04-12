@@ -53,7 +53,7 @@ class PCGrad(): # mtl_v2 only
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
         merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
         merged_grad[shared] = torch.stack([g[shared]
-                                           for g in pc_grad]).mean(dim=0)
+                                           for g in pc_grad]).mean(dim=0) #평균
         merged_grad[~shared] = torch.stack([g[~shared]
                                             for g in pc_grad]).sum(dim=0)
         return merged_grad
@@ -137,16 +137,21 @@ class PCGrad_v2(PCGrad):
         self.saving_pc_grad_list=list()
     
     def step(self):
-        new_pc_grad=list()
-        for idx,savings in enumerate(self.saving_pc_grad_list):
-            for layer_idx,pc_grads in enumerate(self.saving_pc_grad_list[idx]):
-                if idx==0:
-                    new_pc_grad.append(list())
-                new_pc_grad[layer_idx].append(pc_grads)
+        new_pc_grad_list=list()
+        for idx,savings in enumerate(self.saving_pc_grad_list[0]):
+            new_pc_grad_list.append(torch.stack([pc_grad[idx] for pc_grad in self.saving_pc_grad_list]).sum(dim=0)) # 모든 클래스 합)
 
-        for layer_grad in new_pc_grad:
-            layer_grad=torch.cat(layer_grad,dim=0).mean(dim=0)
-        self._set_grad(new_pc_grad)
+        # for idx,savings in enumerate(self.saving_pc_grad_list):
+        #     for layer_idx,pc_grads in enumerate(savings):
+        #         if idx==0:
+        #             new_pc_grad.append(list())
+        #         new_pc_grad[layer_idx].append(pc_grads)
+        
+        # set_pc_grad=list()
+        # for layer_grad in new_pc_grad:
+        #     set_pc_grad.append(torch.cat(layer_grad,dim=0).sum(dim=0)) # sum or mean
+
+        self._set_grad(new_pc_grad_list)
         self._optim.step()
         self.saving_pc_grad_list=list()
         return 
@@ -162,10 +167,10 @@ class PCGrad_v2(PCGrad):
         pc_grad = self._project_conflicting(grads, has_grads)
         pc_grad=self._unflatten_grad(pc_grad, shapes[0])
         pc_grad_list=list()
-        for idx,grad_layer in enumerate(pc_grad[0]):
-            pc_grad_list.append(torch.zeros_like(grad_layer))
-            for pc_grad_ in self.saving_pc_grad_list:
-                pc_grad_list[idx]+=pc_grad_[idx]
-            pc_grad_list[idx]=torch.div(pc_grad_list[idx],len(self.saving_pc_grad_list))
+        # for idx,grad_layer in enumerate(pc_grad): #pc grad는 단일로 취해져서 나옴 # 불필요
+        #     pc_grad_list.append(torch.zeros_like(grad_layer))
+        #     for pc_grad_ in self.saving_pc_grad_list:
+        #         pc_grad_list[idx]+=pc_grad_[idx]
+        #     pc_grad_list[idx]=torch.div(pc_grad_list[idx],len(self.saving_pc_grad_list))
         self.saving_pc_grad_list.append(pc_grad_list)
         return

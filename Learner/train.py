@@ -37,8 +37,9 @@ class ClassicLearner(BaseLearner):
 
         eval_accuracy, eval_loss = 0.0, 0.0
         train_accuracy, train_loss = 0.0, 0.0
+        best_eval_accuracy=0.0
         # Train
-        for epoch in range(1, self.configs['epochs'] + 1):
+        for epoch in range(self.configs['start_epoch'], self.configs['epochs'] + 1):
             train_accuracy, train_loss = self._train(epoch)
             eval_accuracy, eval_loss = self._eval()
             self.scheduler.step()
@@ -54,6 +55,9 @@ class ClassicLearner(BaseLearner):
                 break
             if self.device == 'gpu':
                 torch.cuda.empty_cache()
+            if best_eval_accuracy<eval_accuracy:
+                best_eval_accuracy=eval_accuracy
+        print("Best Accuracy in evaluation: {:.2f}".format(best_eval_accuracy) )
 
         if self.configs['mode'] == 'train_weight_prune':
             print("before prune")

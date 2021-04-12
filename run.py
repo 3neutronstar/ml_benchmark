@@ -18,7 +18,7 @@ def parse_args(args):
     # required input parameters
     parser.add_argument(
         'mode', type=str,
-        help='visual, or test, {}'.format(TRAIN_MODE))
+        help='visual[need saved grad], or test, load, {}'.format(TRAIN_MODE))
     
     #TRAIN SECTION
     parser.add_argument(
@@ -78,8 +78,8 @@ def parse_args(args):
         momentum=0.9
     elif 'resnet' in nn_type:
         dataset='cifar10'
-        lr=1e-2
-        epochs=300
+        lr=1e-1
+        epochs=200
         momentum=0.9
 
     parser.add_argument(
@@ -91,6 +91,9 @@ def parse_args(args):
     parser.add_argument(
         '--epochs', type=int, default=epochs,
         help='run epochs')
+    parser.add_argument(
+        '--start_epoch', type=int, default=1,help='for load model'
+    )
     parser.add_argument(
         '--dataset', type=str, default=dataset,
         help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
@@ -143,6 +146,7 @@ def main(args):
     configs = {'device': str(device),
                'seed': random_seed,
                'epochs': flags.epochs,
+               'start_epoch':flags.start_epoch,
                'lr': flags.lr,
                'batch_size': flags.batch_size,
                'dataset': flags.dataset.lower(),

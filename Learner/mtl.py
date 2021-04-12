@@ -19,7 +19,7 @@ class MTLLearner(BaseLearner):
 
         best_accuracy=0.0
         # Train
-        for epoch in range(1, self.configs['epochs'] + 1):
+        for epoch in range(self.configs['start_epoch'], self.configs['epochs'] + 1):
                 
             print('Learning rate: {}'.format(self.scheduler.optimizer.param_groups[0]['lr']))
             train_metric = self._train(epoch)

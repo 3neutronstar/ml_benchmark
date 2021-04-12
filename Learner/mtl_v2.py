@@ -19,7 +19,7 @@ class MTLLearner_v2(BaseLearner):
 
         best_accuracy=0.0
         # Train
-        for epoch in range(1, self.configs['epochs'] + 1):
+        for epoch in range(self.configs['start_epoch'], self.configs['epochs'] + 1):
                 
             print('Learning rate: {}'.format(self.scheduler.optimizer.param_groups[0]['lr']))
             train_metric = self._train(epoch)
@@ -44,6 +44,7 @@ class MTLLearner_v2(BaseLearner):
         self.configs['train_end_epoch']=epoch
         configs = self.save_grad(epoch)
         return configs
+
     def _class_wise_write(self,data,target):
         data,target = data.to(self.device), target.to(
                 self.device)
@@ -54,7 +55,8 @@ class MTLLearner_v2(BaseLearner):
         correct = pred.eq(target.view_as(pred)).sum().item()
 
         self.optimizer.pc_backward(loss,target)
-        return correct,loss
+        data_num=len(data)
+        return correct,loss,data_num
 
 
     def _train(self, epoch):
@@ -63,21 +65,23 @@ class MTLLearner_v2(BaseLearner):
         running_loss = 0.0
         correct = 0
         num_training_data = len(self.train_loader[0].dataset)*len(self.train_loader)
-
+        for i,loader in enumerate(self.train_loader):
+            self.train_loader[i]=enumerate(loader)
+        batch_idx=0
         while True:
-            for batch_idx,loader_tuple in enumerate(zip( loader for loader in self.train_loader)):
-                for (data,target) in loader_tuple:
-                    _correct,loss,data_num=self._class_wise_write(data,target)
+            for loader in self.train_loader:
+                batch_idx,(data,target)=next(loader)
+                _correct,loss,data_num=self._class_wise_write(data,target)
                 correct+=_correct
                 running_loss += loss.sum().item()
                 
             if batch_idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
                     data_num)*len(self.train_loader), num_training_data, 100.0 * correct / len(self.train_loader), loss.sum().item()), end='')
+
             self.optimizer.step()
             if self.train_loader[batch_idx].__getitem__()==self.train_loader[-1][-1]:
                 break
-
 
         running_loss /= num_training_data
         tok = time.time()

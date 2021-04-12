@@ -19,7 +19,10 @@ class BaseLearner():
         self.scheduler = self.model.scheduler
         self.configs = configs
         self.grad_list = list()
-        self.log_interval = 100
+        if configs['mode']=='train_mtl_v2':
+            self.log_interval=1
+        else:
+            self.log_interval = 50
         self.device = self.configs['device']
         # data
         opener = urllib.request.build_opener()

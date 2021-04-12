@@ -11,9 +11,9 @@
             "program": "${workspaceFolder}/run.py",
             "console": "integratedTerminal",
             "args": [
-                "train_moo",
+                "train_mtl",
                 "--nn_type",
-                "resnet18",
+                "resnet20",
                 //"--epochs",
                 //"1",
                 "--log",
