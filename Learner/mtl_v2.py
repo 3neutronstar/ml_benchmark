@@ -66,12 +66,15 @@ class MTLLearner_v2(BaseLearner):
         self.model.train()  # train모드로 설정
         running_loss = 0.0
         correct = 0
+        training_data=len(self.train_loader[0])
         num_training_data = len(self.train_loader[0].dataset)*len(self.train_loader)
+
+        train_loader=list()
         for i,loader in enumerate(self.train_loader):
-            self.train_loader[i]=enumerate(loader)
+            train_loader.append(enumerate(loader))
         batch_idx=0
         while True:
-            for loader in self.train_loader:
+            for loader in train_loader:
                 batch_idx,(data,target)=next(loader)
                 _correct,loss,data_num=self._class_wise_write(data,target)
                 correct+=_correct
@@ -80,12 +83,11 @@ class MTLLearner_v2(BaseLearner):
                     torch.cuda.empty_cache()
                 
             if batch_idx % self.log_interval == 0:
-                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, (batch_idx+1) * data_num*len(self.train_loader),
-                    num_training_data, 100.0 * float(correct) /float((batch_idx+1) * data_num*len(self.train_loader)), loss.item()), end='')
+                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, (batch_idx+1) * self.configs['batch_size']*len(self.train_loader),
+                    num_training_data, 100.0 * float((batch_idx+1) * self.configs['batch_size']*len(self.train_loader)) /float(num_training_data), loss.item()), end='')
 
             self.optimizer.step()
-            if num_training_data%self.configs['batch_size']==batch_idx:# 끝내기용
-                print(batch_idx," ", num_training_data)
+            if training_data==(batch_idx+1):# 끝내기용
                 break
 
         running_loss /= num_training_data
