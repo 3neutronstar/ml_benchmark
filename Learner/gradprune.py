@@ -47,7 +47,7 @@ class GradPruneLearner(BaseLearner):
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
-            if self.device == 'gpu':
+            if self.device == 'cuda':
                 torch.cuda.empty_cache()
 
             if isinstance(self.optimizer,LookUpGrad):

@@ -104,7 +104,7 @@ def parse_args(args):
         help='grad_data/grad_[].log for VISUAL and grad_[].pt file load for CAM')
     parser.add_argument(
         '--visual_type', type=str, default='time_domain',
-        help='visualization domain decision [time,node')
+        help='visualization domain decision [time,node]')
     parser.add_argument(
         '--num_result', type=int, default=1,
         help='grad_data/grad_[].log file load')

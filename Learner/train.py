@@ -53,7 +53,7 @@ class ClassicLearner(BaseLearner):
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
-            if self.device == 'gpu':
+            if self.device == 'cuda':
                 torch.cuda.empty_cache()
             if best_eval_accuracy<eval_accuracy:
                 best_eval_accuracy=eval_accuracy

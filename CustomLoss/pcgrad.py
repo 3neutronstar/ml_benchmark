@@ -134,26 +134,16 @@ class PCGrad(): # mtl_v2 only
 class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
-        self.saving_pc_grad_list=list()
+        self.objectives=list()
     
     def step(self):
-        new_pc_grad_list=list()
-        for idx,savings in enumerate(self.saving_pc_grad_list[0]):
-            new_pc_grad_list.append(torch.stack([pc_grad[idx] for pc_grad in self.saving_pc_grad_list]).sum(dim=0)) # 모든 클래스 합)
 
-        # for idx,savings in enumerate(self.saving_pc_grad_list):
-        #     for layer_idx,pc_grads in enumerate(savings):
-        #         if idx==0:
-        #             new_pc_grad.append(list())
-        #         new_pc_grad[layer_idx].append(pc_grads)
-        
-        # set_pc_grad=list()
-        # for layer_grad in new_pc_grad:
-        #     set_pc_grad.append(torch.cat(layer_grad,dim=0).sum(dim=0)) # sum or mean
-
-        self._set_grad(new_pc_grad_list)
+        grads, shapes, has_grads = self._pack_grad(self.objectives)
+        pc_grad = self._project_conflicting(grads, has_grads)
+        pc_grad=self._unflatten_grad(pc_grad, shapes[0])
+        self._set_grad(pc_grad)
         self._optim.step()
-        self.saving_pc_grad_list=list()
+        self.objectives=list()
         return 
 
     def pc_backward(self, objectives,labels):
@@ -163,14 +153,5 @@ class PCGrad_v2(PCGrad):
         - objectives: a list of objectives
         '''
         
-        grads, shapes, has_grads = self._pack_grad(objectives)
-        pc_grad = self._project_conflicting(grads, has_grads)
-        pc_grad=self._unflatten_grad(pc_grad, shapes[0])
-        pc_grad_list=list()
-        # for idx,grad_layer in enumerate(pc_grad): #pc grad는 단일로 취해져서 나옴 # 불필요
-        #     pc_grad_list.append(torch.zeros_like(grad_layer))
-        #     for pc_grad_ in self.saving_pc_grad_list:
-        #         pc_grad_list[idx]+=pc_grad_[idx]
-        #     pc_grad_list[idx]=torch.div(pc_grad_list[idx],len(self.saving_pc_grad_list))
-        self.saving_pc_grad_list.append(pc_grad_list)
+        self.objectives.append(objectives)
         return

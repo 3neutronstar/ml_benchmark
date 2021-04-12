@@ -1,6 +1,7 @@
 from torchvision import datasets
 import torchvision.transforms as transforms
 import torch
+from torchvision.transforms.transforms import RandomCrop
 
 
 def load_dataset(configs):
@@ -13,14 +14,23 @@ def load_dataset(configs):
                                         download=False, transform=transform)
 
     elif configs['dataset'] == 'cifar100':
-        transform = transforms.Compose([
+        normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
+                                     std=[0.2023, 0.1994, 0.2010])
+        train_transform = transforms.Compose([
+            transforms.Pad(4),
+            transforms.RandomCrop(32),
+            transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            normalize,
             ])
+        test_transform=transforms.Compose([
+            transforms.ToTensor(),
+            normalize,
+        ])
         train_data = datasets.CIFAR100(root='data', train=True,
-                                       download=True, transform=transform)
+                                       download=True, transform=train_transform)
         test_data = datasets.CIFAR100(root='data', train=False,
-                                      download=False, transform=transform)
+                                      download=False, transform=test_transform)
 
     elif configs['dataset'] == 'cifar10':
         normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
@@ -45,7 +55,7 @@ def load_dataset(configs):
     return train_data, test_data
 
 def split_class_data_loader(train_data,test_data,configs):
-    if configs['dataset']=='mnist' or configs['dataset']=='cifar10':
+    if configs['dataset']=='mnist' or configs['dataset']=='cifar10' or configs['cifar100']:
         data_classes = [i for i in range(10)] # MNIST
         idx =1 # split class index
         locals()['train_subset_per_class_{}'.format(1)] = list()

@@ -104,12 +104,8 @@ class ResNet(nn.Module):
         self.residual_layer=nn.Sequential(*residual)
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=configs['momentum'], lr=configs['lr'], nesterov=True, weight_decay=1e-4)
-        mtl_list=['train_mtl','train_mtl_v2']
-        if configs['mode'] in mtl_list:
-            reduction='none'
-        else:
-            reduction='mean'
-        self.loss=nn.CrossEntropyLoss(reduction=reduction)
+
+        self.loss=nn.CrossEntropyLoss()
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
                                 100, 150], gamma=0.1)
 

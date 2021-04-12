@@ -10,7 +10,7 @@ class MTLLearner_v2(BaseLearner):
         super(MTLLearner_v2,self).__init__(model,time_data,file_path,configs)
         self.optimizer=PCGrad_v2(self.optimizer)
         self.class_idx=1
-        self.criterion=self.criterion.__class__(reduction='none')#grad vector (no scalar)
+        self.criterion=self.criterion.__class__(reduction='mean')#grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
             os.mkdir(os.path.join(self.making_path,time_data))
 
@@ -38,8 +38,9 @@ class MTLLearner_v2(BaseLearner):
             if self.early_stopping.early_stop:
                 print("Early stopping")
                 break
-            if self.device == 'gpu':
+            if self.device == 'cuda':
                 torch.cuda.empty_cache()
+            
         print("Best Accuracy: "+str(best_accuracy))
         self.configs['train_end_epoch']=epoch
         configs = self.save_grad(epoch)
@@ -56,6 +57,7 @@ class MTLLearner_v2(BaseLearner):
 
         self.optimizer.pc_backward(loss,target)
         data_num=len(data)
+        del data,target
         return correct,loss,data_num
 
 
@@ -73,13 +75,17 @@ class MTLLearner_v2(BaseLearner):
                 batch_idx,(data,target)=next(loader)
                 _correct,loss,data_num=self._class_wise_write(data,target)
                 correct+=_correct
-                running_loss += loss.sum().item()
+                running_loss += loss.item()
+                if self.device == 'cuda':
+                    torch.cuda.empty_cache()
                 
             if batch_idx % self.log_interval == 0:
-                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * data_num*len(self.train_loader), num_training_data, 100.0 * correct / len(self.train_loader), loss.sum().item()), end='')
+                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, (batch_idx+1) * data_num*len(self.train_loader),
+                    num_training_data, 100.0 * float(correct) /float((batch_idx+1) * data_num*len(self.train_loader)), loss.item()), end='')
 
             self.optimizer.step()
-            if self.train_loader[batch_idx].__getitem__()==self.train_loader[-1][-1]:
+            if num_training_data%self.configs['batch_size']==batch_idx:# 끝내기용
+                print(batch_idx," ", num_training_data)
                 break
 
         running_loss /= num_training_data
