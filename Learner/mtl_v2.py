@@ -76,8 +76,7 @@ class MTLLearner_v2(BaseLearner):
                 running_loss += loss.sum().item()
                 
             if batch_idx % self.log_interval == 0:
-                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
-                    data_num)*len(self.train_loader), num_training_data, 100.0 * correct / len(self.train_loader), loss.sum().item()), end='')
+                print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * data_num*len(self.train_loader), num_training_data, 100.0 * correct / len(self.train_loader), loss.sum().item()), end='')
 
             self.optimizer.step()
             if self.train_loader[batch_idx].__getitem__()==self.train_loader[-1][-1]:
