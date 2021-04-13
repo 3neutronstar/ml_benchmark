@@ -68,6 +68,7 @@ class MTLLearner_v2(BaseLearner):
         correct = 0
         num_training_data = len(self.train_loader[0].dataset)*len(self.train_loader)
         train_loader=list()
+        training_data=len(self.train_loader[0])
         for i,loader in enumerate(self.train_loader):
             train_loader.append(enumerate(loader))
         batch_idx=0
@@ -84,8 +85,7 @@ class MTLLearner_v2(BaseLearner):
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, (batch_idx+1) * self.configs['batch_size']*len(self.train_loader),
                     num_training_data, 100.0 * float((batch_idx+1) * self.configs['batch_size']*len(self.train_loader)) /float(num_training_data), loss.item()), end='')
             self.optimizer.step()
-            if num_training_data%self.configs['batch_size']==batch_idx:# 끝내기용
-                print(batch_idx," ", num_training_data)
+            if training_data==(batch_idx+1):# 끝내기용
                 break
 
         running_loss /= num_training_data
