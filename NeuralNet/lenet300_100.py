@@ -11,17 +11,17 @@ class LeNet_300_100(nn.Module):
         self.configs=configs
         self.fc1 = nn.Linear(32*32, 300, bias=True)
         self.fc2 = nn.Linear(300, 100, bias=True)
-        self.fc3 = nn.Linear(100, 10, bias=True)
+        self.fc3 = nn.Linear(100, configs['num_classes'], bias=True)
 
         self.optim=optim.SGD(params=self.parameters(),momentum=self.configs['momentum'],lr=self.configs['lr'],nesterov=True)
         self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
         self.loss=nn.CrossEntropyLoss()
 
-        self.w_size_list = [32*32*300,300*100,100*10]  # weight,bias size
-        self.b_size_list = [300, 100, 10]
-        self.NN_size_list = [1, 300, 100 ,10]  # cnn과 fc_net out 작성
+        self.w_size_list = [32*32*300,300*100,100*configs['num_classes']]  # weight,bias size
+        self.b_size_list = [300, 100, configs['num_classes']]
+        self.NN_size_list = [1, 300, 100 ,configs['num_classes']]  # cnn과 fc_net out 작성
         self.NN_type_list = ['fc', 'fc', 'fc']
-        self.node_size_list=[300,100,10]
+        self.node_size_list=[300,100,configs['num_classes']]
 
     def forward(self, x):
         x0 = x.view(-1, 32*32)

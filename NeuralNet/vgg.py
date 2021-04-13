@@ -14,10 +14,7 @@ cfg = {
 class VGG(nn.Module):
     def __init__(self, config):
         super(VGG, self).__init__()
-        if config['dataset'] == 'cifar10':
-            final_out = 10
-        if config['dataset'] == 'cifar100':
-            final_out = 100
+        final_out=config['num_classes']
         self.features = self._make_layers(cfg[config['nn_type']])
         self.classifier = nn.Sequential(nn.Linear(7*7*512, 4096),
                                         nn.ReLU(inplace=True),
@@ -54,7 +51,7 @@ class VGG(nn.Module):
                     self.kernel_size_list[-1][0]*self.kernel_size_list[-1][1]*self.b_size_list[-1])
                 self.node_size_list.append(cnn_info)
 
-        for fc_info in [4096, 4096, 10]:
+        for fc_info in [4096, 4096, config['num_classes']]:
             self.NN_type_list.append('fc')
             self.NN_size_list.append(fc_info)
             self.b_size_list.append(fc_info)

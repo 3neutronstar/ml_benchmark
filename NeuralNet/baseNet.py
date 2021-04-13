@@ -1,6 +1,11 @@
 
 class BaseNet():
     def __init__(self,configs):
+        
+        if configs['dataset']=='cifar10' or configs['dataset']=='mnist':
+            configs['num_classes']=10
+        else:
+            configs['num_classes']=100
         if configs['nn_type'] == 'lenet5':
             from NeuralNet.lenet5 import LeNet5
             model = LeNet5(configs).to(configs['device'])
@@ -13,6 +18,6 @@ class BaseNet():
             model = LeNet_300_100(configs).to(configs['device'])
         if configs['nn_type'][:6]=='resnet':
             from NeuralNet.resnet import ResNet
-            configs['num_classes']=10
+            
             model = ResNet(configs).to(configs['device'])
         self.model=model

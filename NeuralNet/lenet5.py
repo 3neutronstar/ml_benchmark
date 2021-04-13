@@ -15,19 +15,19 @@ class LeNet5(nn.Module):
         self.conv3 = nn.Conv2d(
             in_channels=16, out_channels=120, kernel_size=(5, 5))  # 5x5+1 params
         self.fc1 = nn.Linear(120, 84)
-        self.fc2 = nn.Linear(84, 10)
+        self.fc2 = nn.Linear(84, config['num_classes'])
         
         self.log_softmax = nn.LogSoftmax(dim=-1)
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=config['momentum'], lr=config['lr'], nesterov=True, weight_decay=1e-4)
         self.loss=nn.CrossEntropyLoss()
         self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
-        self.w_size_list = [150, 2400, 48000, 10080, 840]  # weight,bias size
-        self.b_size_list = [6, 16, 120, 84, 10]
-        self.NN_size_list = [1, 6, 16, 120, 84, 10]  # cnn과 fc_net out 작성
+        self.w_size_list = [150, 2400, 48000, 10080, 84*config['num_classes']]  # weight,bias size
+        self.b_size_list = [6, 16, 120, 84, config['num_classes']]
+        self.NN_size_list = [1, 6, 16, 120, 84, config['num_classes']]  # cnn과 fc_net out 작성
         self.NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
         self.kernel_size_list = [(5, 5), (5, 5), (5, 5)]
-        self.node_size_list=[6,16,120,84,10]
+        self.node_size_list=[6,16,120,84,config['num_classes']]
 
     def forward(self, x):
         x = F.relu(self.conv1(x))

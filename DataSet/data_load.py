@@ -56,7 +56,7 @@ def load_dataset(configs):
 
 def split_class_data_loader(train_data,test_data,configs):
     if configs['dataset']=='mnist' or configs['dataset']=='cifar10' or configs['cifar100']:
-        data_classes = [i for i in range(10)] # MNIST
+        data_classes = [i for i in range(configs['num_'])] # MNIST
         idx =1 # split class index
         locals()['train_subset_per_class_{}'.format(1)] = list()
         for j in range(len(train_data)):
@@ -74,27 +74,24 @@ def split_class_data_loader(train_data,test_data,configs):
                         batch_size=configs['batch_size'], shuffle=False)
     return train_data_loader, test_data_loader
 def split_class_list_data_loader(train_data,test_data,configs):
-    if configs['dataset']=='mnist' or configs['dataset']=='cifar10':
-        data_classes = [i for i in range(10)] # MNIST
-        train_data_loader=list()
-        for idx in data_classes:
-            locals()['train_subset_per_class_{}'.format(idx)] = list()
-            for j in range(len(train_data)):
-                if int(train_data[j][1]) == idx:
-                    locals()['train_subset_per_class_{}'.format(idx)].append(j)
-            locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
-                                                    locals()['train_subset_per_class_{}'.format(idx)])
+    data_classes = [i for i in range(configs['num_classes'])]
+    train_data_loader=list()
+    for idx in data_classes:
+        locals()['train_subset_per_class_{}'.format(idx)] = list()
+        for j in range(len(train_data)):
+            if int(train_data[j][1]) == idx:
+                locals()['train_subset_per_class_{}'.format(idx)].append(j)
+        locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
+                                                locals()['train_subset_per_class_{}'.format(idx)])
 
-            train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
-                                                    batch_size=configs['batch_size'],
-                                                    shuffle=True
-                                                    ))
+        train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
+                                                batch_size=configs['batch_size'],
+                                                shuffle=True
+                                                ))
 
-        test_data_loader = torch.utils.data.DataLoader(test_data,
-                        batch_size=configs['batch_size'], shuffle=False)
-        print("Finish Load splitted dataset")
-    else:
-        raise NotImplementedError
+    test_data_loader = torch.utils.data.DataLoader(test_data,
+                    batch_size=configs['batch_size'], shuffle=False)
+    print("Finish Load splitted dataset")
     return train_data_loader, test_data_loader #list(loader),loader return
 
 def base_data_loader(train_data,test_data,configs):

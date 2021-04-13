@@ -39,6 +39,7 @@ class BaseLearner():
 
         self.early_stopping = EarlyStopping(
             self.current_path, time_data, configs, patience=self.configs['patience'], verbose=True)
+            
         if self.configs['colab'] == True:
             self.making_path = os.path.join('drive', 'MyDrive', 'grad_data')
         else:
