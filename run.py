@@ -81,6 +81,11 @@ def parse_args(args):
         lr=1e-1
         epochs=200
         momentum=0.9
+    elif nn_type=='convnet':
+        dataset = 'cifar10'
+        epochs = 200
+        lr=1e-1
+        momentum=0.9
 
     parser.add_argument(
         '--lr', type=float, default=lr,

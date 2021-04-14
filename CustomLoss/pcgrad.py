@@ -67,7 +67,7 @@ class PCGrad(): # mtl_v2 only
         for group in self._optim.param_groups:
             for p in group['params']:
                 # if p.grad is None: continue
-                p.grad = grads[idx].cuda()
+                p.grad = grads[idx]
                 idx += 1
         return
 
@@ -119,7 +119,6 @@ class PCGrad(): # mtl_v2 only
             for p in group['params']:
                 # if p.grad is None: continue
                 # tackle the multi-head scenario
-                p.to('cpu')
                 if p.grad is None:
                     shape.append(p.shape)
                     grad.append(torch.zeros_like(p).to(p.device))
@@ -135,7 +134,11 @@ class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
         self.objectives=list()
-    
+
+    @property
+    def optimizer(self):
+        return self._optim
+
     def step(self):
 
         grads, shapes, has_grads = self._pack_grad(self.objectives)

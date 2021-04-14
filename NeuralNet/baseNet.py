@@ -18,6 +18,8 @@ class BaseNet():
             model = LeNet_300_100(configs).to(configs['device'])
         if configs['nn_type'][:6]=='resnet':
             from NeuralNet.resnet import ResNet
-            
             model = ResNet(configs).to(configs['device'])
+        if configs['nn_type']=='convnet':
+            from NeuralNet.convnet import ConvNet
+            model = ConvNet(configs).to(configs['device'])
         self.model=model

@@ -80,7 +80,6 @@ class MTLLearner_v2(BaseLearner):
                 running_loss += loss.item()
                 if self.device == 'cuda':
                     torch.cuda.empty_cache()
-                
             if batch_idx % self.log_interval == 0: 
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, (batch_idx+1) * self.configs['batch_size']*len(self.train_loader),
                     num_training_data, 100.0 * float((batch_idx+1) * self.configs['batch_size']*len(self.train_loader)) /float(num_training_data), loss.item()), end='')

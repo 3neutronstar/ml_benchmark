@@ -20,7 +20,7 @@ class BaseLearner():
         self.configs = configs
         self.grad_list = list()
         if configs['mode']=='train_mtl_v2':
-            self.log_interval=1
+            self.log_interval=10
         elif configs['mode']=='train_mtl':
             self.log_interval=10
         else:
@@ -39,7 +39,7 @@ class BaseLearner():
 
         self.early_stopping = EarlyStopping(
             self.current_path, time_data, configs, patience=self.configs['patience'], verbose=True)
-            
+
         if self.configs['colab'] == True:
             self.making_path = os.path.join('drive', 'MyDrive', 'grad_data')
         else:

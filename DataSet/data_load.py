@@ -60,7 +60,7 @@ def split_class_data_loader(train_data,test_data,configs):
         idx =1 # split class index
         locals()['train_subset_per_class_{}'.format(1)] = list()
         for j in range(len(train_data)):
-            if int(train_data[j][1]) == idx:
+            if int(train_data[j][1]) == idx:#index 확인
                 locals()['train_subset_per_class_{}'.format(idx)].append(j)
         locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
                                                 locals()['train_subset_per_class_{}'.format(idx)])
@@ -76,19 +76,30 @@ def split_class_data_loader(train_data,test_data,configs):
 def split_class_list_data_loader(train_data,test_data,configs):
     data_classes = [i for i in range(configs['num_classes'])]
     train_data_loader=list()
-    for idx in data_classes:
-        locals()['train_subset_per_class_{}'.format(idx)] = list()
-        for j in range(len(train_data)):
-            if int(train_data[j][1]) == idx:
-                locals()['train_subset_per_class_{}'.format(idx)].append(j)
-        locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
-                                                locals()['train_subset_per_class_{}'.format(idx)])
+    # for idx in data_classes:
+    #     locals()['train_subset_per_class_{}'.format(idx)] = list()
+    #     for j in range(len(train_data)):
+    #         if int(train_data[j][1]) == idx:
+    #             locals()['train_subset_per_class_{}'.format(idx)].append(j) # 해당클래스의 인덱스만 추출
+    #     locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
+    #                                             locals()['train_subset_per_class_{}'.format(idx)]) # 인덱스 기반 subset 생성
 
-        train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
+    #     train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
+    #                                             batch_size=configs['batch_size'],
+    #                                             shuffle=True
+    #                                             )) # 각 loader에 넣기
+    for i in range(configs['num_classes']):
+        locals()['train_subset_per_class_{}'.format(i)]=list()
+    for idx,(images, label) in enumerate(train_data):
+        locals()['train_subset_per_class_{}'.format(label)].append(idx)
+    for i in range(configs['num_classes']):
+        locals()['trainset_{}'.format(i)] = torch.utils.data.Subset(train_data,
+                                                locals()['train_subset_per_class_{}'.format(i)]) # 인덱스 기반 subset 생성
+        train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(i)],
                                                 batch_size=configs['batch_size'],
                                                 shuffle=True
-                                                ))
-
+                                                )) # 각 loader에 넣기
+        
     test_data_loader = torch.utils.data.DataLoader(test_data,
                     batch_size=configs['batch_size'], shuffle=False)
     print("Finish Load splitted dataset")
