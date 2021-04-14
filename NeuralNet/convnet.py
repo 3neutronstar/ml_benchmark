@@ -3,50 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-class MaskLayer_F(torch.autograd.Function):
-    def forward(self, input, alpha, beta):
-        positive = beta.gt(0.8001)
-        negative = beta.lt(0.800)
-        alpha[positive] = 1.0
-        alpha[negative] = 0.0
-        # save alpha after we modify it
-        self.save_for_backward(input, alpha)
-        if not (alpha.eq(1.0).sum() + alpha.eq(0.0).sum() == alpha.nelement()):
-            print('ERROR: Please set the weight decay and lr of alpha to 0.0')
-        if len(input.shape) == 4:
-            input = input.mul(alpha.unsqueeze(2).unsqueeze(3))
-        else:
-            input = input.mul(alpha)
-        return input
-
-    def backward(self, grad_output):
-        input, alpha = self.saved_variables
-        grad_input = grad_output.clone()
-        if len(input.shape) == 4:
-            grad_input = grad_input.mul(alpha.data.unsqueeze(2).unsqueeze(3))
-        else:
-            grad_input = grad_input.mul(alpha.data)
-
-        grad_beta = grad_output.clone()
-        grad_beta = grad_beta.mul(input.data).sum(0, keepdim=True)
-        if len(grad_beta.shape) == 4:
-            grad_beta = grad_beta.sum(3).sum(2)
-        return grad_input, None, grad_beta
-
-class MaskLayer(nn.Module):
-    def __init__(self, size=-1, conv=False, beta_initial=0.8002, beta_limit=0.802):
-        assert(size>0)
-        super(MaskLayer, self).__init__()
-        self.alpha = nn.Parameter(torch.FloatTensor(1, size).zero_().add(1.0))
-        self.beta = nn.Parameter(torch.FloatTensor(1, size).zero_().add(beta_initial))
-        self.beta_limit = beta_limit
-        self.conv = conv
-        return
-
-    def forward(self, x):
-        self.beta.data.clamp_(0.0, self.beta_limit)
-        x = MaskLayer_F()(x, self.alpha, self.beta)
-        return x
 
 class LRN(nn.Module):
     def __init__(self, local_size=1, Alpha=1.0, Beta=0.75, ACROSS_CHANNELS=True):
@@ -93,6 +49,7 @@ class ConvNet(nn.Module):
         self.relu_conv3 = nn.ReLU(inplace=True)
         self.pool3 = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
         self.ip1 = nn.Linear(64*4*4, configs['num_classes'])
+        
         self.optim=optim.SGD(params=self.parameters(),momentum=self.configs['momentum'],lr=self.configs['lr'],nesterov=True)
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
                         100, 150], gamma=0.1)

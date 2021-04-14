@@ -1,4 +1,43 @@
 
+def get_hyperparams(nn_type):
+    if nn_type == 'lenet5':
+        dataset = 'mnist'
+        epochs = 60
+        lr=1e-2
+        momentum=0.9
+    elif nn_type == 'vgg16':
+        dataset = 'cifar10'
+        epochs = 300
+        lr=1e-2
+        momentum=0.9
+    elif nn_type=='lenet300_100':
+        dataset = 'mnist'
+        epochs = 60
+        lr=1e-2
+        momentum=0.9
+    elif 'resnet' in nn_type:
+        dataset='cifar10'
+        lr=1e-1
+        epochs=200
+        momentum=0.9
+    elif nn_type=='convnet':
+        dataset = 'cifar10'
+        epochs = 200
+        lr=1e-2
+        momentum=0.9
+    elif nn_type=='nin':
+        dataset='cifar10'
+        epochs=320
+        lr=1e-2
+        momentum=0.9
+    else:
+        print("No algorithm available")
+        raise NotImplementedError
+
+    return dataset,epochs,lr,momentum
+
+
+
 class BaseNet():
     def __init__(self,configs):
         
@@ -6,6 +45,7 @@ class BaseNet():
             configs['num_classes']=10
         else:
             configs['num_classes']=100
+
         if configs['nn_type'] == 'lenet5':
             from NeuralNet.lenet5 import LeNet5
             model = LeNet5(configs).to(configs['device'])
@@ -22,4 +62,7 @@ class BaseNet():
         if configs['nn_type']=='convnet':
             from NeuralNet.convnet import ConvNet
             model = ConvNet(configs).to(configs['device'])
+        if configs['nn_type']=='nin':
+            from NeuralNet.NIN import NIN
+            model = NIN(configs).to(configs['device'])
         self.model=model

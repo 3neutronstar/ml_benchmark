@@ -13,6 +13,11 @@ class MTLLearner_v2(BaseLearner):
         self.criterion=self.criterion.__class__(reduction='mean')#grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
             os.mkdir(os.path.join(self.making_path,time_data))
+        self.num_training_data=0
+        self.training_data_len_list=list()
+        for train_loader in self.train_loader:
+            self.num_training_data += len(train_loader.dataset)
+            self.training_data_len_list.append(len(train_loader))
 
     def run(self):
         print("Training {} epochs".format(self.configs['epochs']))
@@ -66,36 +71,39 @@ class MTLLearner_v2(BaseLearner):
         self.model.train()  # train모드로 설정
         running_loss = 0.0
         correct = 0
-        num_training_data = len(self.train_loader[0].dataset)*len(self.train_loader)
         train_loader=list()
-        training_data_len=len(self.train_loader[0])
-        for i,loader in enumerate(self.train_loader):
-            train_loader.append(enumerate(loader))
+
+        for i,data_loader in enumerate(self.train_loader):
+            train_loader.append(enumerate(data_loader))
         batch_idx=0
         while True:
-            for loader in train_loader:
+            for i,loader in enumerate(train_loader):
+                if (batch_idx+1)>=self.training_data_len_list[i]: # data갯수가 달라 batch 수가 다를경우
+                    continue
                 batch_idx,(data,target)=next(loader)
                 _correct,loss,data_num=self._class_wise_write(data,target)
                 correct+=_correct
                 running_loss += loss.item()
                 if self.device == 'cuda':
                     torch.cuda.empty_cache()
+
             if batch_idx % self.log_interval == 0: 
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, (batch_idx+1) * self.configs['batch_size']*len(self.train_loader),
-                    num_training_data, 100.0 * float((batch_idx+1) * self.configs['batch_size']*len(self.train_loader)) /float(num_training_data), loss.item()), end='')
+                    self.num_training_data, 100.0 * float((batch_idx+1) * self.configs['batch_size']*len(self.train_loader)) /float(self.num_training_data), loss.item()), end='')
             self.optimizer.step()
-            print(training_data_len, batch_idx)
-            if training_data_len==(batch_idx+1):# 끝내기용
+
+            if max(self.training_data_len_list)==(batch_idx+1):# 끝내기용
                 break
 
-        running_loss /= num_training_data
+        running_loss /= self.num_training_data
         tok = time.time()
-        running_accuracy = 100.0 * correct / float(num_training_data)
+        running_accuracy = 100.0 * correct / float(self.num_training_data)
         print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
-            tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
+            tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, self.num_training_data, 100.0*correct/self.num_training_data))
         if self.configs['log_extraction']=='true':
             sys.stdout.flush()
         train_metric={'accuracy':running_accuracy,'loss': running_loss}
+        del train_loader
         return train_metric
 
     def _eval(self):

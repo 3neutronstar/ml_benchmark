@@ -61,31 +61,8 @@ def parse_args(args):
 
     #TRAIN OPTION BY NN
     nn_type = parser.parse_known_args(args)[0].nn_type.lower()
-    if nn_type == 'lenet5':
-        dataset = 'mnist'
-        epochs = 60
-        lr=1e-2
-        momentum=0.9
-    elif nn_type == 'vgg16':
-        dataset = 'cifar10'
-        epochs = 300
-        lr=1e-2
-        momentum=0.9
-    elif nn_type=='lenet300_100':
-        dataset = 'mnist'
-        epochs = 60
-        lr=1e-2
-        momentum=0.9
-    elif 'resnet' in nn_type:
-        dataset='cifar10'
-        lr=1e-1
-        epochs=200
-        momentum=0.9
-    elif nn_type=='convnet':
-        dataset = 'cifar10'
-        epochs = 200
-        lr=1e-1
-        momentum=0.9
+    from NeuralNet.baseNet import get_hyperparams
+    dataset,epochs,lr,momentum=get_hyperparams(nn_type)
 
     parser.add_argument(
         '--lr', type=float, default=lr,
@@ -124,7 +101,7 @@ def main(args):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
         print(time_data)
-        if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False:
+        if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data'))) == False and flags.log =='true':
             os.mkdir(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data')))
     elif flags.file_name is not None and flags.mode not in train_mode_list:  # load param when not training
         time_data = flags.file_name
