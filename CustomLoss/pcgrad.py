@@ -158,3 +158,25 @@ class PCGrad_v2(PCGrad):
         
         self.objectives.append(objectives)
         return
+
+
+class PCGrad_v3(PCGrad):
+    def __init__(self,optimizer):
+        super(PCGrad_v3,self).__init__(optimizer)
+
+    @property
+    def optimizer(self):
+        return self._optim
+
+    def step(self):
+
+        grads, shapes, has_grads = self._pack_grad(self.objectives)
+        pc_grad = self._project_conflicting(grads, has_grads)
+        pc_grad=self._unflatten_grad(pc_grad, shapes[0])
+        self._set_grad(pc_grad)
+        self._optim.step()
+        self.objectives=list()
+        return 
+
+    def pc_backward(self, objectives,labels):
+        return
