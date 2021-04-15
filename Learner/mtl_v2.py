@@ -61,9 +61,8 @@ class MTLLearner_v2(BaseLearner):
         correct = pred.eq(target.view_as(pred)).sum().item()
 
         self.optimizer.pc_backward(loss,target)
-        data_num=len(data)
         del data,target
-        return correct,loss,data_num
+        return correct,loss
 
 
     def _train(self, epoch):
@@ -81,7 +80,7 @@ class MTLLearner_v2(BaseLearner):
                 if (batch_idx+1)>=self.training_data_len_list[i]: # data갯수가 달라 batch 수가 다를경우
                     continue
                 batch_idx,(data,target)=next(loader)
-                _correct,loss,data_num=self._class_wise_write(data,target)
+                _correct,loss=self._class_wise_write(data,target)
                 correct+=_correct
                 running_loss += loss.item()
                 if self.device == 'cuda':

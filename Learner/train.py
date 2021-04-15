@@ -124,12 +124,11 @@ class ClassicLearner(BaseLearner):
         self.model.eval()
         eval_loss = 0
         correct = 0
-        criterion = self.model.loss  # add all samples in a mini-batch
         with torch.no_grad():
             for data, target in self.test_loader:
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
-                loss = criterion(output, target)
+                loss = self.criterion(output, target)
                 eval_loss += loss.item()
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)

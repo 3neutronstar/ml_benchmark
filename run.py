@@ -45,6 +45,9 @@ def parse_args(args):
     parser.add_argument(
         '--log', type=str, default='true',
         help='generate log')
+    parser.add_argument(
+        '--earlystop', type=bool, default=False,
+        help='earlystopping')
     # save grad
     parser.add_argument(
         '--grad_save', type=bool, default=False,
@@ -143,6 +146,7 @@ def main(args):
                'grad_save':flags.grad_save,
                'threshold':flags.threshold,
                'grad_off_epoch':flags.grad_off_epoch,
+               'earlystop':flags.earlystop,
                }
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
         print("SEED:",flags.seed)

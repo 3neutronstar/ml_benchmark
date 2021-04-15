@@ -25,9 +25,9 @@ def get_hyperparams(nn_type):
         epochs = 200
         lr=1e-2
         momentum=0.9
-    elif nn_type=='nin':
+    elif nn_type=='alexnet':
         dataset='cifar10'
-        epochs=320
+        epochs=200
         lr=1e-2
         momentum=0.9
     else:
@@ -62,7 +62,7 @@ class BaseNet():
         if configs['nn_type']=='convnet':
             from NeuralNet.convnet import ConvNet
             model = ConvNet(configs).to(configs['device'])
-        if configs['nn_type']=='nin':
-            from NeuralNet.NIN import NIN
-            model = NIN(configs).to(configs['device'])
+        if configs['nn_type']=='alexnet':
+            from NeuralNet.alexnet import AlexNet
+            model = AlexNet(configs).to(configs['device'])
         self.model=model

@@ -57,7 +57,7 @@ class EarlyStopping:
         elif score > self.best_score + self.delta:
 
             self.counter += 1
-            if self.config['nn_type']!='vgg16' and self.config['nn_type']!='resnet20' and self.config['nn_type']!='convnet' and self.config['nn_type']!='nin':
+            if self.config['earlystop']==True:
                 print(
                     f'EarlyStopping counter: {self.counter} out of {self.patience}')
                 if self.counter >= self.patience:
