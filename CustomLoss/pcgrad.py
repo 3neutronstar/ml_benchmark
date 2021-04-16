@@ -196,28 +196,34 @@ class PCGrad_v3(PCGrad):
                     continue
                 grad.append(p.grad.clone())
         return grad
-    
-    def step(self):
-        objectives= [obj.clone() for obj in self.objectives]
-        for i, i_obj in enumerate(self.objectives):
+
+    def _pack_grad(self, objectives):
+        grad_list=list()
+        for obj in objectives:
             self._optim.zero_grad(set_to_none=True)
-            i_obj.backward(retain_graph=True)
+            obj.backward(retain_graph=True)
             grad = self._retrieve_grad()
-            g_i=self._flatten_grad(grad, self.shape)
+            grad=self._flatten_grad(grad, self.shape)
+            grad_list.append(grad.to('cpu'))
+        self.objectives=list()
+        return grad_list
+
+    def step(self):
+        grad_list=self._pack_grad(self.objectives)
+        pc_grad_list=copy.deepcopy(grad_list)
+        for i, g_i in enumerate(grad_list):
+            random.shuffle(pc_grad_list)
+            g_i=g_i.cuda()
             if i==0:
                 pc_grad=torch.zeros_like(g_i)
-            random.shuffle(objectives)
-            for j_obj in objectives:
-                self._optim.zero_grad(set_to_none=True)
-                j_obj.backward(retain_graph=True)
-                grad = self._retrieve_grad()
-                g_j=self._flatten_grad(grad, self.shape)
-
+            for g_j in pc_grad_list:
+                g_j=g_j.cuda()
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-            pc_grad=pc_grad+g_i
-        pc_grad=torch.div(pc_grad,self.batch_size)
+                g_j=g_j.to('cpu')
+            pc_grad+=g_i
+        pc_grad=torch.div(pc_grad,self.batch_size)                        
         pc_grad=self._unflatten_grad(pc_grad, self.shape)
         self._set_grad(pc_grad)
         self._optim.step()
@@ -278,6 +284,7 @@ class PCGrad_v4(PCGrad):
             g_i=self._flatten_grad(grad, self.shape)
             if i==0:
                 pc_grad=torch.zeros_like(g_i)
+            random.shuffle(objectives)
             for j_obj in objectives:
                 self._optim.zero_grad(set_to_none=True)
                 j_obj.backward(retain_graph=True)
