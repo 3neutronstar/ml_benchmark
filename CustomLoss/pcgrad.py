@@ -52,11 +52,10 @@ class PCGrad(): # mtl_v2 only
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
         merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
-        del grads
-        merged_grad[shared] = torch.stack([g[shared]
-                                           for g in pc_grad]).mean(dim=0) #평균
-        merged_grad[~shared] = torch.stack([g[~shared]
-                                            for g in pc_grad]).sum(dim=0)
+        merged_grad[shared] = torch.stack([g[shared].to('cpu')
+                                           for g in pc_grad]).mean(dim=0).cuda() #평균
+        merged_grad[~shared] = torch.stack([g[~shared].to('cpu')
+                                            for g in pc_grad]).sum(dim=0).cuda()
         return merged_grad
 
     def _set_grad(self, grads):
@@ -164,20 +163,80 @@ class PCGrad_v2(PCGrad):
 class PCGrad_v3(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v3,self).__init__(optimizer)
+        self.objectives=None
+        self.shape=[]
+        for group in self._optim.param_groups:
+            for p in group['params']:
+                self.shape.append(p.shape)
+        self.i=0
+        self.batch_size=0
 
     @property
     def optimizer(self):
         return self._optim
 
-    def step(self):
+    def _retrieve_grad(self):
+        '''
+        get the gradient of the parameters of the network with specific 
+        objective
+        
+        output:
+        - grad: a list of the gradient of the parameters
+        - shape: a list of the shape of the parameters
+        - has_grad: a list of mask represent whether the parameter has gradient
+        '''
 
-        grads, shapes, has_grads = self._pack_grad(self.objectives)
-        pc_grad = self._project_conflicting(grads, has_grads)
-        pc_grad=self._unflatten_grad(pc_grad, shapes[0])
+        grad=[]
+        for group in self._optim.param_groups:
+            for p in group['params']:
+                # if p.grad is None: continue
+                # tackle the multi-head scenario
+                if p.grad is None:
+                    grad.append(torch.zeros_like(p).to(p.device))
+                    continue
+                grad.append(p.grad.clone())
+        return grad
+    
+    def _project_conflicting(self, grads):
+        pc_grad = copy.deepcopy(grads)
+        for g_i in pc_grad:
+            random.shuffle(grads)
+            for g_j in grads:
+                g_i_g_j = torch.dot(g_i, g_j)
+                if g_i_g_j < 0:
+                    g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+        merged_grad = torch.stack([g for g in pc_grad]).mean(dim=0).cuda() #평균
+        return merged_grad
+        
+    def step(self):
+        objectives=copy.deepcopy(self.objectives)
+        for i, i_obj in enumerate(objectives):
+            self._optim.zero_grad(set_to_none=True)
+            i_obj.backward(retain_graph=True)
+            grad = self._retrieve_grad()
+            g_i=self._flatten_grad(grad, self.shape)
+            if i==0:
+                pc_grad=torch.zeros_like(g_i)
+            for j_obj in self.objectives:
+                self._optim.zero_grad(set_to_none=True)
+                j_obj.backward(retain_graph=True)
+                grad = self._retrieve_grad()
+                g_j=self._flatten_grad(grad, self.shape)
+
+                g_i_g_j = torch.dot(g_i, g_j)
+                if g_i_g_j < 0:
+                    g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+            pc_grad=pc_grad+g_i
+
+        pc_grad=self._unflatten_grad(pc_grad, self.shape)
         self._set_grad(pc_grad)
         self._optim.step()
-        self.objectives=list()
+        self.objectives=None
+        self.i=0
         return 
 
     def pc_backward(self, objectives,labels):
+        self.objectives=objectives
+        self.batch_size=len(labels)
         return
+    
