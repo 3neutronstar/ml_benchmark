@@ -270,7 +270,7 @@ class PCGrad_v4(PCGrad):
         return grad
 
     def step(self):
-        objectives=copy.deepcopy(self.objectives)
+        objectives=[obj.clone() for obj in self.objectives]
         for i, i_obj in enumerate(self.objectives):
             self._optim.zero_grad(set_to_none=True)
             i_obj.backward(retain_graph=True)
