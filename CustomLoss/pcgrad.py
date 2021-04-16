@@ -209,7 +209,7 @@ class PCGrad_v3(PCGrad):
         return merged_grad
         
     def step(self):
-        objectives=copy.deepcopy(self.objectives)
+        objectives=self.objectives.clone()
         for i, i_obj in enumerate(objectives):
             self._optim.zero_grad(set_to_none=True)
             i_obj.backward(retain_graph=True)
