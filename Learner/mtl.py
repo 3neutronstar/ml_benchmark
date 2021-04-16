@@ -9,9 +9,9 @@ from CustomLoss.pcgrad import PCGrad, PCGrad_v3
 class MTLLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MTLLearner,self).__init__(model,time_data,file_path,configs)
-        if configs['mode']=='mtl':
+        if configs['mode']=='traim_mtl':
             self.optimizer=PCGrad(self.optimizer)
-        elif configs['mode']=='mtl_v3':
+        elif configs['mode']=='train_mtl_v3':
             self.optimizer=PCGrad_v3(self.optimizer)
         self.class_idx=1
         self.criterion=self.criterion.__class__(reduction='none')#grad vector (no scalar)
