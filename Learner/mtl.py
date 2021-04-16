@@ -13,8 +13,12 @@ class MTLLearner(BaseLearner):
             self.optimizer=PCGrad(self.optimizer)
         elif configs['mode']=='train_mtl_v3':
             self.optimizer=PCGrad_v3(self.optimizer)
-        self.class_idx=1
-        self.criterion=self.criterion.__class__(reduction='none')#grad vector (no scalar)
+        
+        if configs['mode']=='train_mtl_v3':
+            reduction='none'
+        else:
+            reduction='mean'
+        self.criterion=self.criterion.__class__(reduction=reduction)#grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
             os.mkdir(os.path.join(self.making_path,time_data))
 

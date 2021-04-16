@@ -14,7 +14,6 @@ class MTLLearner_v2(BaseLearner):
             self.optimizer=PCGrad_v4(self.optimizer)
         else:
             raise NotImplementedError
-        self.class_idx=1
         self.criterion=self.criterion.__class__(reduction='mean')#grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
             os.mkdir(os.path.join(self.making_path,time_data))
