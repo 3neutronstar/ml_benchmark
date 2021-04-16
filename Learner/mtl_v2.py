@@ -3,12 +3,17 @@ import os
 import sys
 import torch
 from Learner.base_learner import BaseLearner
-from CustomLoss.pcgrad import PCGrad_v2
+from CustomLoss.pcgrad import PCGrad_v2,PCGrad_v4
 
 class MTLLearner_v2(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MTLLearner_v2,self).__init__(model,time_data,file_path,configs)
-        self.optimizer=PCGrad_v2(self.optimizer)
+        if configs['mode']=='train_mtl_v2':
+            self.optimizer=PCGrad_v2(self.optimizer)
+        if configs['mode']=='train_mtl_v4':
+            self.optimizer=PCGrad_v4(self.optimizer)
+        else:
+            raise NotImplementedError
         self.class_idx=1
         self.criterion=self.criterion.__class__(reduction='mean')#grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path,time_data)) == False:
