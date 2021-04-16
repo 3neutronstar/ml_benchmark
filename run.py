@@ -183,7 +183,7 @@ def main(args):
         learner=GradPruneLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif flags.mode=='train_mtl':
+    elif flags.mode=='train_mtl' or flags.mode=='train_mtl_v3':
         from Learner.mtl import MTLLearner
         learner=MTLLearner(model,time_data,file_path,configs)
         configs=learner.run()
