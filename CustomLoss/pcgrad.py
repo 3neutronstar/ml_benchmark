@@ -221,7 +221,6 @@ class PCGrad_v3(PCGrad):
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                g_j=g_j.to('cpu')
             pc_grad+=g_i
         pc_grad=torch.div(pc_grad,self.batch_size)                        
         pc_grad=self._unflatten_grad(pc_grad, self.shape)
