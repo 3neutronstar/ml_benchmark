@@ -14,7 +14,7 @@ class MTLLearner(BaseLearner):
         elif configs['mode']=='train_mtl_v3':
             self.optimizer=PCGrad_v3(self.optimizer)
         
-        if configs['mode']=='train_mtl_v3':
+        if configs['mode']=='train_mtl_v3' or configs['mode']=='train_mtl':
             reduction='none'
         else:
             reduction='mean'
