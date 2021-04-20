@@ -70,7 +70,7 @@ class MTLLearner(BaseLearner):
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
 
-            self.optimizer.pc_backward(loss,target)
+            self.optimizer.pc_backward(loss,target,epoch,batch_idx)
             self.optimizer.step()
 
             running_loss += loss.sum().item()

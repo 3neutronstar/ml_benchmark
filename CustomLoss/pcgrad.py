@@ -4,9 +4,9 @@ import torch.nn as nn
 import copy
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
-
-class PCGrad(): # mtl_v2 only
+class PCGrad(): # mtl_v2 only# cpu 안내리기
     def __init__(self, optimizer):
         self._optim = optimizer
         return
@@ -29,7 +29,7 @@ class PCGrad(): # mtl_v2 only
 
         return self._optim.step()
 
-    def pc_backward(self, objectives,labels):
+    def pc_backward(self, objectives,labels,epoch=None,batch_idx=None):
         '''
         calculate the gradient of the parameters
         input:
@@ -37,25 +37,43 @@ class PCGrad(): # mtl_v2 only
         '''
 
         grads, shapes, has_grads = self._pack_grad(objectives)
-        pc_grad = self._project_conflicting(grads, has_grads)
+        pc_grad = self._project_conflicting(grads, has_grads,epoch=epoch,batch_idx=batch_idx)
         pc_grad = self._unflatten_grad(pc_grad, shapes[0])
         self._set_grad(pc_grad)
         return
 
-    def _project_conflicting(self, grads, has_grads, shapes=None):
+    def _project_conflicting(self, grads, has_grads, shapes=None,epoch=None,batch_idx=None):
         shared = torch.stack(has_grads).prod(0).bool()
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
+        print_norm_before=list()
+        print_norm_after=list()
+        if batch_idx is not None:
+            if batch_idx % 10==0:
+                for g in pc_grad:
+                    print_norm_before.append(g.norm().cpu())
+
         for g_i in pc_grad:
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+        if batch_idx is not None:
+            if batch_idx % 10==0:
+                for g in pc_grad:
+                    print_norm_after.append(g.norm().cpu())
+                plt.plot(print_norm_before,print_norm_after,'bo')
+                plt.xlabel('before')            
+                plt.ylabel('after')            
+                plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
+                plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
+
         merged_grad = torch.zeros_like(grads[0])
         merged_grad[shared] = torch.stack([g[shared]
-                                           for g in pc_grad]).mean(dim=0) #평균
+                                           for g in pc_grad]).mean(dim=0)
         merged_grad[~shared] = torch.stack([g[~shared]
                                             for g in pc_grad]).sum(dim=0)
+        
         return merged_grad
 
     def _set_grad(self, grads):
@@ -121,12 +139,12 @@ class PCGrad(): # mtl_v2 only
                 # tackle the multi-head scenario
                 if p.grad is None:
                     shape.append(p.shape)
-                    grad.append(torch.zeros_like(p))
-                    has_grad.append(torch.zeros_like(p))
+                    grad.append(torch.zeros_like(p).to(p.device))
+                    has_grad.append(torch.zeros_like(p).to(p.device))
                     continue
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
-                has_grad.append(torch.ones_like(p))
+                has_grad.append(torch.ones_like(p).to(p.device))
         return grad, shape, has_grad
 
 
@@ -160,7 +178,7 @@ class PCGrad_v2(PCGrad):
         return
 
 
-class PCGrad_v3(PCGrad):
+class PCGrad_v3(PCGrad):# cpu 내리기
     def __init__(self,optimizer):
         super(PCGrad_v3,self).__init__(optimizer)
         self.objectives=None
