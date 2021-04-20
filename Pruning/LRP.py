@@ -1,6 +1,6 @@
 import torch
 import torch.optim as optim
-class LateralInhibition():
+class LateralInhibition():#LRN
     def __init__(self,optimizer:optim):
         self._optim=optimizer
 

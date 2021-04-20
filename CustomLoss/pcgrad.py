@@ -51,7 +51,7 @@ class PCGrad(): # mtl_v2 only
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-        merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
+        merged_grad = torch.zeros_like(grads[0])
         merged_grad[shared] = torch.stack([g[shared]
                                            for g in pc_grad]).mean(dim=0) #평균
         merged_grad[~shared] = torch.stack([g[~shared]
@@ -121,12 +121,12 @@ class PCGrad(): # mtl_v2 only
                 # tackle the multi-head scenario
                 if p.grad is None:
                     shape.append(p.shape)
-                    grad.append(torch.zeros_like(p).to(p.device))
-                    has_grad.append(torch.zeros_like(p).to(p.device))
+                    grad.append(torch.zeros_like(p))
+                    has_grad.append(torch.zeros_like(p))
                     continue
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
-                has_grad.append(torch.ones_like(p).to(p.device))
+                has_grad.append(torch.ones_like(p))
         return grad, shape, has_grad
 
 
@@ -192,7 +192,7 @@ class PCGrad_v3(PCGrad):
                 # if p.grad is None: continue
                 # tackle the multi-head scenario
                 if p.grad is None:
-                    grad.append(torch.zeros_like(p).to(p.device))
+                    grad.append(torch.zeros_like(p))
                     continue
                 grad.append(p.grad.clone())
         return grad
@@ -269,7 +269,7 @@ class PCGrad_v4(PCGrad):
                 # if p.grad is None: continue
                 # tackle the multi-head scenario
                 if p.grad is None:
-                    grad.append(torch.zeros_like(p).to(p.device))
+                    grad.append(torch.zeros_like(p))
                     continue
                 grad.append(p.grad.clone())
         return grad
