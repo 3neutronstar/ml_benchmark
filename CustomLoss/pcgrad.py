@@ -70,7 +70,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
                 plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
 
-        merged_grad = torch.cat(pc_grad,dim=0).mean(dim=0)
+        merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         # print('after',merged_grad.norm())
         
         return merged_grad
