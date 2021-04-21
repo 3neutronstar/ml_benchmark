@@ -13,7 +13,11 @@
             "args": [
                 "train_mtl",
                 "--nn_type",
-                "resnet20",
+                "convnet",
+                "--lr",
+                "0.001",
+                "--batch_size",
+                "16",
                 //"--epochs",
                 //"1",
                 "--log",

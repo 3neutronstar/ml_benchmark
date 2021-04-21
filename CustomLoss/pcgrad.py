@@ -36,19 +36,19 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         - objectives: a list of objectives
         '''
 
-        grads, shapes, has_grads = self._pack_grad(objectives)
-        pc_grad = self._project_conflicting(grads, has_grads,epoch=epoch,batch_idx=batch_idx)
+        grads, shapes = self._pack_grad(objectives)
+        pc_grad = self._project_conflicting(grads, epoch=epoch,batch_idx=batch_idx)
         pc_grad = self._unflatten_grad(pc_grad, shapes[0])
         self._set_grad(pc_grad)
         return
 
-    def _project_conflicting(self, grads, has_grads, shapes=None,epoch=None,batch_idx=None):
-        shared = torch.stack(has_grads).prod(0).bool()
+    def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         print_norm_before=list()
         print_norm_after=list()
-        if batch_idx is not None:
-            if batch_idx % 10==0:
+        if batch_idx==3074 and epoch==4:
+            print("hi")
+        if batch_idx is not None and batch_idx % 10==0:
                 for g in pc_grad:
                     print_norm_before.append(g.norm().cpu())
 
@@ -57,9 +57,13 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
-                    g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-        if batch_idx is not None:
-            if batch_idx % 10==0:
+                        
+                    g_i -= torch.nan_to_num((g_i_g_j) * g_j / (g_j.norm()**2))
+                    if batch_idx==3074 and epoch==4 and torch.isnan(g_i).sum()>0:
+                        print(g_j.norm())
+
+                    
+        if batch_idx is not None and batch_idx % 10==0:
                 for g in pc_grad:
                     print_norm_after.append(g.norm().cpu())
                 plt.plot(print_norm_before,print_norm_after,'bo')
@@ -68,11 +72,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
                 plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
 
-        merged_grad = torch.zeros_like(grads[0])
-        merged_grad[shared] = torch.stack([g[shared]
-                                           for g in pc_grad]).mean(dim=0)
-        merged_grad[~shared] = torch.stack([g[~shared]
-                                            for g in pc_grad]).sum(dim=0)
+        merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         
         return merged_grad
 
@@ -99,15 +99,14 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         - has_grad: a list of mask represent whether the parameter has gradient
         '''
 
-        grads, shapes, has_grads = [], [], []
+        grads, shapes = [], []
         for obj in objectives:
             self._optim.zero_grad(set_to_none=True)
             obj.backward(retain_graph=True)
-            grad, shape, has_grad = self._retrieve_grad()
+            grad, shape= self._retrieve_grad()
             grads.append(self._flatten_grad(grad, shape))
-            has_grads.append(self._flatten_grad(has_grad, shape))
             shapes.append(shape)
-        return grads, shapes, has_grads
+        return grads, shapes
 
     def _unflatten_grad(self, grads, shapes):
         unflatten_grad, idx = [], 0
@@ -132,7 +131,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         - has_grad: a list of mask represent whether the parameter has gradient
         '''
 
-        grad, shape, has_grad = [], [], []
+        grad, shape = [], []
         for group in self._optim.param_groups:
             for p in group['params']:
                 # if p.grad is None: continue
@@ -140,12 +139,10 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 if p.grad is None:
                     shape.append(p.shape)
                     grad.append(torch.zeros_like(p).to(p.device))
-                    has_grad.append(torch.zeros_like(p).to(p.device))
                     continue
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
-                has_grad.append(torch.ones_like(p).to(p.device))
-        return grad, shape, has_grad
+        return grad, shape
 
 
 class PCGrad_v2(PCGrad):
