@@ -11,6 +11,7 @@ import os
 from utils import EarlyStopping
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 class BaseLearner():
     def __init__(self,model,time_data,file_path,configs):
         self.model = model
@@ -56,6 +57,7 @@ class BaseLearner():
         # Save all grad to the file
         self.configs['end_epoch'] = epochs
         if self.configs['grad_save'] == True:
+            self.grad_list.append([])
             param_size = list()
             params_write = list()
 
@@ -169,12 +171,36 @@ class BaseLearner():
                 del save_grad_list
                 del row_data
 
-    def revert_grad_(self, p_groups):
-        if self.configs['mode'] == 'train_weight_prune' and self.grad_off_mask.sum() > 0 and len(self.grad_list) != 0:
-            for p in p_groups:
-                for i, p_layers in enumerate(p['params']):
-                    for p_nodes in p_layers:
-                        for p_node in p_nodes:
-                            p_node.grad = self.grad_list[-1][0]
-                            self.grad_list[-1].pop(0)
-                    self.grad_list.pop(-1)  # node뽑기
+    def _show_grad(self,output, target,p_groups,epochs,batch_idx):
+        if batch_idx%100==0:
+            criterion=nn.CrossEntropyLoss(reduction='none')
+            self.optimizer.zero_grad()
+            loss=criterion(output, target)
+            flatten_grads=list()
+            for l in loss:
+                flatten_grad=list()
+                l.backward(retain_graph=True)
+                for params in p_groups:
+                    for p in params['params']:
+                        flatten_grad.append(p.grad.view(-1))
+                    flatten_grad=torch.cat(flatten_grad,dim=0)
+                flatten_grads.append(flatten_grad.norm().cpu())
+
+            plt.clf()
+            plt.plot(flatten_grads,flatten_grads,'bo')
+            plt.xlabel('no_pcgrad')
+            plt.ylabel('no_pcgrad')
+            plt.title('no_pcgrad norm (batch size: {})'.format(self.configs['batch_size']))
+            plt.savefig('./grad_data/png/no_pcgrad/{}batch_{}e_{}i.png'.format(self.configs['batch_size'],epochs,batch_idx))
+            criterion=nn.CrossEntropyLoss(reduction='mean')
+            self.optimizer.zero_grad()
+            loss=criterion(output,target)
+            loss.backward()
+        
+
+
+
+         
+
+
+

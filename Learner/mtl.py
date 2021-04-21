@@ -4,19 +4,19 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomLoss.pcgrad import PCGrad, PCGrad_v3
+from CustomLoss.pcgrad import PCGrad, PCGrad_v2
 
 class MTLLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MTLLearner,self).__init__(model,time_data,file_path,configs)
         if configs['mode']=='train_mtl':
             self.optimizer=PCGrad(self.optimizer)
-        elif configs['mode']=='train_mtl_v3':
-            self.optimizer=PCGrad_v3(self.optimizer)
+        elif configs['mode']=='train_mtl_v2':
+            self.optimizer=PCGrad_v2(self.optimizer)
         else:
             raise NotImplementedError
         
-        if configs['mode']=='train_mtl_v3' or configs['mode']=='train_mtl':
+        if configs['mode']=='train_mtl_v2' or configs['mode']=='train_mtl':
             reduction='none'
         else:
             reduction='mean'

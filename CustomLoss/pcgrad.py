@@ -46,11 +46,10 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         print_norm_before=list()
         print_norm_after=list()
-        if batch_idx==3074 and epoch==4:
-            print("hi")
         if batch_idx is not None and batch_idx % 10==0:
                 for g in pc_grad:
-                    print_norm_before.append(g.norm().cpu())
+                    print_norm_before.append(g.norm().cpu().clone())
+        # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
 
         for g_i in pc_grad:
             random.shuffle(grads)
@@ -65,7 +64,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                     
         if batch_idx is not None and batch_idx % 10==0:
                 for g in pc_grad:
-                    print_norm_after.append(g.norm().cpu())
+                    print_norm_after.append(g.norm().cpu().clone())
+                plt.clf()
                 plt.plot(print_norm_before,print_norm_after,'bo')
                 plt.xlabel('before')            
                 plt.ylabel('after')            
@@ -144,40 +144,9 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 grad.append(p.grad.clone())
         return grad, shape
 
-
-class PCGrad_v2(PCGrad):
+class PCGrad_v2(PCGrad):# cpu 내리기
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
-        self.objectives=list()
-
-    @property
-    def optimizer(self):
-        return self._optim
-
-    def step(self):
-
-        grads, shapes, has_grads = self._pack_grad(self.objectives)
-        pc_grad = self._project_conflicting(grads, has_grads)
-        pc_grad=self._unflatten_grad(pc_grad, shapes[0])
-        self._set_grad(pc_grad)
-        self._optim.step()
-        self.objectives=list()
-        return 
-
-    def pc_backward(self, objectives,labels):
-        '''
-        calculate the gradient of the parameters
-        input:
-        - objectives: a list of objectives
-        '''
-        
-        self.objectives.append(objectives)
-        return
-
-
-class PCGrad_v3(PCGrad):# cpu 내리기
-    def __init__(self,optimizer):
-        super(PCGrad_v3,self).__init__(optimizer)
         self.objectives=None
         self.shape=[]
         for group in self._optim.param_groups:
@@ -237,6 +206,7 @@ class PCGrad_v3(PCGrad):# cpu 내리기
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
             pc_grad+=g_i
+        
         pc_grad=torch.div(pc_grad,self.batch_size)                        
         pc_grad=self._unflatten_grad(pc_grad, self.shape)
         self._set_grad(pc_grad)
@@ -249,75 +219,3 @@ class PCGrad_v3(PCGrad):# cpu 내리기
         self.objectives=objectives
         self.batch_size=len(labels)
         return
-
-
-
-class PCGrad_v4(PCGrad):
-    def __init__(self,optimizer):
-        super(PCGrad_v4,self).__init__(optimizer)
-        self.objectives=[]
-        self.shape=[]
-        for group in self._optim.param_groups:
-            for p in group['params']:
-                self.shape.append(p.shape)
-        self.i=0
-        self.batch_size=0
-
-    @property
-    def optimizer(self):
-        return self._optim
-
-    def _retrieve_grad(self):
-        '''
-        get the gradient of the parameters of the network with specific 
-        objective
-        
-        output:
-        - grad: a list of the gradient of the parameters
-        - shape: a list of the shape of the parameters
-        - has_grad: a list of mask represent whether the parameter has gradient
-        '''
-
-        grad=[]
-        for group in self._optim.param_groups:
-            for p in group['params']:
-                # if p.grad is None: continue
-                # tackle the multi-head scenario
-                if p.grad is None:
-                    grad.append(torch.zeros_like(p))
-                    continue
-                grad.append(p.grad.clone())
-        return grad
-
-    def step(self):
-        objectives=[obj.clone() for obj in self.objectives]
-        for i, i_obj in enumerate(self.objectives):
-            self._optim.zero_grad(set_to_none=True)
-            i_obj.backward(retain_graph=True)
-            grad = self._retrieve_grad()
-            g_i=self._flatten_grad(grad, self.shape)
-            if i==0:
-                pc_grad=torch.zeros_like(g_i)
-            random.shuffle(objectives)
-            for j_obj in objectives:
-                self._optim.zero_grad(set_to_none=True)
-                j_obj.backward(retain_graph=True)
-                grad = self._retrieve_grad()
-                g_j=self._flatten_grad(grad, self.shape)
-
-                g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0:
-                    g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-            pc_grad=pc_grad+g_i
-
-        pc_grad=self._unflatten_grad(pc_grad, self.shape)
-        self._set_grad(pc_grad)
-        self._optim.step()
-        self.objectives=[]
-        self.i=0
-        return 
-
-    def pc_backward(self, objectives,labels):
-        self.objectives.append(objectives)
-        return
-    
