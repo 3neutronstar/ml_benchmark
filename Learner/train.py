@@ -96,9 +96,10 @@ class ClassicLearner(BaseLearner):
             # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
-            loss.backward()  # 역전파
+            loss.backward(retain_graph=True)  # 역전파
             p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
-            self.grad_list.append([])
+            # show grad
+            self._show_grad(output, target,p_groups,epoch,batch_idx)
             # grad prune
             self._prune_grad(p_groups, epoch, batch_idx)
             # grad save(prune후 save)
@@ -151,6 +152,7 @@ class ClassicLearner(BaseLearner):
         # pruning mask generator
         l = -1  # 처음 layer는 0으로 증가해서 maxpooling과 같은 요소를 피하기 위함
         if self.configs['mode'] == 'train_weight_prune':
+            
             for p in p_groups:
                 for i, p_layers in enumerate(p['params']):
                     # first and last layer live

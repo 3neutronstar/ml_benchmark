@@ -43,14 +43,14 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         return
 
     def _project_conflicting(self, grads, has_grads, shapes=None,epoch=None,batch_idx=None):
-        shared = torch.stack(has_grads).prod(0).bool()
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         print_norm_before=list()
         print_norm_after=list()
         if batch_idx is not None:
             if batch_idx % 100==0:
                 for g in pc_grad:
-                    print_norm_before.append(g.norm().cpu())
+                    print_norm_before.append(g.norm().cpu().clone())
+        # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
 
         for g_i in pc_grad:
             random.shuffle(grads)
@@ -58,10 +58,11 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
                     g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    
         if batch_idx is not None:
             if batch_idx % 100==0:
                 for g in pc_grad:
-                    print_norm_after.append(g.norm().cpu())
+                    print_norm_after.append(g.norm().cpu().clone())
                 plt.clf()
                 plt.plot(print_norm_before,print_norm_after,'bo')
                 plt.xlabel('before')            
@@ -69,11 +70,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
                 plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
 
-        merged_grad = torch.zeros_like(grads[0])
-        merged_grad[shared] = torch.stack([g[shared]
-                                           for g in pc_grad]).mean(dim=0)
-        merged_grad[~shared] = torch.stack([g[~shared]
-                                            for g in pc_grad]).sum(dim=0)
+        merged_grad = torch.cat(pc_grad,dim=0).mean(dim=0)
+        # print('after',merged_grad.norm())
         
         return merged_grad
 
