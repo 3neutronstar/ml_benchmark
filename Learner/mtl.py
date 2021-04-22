@@ -23,10 +23,10 @@ class MTLLearner(BaseLearner):
         self.criterion=self.criterion.__class__(reduction=reduction) # grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path, time_data)) == False:
             os.mkdir(os.path.join(self.making_path, time_data))
-            if os.path.exists(os.path.join(self.making_path, 'png')) == False:
-                os.mkdir(os.path.join(self.making_path, 'png'))
-                if os.path.exists(os.path.join(self.making_path, 'png', 'batch_'+configs['batch_size']) )==False:
-                    os.mkdir(os.path.join(self.making_path, 'png', 'batch_'+configs['batch_size'])      )
+        if os.path.exists(os.path.join(self.making_path, 'png')) == False:
+            os.mkdir(os.path.join(self.making_path, 'png'))
+        if os.path.exists(os.path.join(self.making_path, 'png', 'batch_'+str(configs['batch_size'])) )==False:
+            os.mkdir(os.path.join(self.making_path, 'png', 'batch_'+str(configs['batch_size']))      )
 
     def run(self):
         print("Training {} epochs".format(self.configs['epochs']))
@@ -73,8 +73,6 @@ class MTLLearner(BaseLearner):
 
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
-            if batch_idx==3073 and epoch==4:
-                print("hey 29400쯤이야")
 
             self.optimizer.pc_backward(loss,target,epoch,batch_idx)
             self.optimizer.step()
