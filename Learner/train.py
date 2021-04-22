@@ -99,7 +99,7 @@ class ClassicLearner(BaseLearner):
             loss.backward(retain_graph=True)  # 역전파
             p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
             # show grad
-            self._show_grad(output, target,p_groups,epoch,batch_idx)
+            #self._show_grad(output, target,p_groups,epoch,batch_idx)
             # grad prune
             self._prune_grad(p_groups, epoch, batch_idx)
             # grad save(prune후 save)

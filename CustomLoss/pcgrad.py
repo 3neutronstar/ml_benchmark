@@ -44,8 +44,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
     def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
-        print_norm_before=list()
-        print_norm_after=list()
+        #print_norm_before=list()
+        #print_norm_after=list()
         #if batch_idx is not None and batch_idx % 10==0:
         #        for g in pc_grad:
         #            print_norm_before.append(g.norm().cpu().clone())
@@ -56,7 +56,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
-                    g_i -= torch.tensor(np.round(((g_i_g_j) * g_j / (g_j.norm()**2)).cpu().numpy(),-10)).cuda() # 해명 필요
+                    g_j=torch.tensor(np.round(g_j.cpu().numpy(),-10)).cuda()
+                    g_i -= ((g_i_g_j) * g_j / (g_j.norm()**2))# 해명 필요 torch.tensor(np.round(s.cpu().cuda(),-10)).cuda()
 
                     
         #if batch_idx is not None and batch_idx % 10==0:
