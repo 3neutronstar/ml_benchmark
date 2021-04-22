@@ -54,10 +54,10 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         for g_i in pc_grad:
             random.shuffle(grads)
             for g_j in grads:
+                g_j=torch.tensor(np.round(g_j.cpu().numpy(),-10)).cuda()
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
-                    g_j=torch.tensor(np.round(g_j.cpu().numpy(),-10)).cuda()
-                    g_i -= ((g_i_g_j) * g_j / (g_j.norm()**2))# 해명 필요 torch.tensor(np.round(s.cpu().cuda(),-10)).cuda()
+                    g_i -= ((g_i_g_j) * g_j / (g_j.norm()**2))
 
                     
         #if batch_idx is not None and batch_idx % 10==0:
