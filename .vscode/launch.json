@@ -14,8 +14,6 @@
                 "train_mtl",
                 "--nn_type",
                 "convnet",
-                "--lr",
-                "0.001",
                 "--batch_size",
                 "16",
                 //"--epochs",

@@ -56,18 +56,18 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
-                    g_i -= torch.nan_to_num((g_i_g_j) * g_j / (g_j.norm()**2)) # 해명 필요
+                    g_i -= torch.tensor(np.round(((g_i_g_j) * g_j / (g_j.norm()**2)).cpu().numpy(),-10)).cuda() # 해명 필요
 
                     
         if batch_idx is not None and batch_idx % 10==0:
-                for g in pc_grad:
-                    print_norm_after.append(g.norm().cpu().clone())
-                plt.clf()
-                plt.plot(print_norm_before,print_norm_after,'bo')
-                plt.xlabel('before')            
-                plt.ylabel('after')            
-                plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
-                plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
+            for g in pc_grad:
+                print_norm_after.append(g.norm().cpu().clone())
+            plt.clf()
+            plt.plot(print_norm_before,print_norm_after,'bo')
+            plt.xlabel('before')            
+            plt.ylabel('after')            
+            plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
+            plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
 
         merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         

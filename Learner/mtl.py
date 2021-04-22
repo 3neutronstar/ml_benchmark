@@ -70,6 +70,8 @@ class MTLLearner(BaseLearner):
                 self.device)  # gpu로 올림
             output = self.model(data)
             loss = self.criterion(output, target) 
+            if batch_idx==2700 and epoch==6:
+                print("Nan?")
 
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
