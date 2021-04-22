@@ -115,7 +115,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
     def _flatten_grad(self, grads, shapes):
         flatten_grad = torch.cat([g.flatten() for g in grads])
-        flatten_grad=torch.tensor(np.round(flatten_grad.cpu().numpy(),-10)).cuda()
+        flatten_grad=torch.tensor(np.round(flatten_grad.cpu().numpy(),-20)).cuda()
         return flatten_grad
 
     def _retrieve_grad(self):
