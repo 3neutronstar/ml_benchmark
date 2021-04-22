@@ -56,7 +56,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
-                    g_i -= ((g_i_g_j) * g_j / (g_j.norm()**2))
+                    g_i -= torch.nan_to_num((g_i_g_j) * g_j / (g_j.norm()**2))
 
                     
         #if batch_idx is not None and batch_idx % 10==0:
@@ -115,7 +115,6 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
     def _flatten_grad(self, grads, shapes):
         flatten_grad = torch.cat([g.flatten() for g in grads])
-        flatten_grad=torch.tensor(np.round(flatten_grad.cpu().numpy(),-20)).cuda()
         return flatten_grad
 
     def _retrieve_grad(self):
