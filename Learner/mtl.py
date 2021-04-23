@@ -66,8 +66,7 @@ class MTLLearner(BaseLearner):
         correct = 0
         num_training_data = len(self.train_loader.dataset)
         for batch_idx, (data, target) in enumerate(self.train_loader):
-            data, target = data.to(self.device), target.to(
-                self.device)  # gpu로 올림
+            data, target = data.to(self.device).double(), target.to(self.device)  # gpu로 올림
             output = self.model(data)
             loss = self.criterion(output, target) 
 
@@ -98,7 +97,7 @@ class MTLLearner(BaseLearner):
         correct = 0
         with torch.no_grad():
             for data, target in self.test_loader:
-                data, target = data.to(self.device), target.to(self.device)
+                data, target = data.to(self.device).double(), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
                 eval_loss += loss.sum().item()
