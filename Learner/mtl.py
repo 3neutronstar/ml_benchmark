@@ -81,14 +81,14 @@ class MTLLearner(BaseLearner):
             if batch_idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
                     data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.sum().item()), end='')
+            if self.configs['log_extraction']=='true':
+                sys.stdout.flush()
 
         running_loss /= num_training_data
         tok = time.time()
         running_accuracy = 100.0 * correct / float(num_training_data)
         print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
             tok-tik), 'Accuracy: {}/{} ({:.2f}%)'.format(correct, num_training_data, 100.0*correct/num_training_data))
-        if self.configs['log_extraction']=='true':
-            sys.stdout.flush()
         train_metric={'accuracy':running_accuracy,'loss': running_loss}
         return train_metric
 
@@ -111,6 +111,8 @@ class MTLLearner(BaseLearner):
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
             eval_loss, correct, len(self.test_loader.dataset),
             100.0 * correct / float(len(self.test_loader.dataset))))
+        if self.configs['log_extraction']=='true':
+            sys.stdout.flush()
         eval_accuracy = 100.0*correct/float(len(self.test_loader.dataset))
         eval_metric={'accuracy':eval_accuracy,'loss': eval_loss}
         return eval_metric

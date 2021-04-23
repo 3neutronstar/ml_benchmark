@@ -13,7 +13,7 @@
             "args": [
                 "train_mtl",
                 "--nn_type",
-                "convnet",
+                "lenet5",
                 "--batch_size",
                 "16",
                 //"--epochs",

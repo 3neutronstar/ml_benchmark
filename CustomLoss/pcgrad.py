@@ -50,13 +50,19 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #        for g in pc_grad:
         #            print_norm_before.append(g.norm().cpu().clone())
         # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
-
         for g_i in pc_grad:
+            surgery=list()
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j < 0:
-                    g_i -= torch.nan_to_num((g_i_g_j) * g_j / (g_j.norm()**2))
+                    #surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
+                    # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
+                    surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1))
+            if len(surgery)==0:
+                continue
+            else:
+                g_i-=torch.cat(surgery,dim=0).mean(dim=0)
 
                     
         #if batch_idx is not None and batch_idx % 10==0:
