@@ -14,7 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 class BaseLearner():
     def __init__(self,model,time_data,file_path,configs):
-        self.model = model.double()
+        self.model = model
         self.optimizer = self.model.optim
         self.criterion = self.model.loss
         self.scheduler = self.model.scheduler
