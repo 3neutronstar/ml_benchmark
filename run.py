@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 import numpy as np
 from utils import load_params, save_params
-TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2']
+TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_mtl_v4']
 def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -186,6 +186,11 @@ def main(args):
     elif flags.mode=='train_mtl' or flags.mode=='train_mtl_v2':
         from Learner.mtl import MTLLearner
         learner=MTLLearner(model,time_data,file_path,configs)
+        configs=learner.run()
+        save_params(configs, time_data)
+    elif flags.mode=='train_mtl_v4':
+        from Learner.mtl_v2 import MTLLearner_v2
+        learner=MTLLearner_v2(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
 

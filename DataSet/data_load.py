@@ -133,7 +133,7 @@ def data_loader(configs):
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
-    elif configs['mode']=='train_mtl_v3':# Not Using now
+    elif configs['mode']=='train_mtl_v4':# Not Using now
         train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
 
 
