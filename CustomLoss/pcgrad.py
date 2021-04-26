@@ -207,7 +207,7 @@ class PCGrad_v2(PCGrad):
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0 or g_i_g_j>1e-10:
+                if g_i_g_j < 0 or g_i_g_j>1e-20:
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                     g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
         #if batch_idx is not None and batch_idx % 10==0:
