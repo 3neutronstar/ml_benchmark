@@ -60,22 +60,29 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #             g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
         #             # g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
-        2. 
+        # 2. 
+        # for g_i in pc_grad:
+        #     surgery=list()
+        #     random.shuffle(grads)
+        #     for g_j in grads:
+        #         g_i_g_j = torch.dot(g_i, g_j)
+        #         if g_i_g_j < 0:
+        #             # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
+        #             # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
+        #             surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
+        #     if len(surgery)==0:
+        #         continue
+        #     else:
+        #         g_i-=torch.cat(surgery,dim=0).mean(dim=0)
+
+        # 3.
         for g_i in pc_grad:
-            surgery=list()
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0:
-                    # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
-                    # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
-                    surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
-            if len(surgery)==0:
-                continue
-            else:
-                g_i-=torch.cat(surgery,dim=0).mean(dim=0)
-
-                    
+                if g_i_g_j < 0 or g_i_g_j>1e-10:
+                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
         #if batch_idx is not None and batch_idx % 10==0:
         #    for g in pc_grad:
         #        print_norm_after.append(g.norm().cpu().clone())
@@ -157,10 +164,72 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
         return grad, shape
-
-class PCGrad_v2(PCGrad):# cpu 내리기
+class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
+
+
+    def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
+        pc_grad, num_task = copy.deepcopy(grads), len(grads)
+        #print_norm_before=list()
+        #print_norm_after=list()
+        #if batch_idx is not None and batch_idx % 10==0:
+        #        for g in pc_grad:
+        #            print_norm_before.append(g.norm().cpu().clone())
+        # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
+
+        # # 1.
+        # for g_i in pc_grad:
+        #     random.shuffle(grads)
+        #     for g_j in grads:
+        #         g_i_g_j = torch.dot(g_i, g_j)
+        #         if g_i_g_j < 0:
+        #             g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+        #             # g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+
+        # 2. 
+        # for g_i in pc_grad:
+        #     surgery=list()
+        #     random.shuffle(grads)
+        #     for g_j in grads:
+        #         g_i_g_j = torch.dot(g_i, g_j)
+        #         if g_i_g_j < 0:
+        #             # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
+        #             # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
+        #             surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
+        #     if len(surgery)==0:
+        #         continue
+        #     else:
+        #         g_i-=torch.cat(surgery,dim=0).mean(dim=0)
+
+        # 3.
+        for g_i in pc_grad:
+            random.shuffle(grads)
+            for g_j in grads:
+                g_i_g_j = torch.dot(g_i, g_j)
+                if g_i_g_j < 0 or g_i_g_j>1e-10:
+                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+        #if batch_idx is not None and batch_idx % 10==0:
+        #    for g in pc_grad:
+        #        print_norm_after.append(g.norm().cpu().clone())
+        #    plt.clf()
+        #    plt.plot(print_norm_before,print_norm_after,'bo')
+        #    plt.xlabel('before')            
+        #    plt.ylabel('after')            
+        #    plt.title('Grad Norm(batch_size:{})_{}e_{}i'.format(num_task,epoch,batch_idx))
+        #    plt.savefig('./grad_data/png/batch_{}/{}e_{}iter.png'.format(num_task,epoch,batch_idx))
+
+        merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
+        
+        return merged_grad
+
+
+
+
+class PCGrad_v3(PCGrad):# cpu 내리기
+    def __init__(self,optimizer):
+        super(PCGrad_v3,self).__init__(optimizer)
         self.objectives=None
         self.shape=[]
         for group in self._optim.param_groups:
