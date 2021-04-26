@@ -61,28 +61,28 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #             # g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
         # 2. 
-        # for g_i in pc_grad:
-        #     surgery=list()
-        #     random.shuffle(grads)
-        #     for g_j in grads:
-        #         g_i_g_j = torch.dot(g_i, g_j)
-        #         if g_i_g_j < 0:
-        #             # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
-        #             # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
-        #             surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
-        #     if len(surgery)==0:
-        #         continue
-        #     else:
-        #         g_i-=torch.cat(surgery,dim=0).mean(dim=0)
-
-        # 3.
         for g_i in pc_grad:
+            surgery=list()
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0 or g_i_g_j>1e-10:
-                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+                if g_i_g_j < 0 or abs(g_i_g_j)>1e-20:
+                    # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
+                    # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
+                    surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
+            if len(surgery)==0:
+                continue
+            else:
+                g_i-=torch.cat(surgery,dim=0).mean(dim=0)
+
+        # 3.
+        #for g_i in pc_grad:
+        #    random.shuffle(grads)
+        #    for g_j in grads:
+        #        g_i_g_j = torch.dot(g_i, g_j)
+        #        if g_i_g_j < 0 or g_i_g_j>-(1e-20):
+        #            # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+        #            g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
         #if batch_idx is not None and batch_idx % 10==0:
         #    for g in pc_grad:
         #        print_norm_after.append(g.norm().cpu().clone())
