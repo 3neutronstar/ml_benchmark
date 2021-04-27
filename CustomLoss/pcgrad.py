@@ -175,19 +175,17 @@ class PCGrad_v2(PCGrad):
         g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
         g_i_g_j=torch.matmul(g_i,g_j.T)
+        
         for idx,dot_g_j in enumerate(g_i_g_j):
-            index_surgery=dot_g_j<0 #and dot_g_j>1e-20
-            if index_surgery.sum()>0:
-                # print(dot_g_j.size())
-                # print(g_j[index_surgery].size())
-                delta_g_i=((dot_g_j.view(-1,1)*g_j)/torch.maximum(g_j.norm(dim=1,keepdim=True)**2,torch.cuda.FloatTensor([1e-20])))[index_surgery].mean(dim=0)
-                g_i[idx]-=delta_g_i
+            index_surgery=torch.bitwise_and(dot_g_j<0,g_j.norm(dim=1)>1e-10)
+            delta_g_i=((dot_g_j.view(-1,1)*g_j)/g_j.norm(dim=1,keepdim=True)**2)[index_surgery].mean(dim=0)
+            g_i[idx]-=delta_g_i
+            
+            # print(dot_g_j.size())
+            # print(g_j[index_surgery].size())
                 
         merged_grad = g_i.mean(dim=0)
-        
         return merged_grad
-
-
 
 
 class PCGrad_v3(PCGrad):# class wise pcgrad
@@ -207,8 +205,7 @@ class PCGrad_v3(PCGrad):# class wise pcgrad
 
     def _retrieve_grad(self):
         '''
-        get the gradient of the parameters of the network with specific 
-        objective
+        get the gradient of the parameters of the network with specific objective
         
         output:
         - grad: a list of the gradient of the parameters
