@@ -178,9 +178,9 @@ class PCGrad_v2(PCGrad):
         
         for idx,dot_g_j in enumerate(g_i_g_j):
             index_surgery=torch.bitwise_and(dot_g_j<0,g_j.norm(dim=1)>1e-10)
-            delta_g_i=((dot_g_j.view(-1,1)*g_j)/g_j.norm(dim=1,keepdim=True)**2)[index_surgery].mean(dim=0)
+            delta_g_i=((dot_g_j.view(-1,1)*g_j)/(g_j.norm(dim=1,keepdim=True)**2))[index_surgery].mean(dim=0)
             g_i[idx]-=delta_g_i
-            
+
             # print(dot_g_j.size())
             # print(g_j[index_surgery].size())
                 
