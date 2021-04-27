@@ -13,11 +13,9 @@ class MTLLearner(BaseLearner):
             self.optimizer=PCGrad(self.optimizer)
         elif configs['mode']=='train_mtl_v2':
             self.optimizer=PCGrad_v2(self.optimizer)
-        elif configs['mode']=='train_mtl_v4':
-            self.optimizer=PCGrad_v3(self.optimizer)
         else:
             raise NotImplementedError
-        
+
         if configs['mode']=='train_mtl_v2' or configs['mode']=='train_mtl':
             reduction='none'
         else:

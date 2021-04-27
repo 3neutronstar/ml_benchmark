@@ -66,7 +66,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0 or abs(g_i_g_j)>1e-20:
+                if g_i_g_j < 0 or g_j.norm()>1e-20:
                     # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
                     # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
                     surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
@@ -164,6 +164,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
         return grad, shape
+
+
 class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
@@ -207,7 +209,7 @@ class PCGrad_v2(PCGrad):
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0 or g_i_g_j>1e-20:
+                if g_i_g_j < 0 or g_j.norm()>1e-20:
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                     g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
         #if batch_idx is not None and batch_idx % 10==0:
@@ -227,7 +229,7 @@ class PCGrad_v2(PCGrad):
 
 
 
-class PCGrad_v3(PCGrad):# cpu 내리기
+class PCGrad_v3(PCGrad):# class wise pcgrad
     def __init__(self,optimizer):
         super(PCGrad_v3,self).__init__(optimizer)
         self.objectives=None
