@@ -188,12 +188,6 @@ def main(args):
         learner=MTLLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif flags.mode=='train_mtl_v4':
-        from Learner.mtl_v2 import MTLLearner_v2
-        learner=MTLLearner_v2(model,time_data,file_path,configs)
-        configs=learner.run()
-        save_params(configs, time_data)
-
 
     
     print("End the process")

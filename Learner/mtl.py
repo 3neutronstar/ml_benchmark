@@ -4,7 +4,7 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomLoss.pcgrad import PCGrad, PCGrad_v2,PCGrad_v3
+from CustomLoss.pcgrad import PCGrad, PCGrad_v2
 
 class MTLLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
@@ -25,8 +25,8 @@ class MTLLearner(BaseLearner):
             os.mkdir(os.path.join(self.making_path, time_data))
         if os.path.exists(os.path.join(self.making_path, 'png')) == False:
             os.mkdir(os.path.join(self.making_path, 'png'))
-        if os.path.exists(os.path.join(self.making_path, 'png', 'batch_'+str(configs['batch_size'])) )==False:
-            os.mkdir(os.path.join(self.making_path, 'png', 'batch_'+str(configs['batch_size']))      )
+        # if os.path.exists(os.path.join(self.making_path, 'png', 'batch_'+str(configs['batch_size'])) )==False:
+        #     os.mkdir(os.path.join(self.making_path, 'png', 'batch_'+str(configs['batch_size']))      )
 
     def run(self):
         print("Training {} epochs".format(self.configs['epochs']))
