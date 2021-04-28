@@ -184,14 +184,14 @@ class PCGrad_v2(PCGrad):
         shuffle_index=torch.tensor(shuffle_index)
 
         for idx in range(num_task):
-            g_j_g_i=torch.matmul(g_i,g_j.T)
             index=shuffle_index[:,idx]
+            g_j_g_i=torch.matmul(g_i,g_j[index].T)
 
-            this_g_j_g_i=torch.cat([g_j_g_i[x,y].unsqueeze(0) for x,y in zip(range(num_task),index) ])
-            this_g_j=g_j[index]
-            index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
+            this_g_j_g_i=torch.diagonal(g_j_g_i)
+            
+            index_surgery=torch.bitwise_and(this_g_j_g_i<0,(g_j[index].norm(dim=1)>1e-10))
 
-            g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
+            g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),g_j[index]).T,(g_j[index].norm(dim=1)**2)).T[index_surgery]
                 
         merged_grad = g_i.mean(dim=0)
         return merged_grad
