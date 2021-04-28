@@ -21,7 +21,8 @@ class LeNet5(nn.Module):
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=config['momentum'], lr=config['lr'], nesterov=True, weight_decay=1e-4)
         self.loss=nn.CrossEntropyLoss()
-        self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
+        # self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
+        self.scheduler=optim.lr_scheduler.ExponentialLR(self.optim,gamma=0.98)
         self.w_size_list = [150, 2400, 48000, 10080, 84*config['num_classes']]  # weight,bias size
         self.b_size_list = [6, 16, 120, 84, config['num_classes']]
         self.NN_size_list = [1, 6, 16, 120, 84, config['num_classes']]  # cnn과 fc_net out 작성
