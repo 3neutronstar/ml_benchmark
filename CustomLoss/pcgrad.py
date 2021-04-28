@@ -51,29 +51,29 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #            print_norm_before.append(g.norm().cpu().clone())
         # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
 
-        # # 1.
-        # for g_i in pc_grad:
-        #     random.shuffle(grads)
-        #     for g_j in grads:
-        #         g_i_g_j = torch.dot(g_i, g_j)
-        #         if g_i_g_j < 0:
-        #             g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-        #             # g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
-
-        # 2. 
+        # 1.
         for g_i in pc_grad:
-            surgery=list()
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0 or g_j.norm()>1e-20:
-                    # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
-                    # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
-                    surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
-            if len(surgery)==0:
-                continue
-            else:
-                g_i-=torch.cat(surgery,dim=0).mean(dim=0)
+                if g_i_g_j < 0 and g_j.norm()>1e-20:
+                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+
+        # # 2. 
+        # for g_i in pc_grad:
+        #     surgery=list()
+        #     random.shuffle(grads)
+        #     for g_j in grads:
+        #         g_i_g_j = torch.dot(g_i, g_j)
+        #         if g_i_g_j < 0 and g_j.norm()>1e-20:
+        #             # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
+        #             # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
+        #             surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
+        #     if len(surgery)==0:
+        #         continue
+        #     else:
+        #         g_i-=torch.cat(surgery,dim=0).mean(dim=0)
 
 
         # 3. # original v_2
@@ -174,15 +174,24 @@ class PCGrad_v2(PCGrad):
         # random.shuffle(grads)
         g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
-        g_i_g_j=torch.matmul(g_i,g_j.T)
-        
-        for idx,dot_g_j in enumerate(g_i_g_j):
-            index_surgery=torch.bitwise_and(dot_g_j<0,g_j.norm(dim=1)>1e-10)
-            delta_g_i=((dot_g_j.view(-1,1)*g_j)/(g_j.norm(dim=1,keepdim=True)**2))[index_surgery].mean(dim=0)
-            g_i[idx]-=delta_g_i
+        index=[i for i in range(num_task)]# shuffle해서 사용
+        shuffle_index=list()
+        for i in range(num_task):
+            random.shuffle(index)
+            shuffle_index.append(copy.deepcopy(index))
 
-            # print(dot_g_j.size())
-            # print(g_j[index_surgery].size())
+        # g_i[index]=g_j
+        shuffle_index=torch.tensor(shuffle_index)
+        g_j_g_i=torch.matmul(g_i,g_j.T)
+
+        for idx in range(num_task):
+            index=shuffle_index[:,idx]
+
+            this_g_j_g_i=torch.cat([g_j_g_i[x,y].unsqueeze(0) for x,y in zip(range(num_task),index) ])
+            
+            index_surgery=torch.bitwise_and(this_g_j_g_i<0,(g_j[index].norm(dim=1)>1e-10))
+
+            g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),g_j[index]).T,(g_j[index].norm(dim=1)**2)).T[index_surgery]
                 
         merged_grad = g_i.mean(dim=0)
         return merged_grad
