@@ -8,9 +8,9 @@ def load_dataset(configs):
     if configs['dataset'] == 'mnist':
         transform = transforms.Compose(
             [transforms.Resize((32, 32)), transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
-        train_data = datasets.MNIST(root='data', train=True,
+        train_data = datasets.MNIST(root='\dataset', train=True,
                                     download=True, transform=transform)
-        test_data = datasets.MNIST(root='data', train=False,
+        test_data = datasets.MNIST(root='\dataset', train=False,
                                         download=False, transform=transform)
 
     elif configs['dataset'] == 'cifar100':
@@ -27,9 +27,9 @@ def load_dataset(configs):
             transforms.ToTensor(),
             normalize,
         ])
-        train_data = datasets.CIFAR100(root='data', train=True,
+        train_data = datasets.CIFAR100(root='\dataset', train=True,
                                        download=True, transform=train_transform)
-        test_data = datasets.CIFAR100(root='data', train=False,
+        test_data = datasets.CIFAR100(root='\dataset', train=False,
                                       download=False, transform=test_transform)
 
     elif configs['dataset'] == 'cifar10':
@@ -47,9 +47,9 @@ def load_dataset(configs):
             normalize,
         ])
         
-        train_data = datasets.CIFAR10(root='data', train=True,
+        train_data = datasets.CIFAR10(root='\dataset', train=True,
                                       download=True, transform=train_transform)
-        test_data = datasets.CIFAR10(root='data', train=False,
+        test_data = datasets.CIFAR10(root='\dataset', train=False,
                                      download=False, transform=test_transform)
 
     return train_data, test_data
