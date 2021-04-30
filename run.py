@@ -141,12 +141,12 @@ def main(args):
                'num_workers': flags.num_workers,
                'visual_type':flags.visual_type,
                'mode':flags.mode,
-               'patience':flags.patience,
                'momentum':flags.momentum,
                'grad_save':flags.grad_save,
                'threshold':flags.threshold,
                'grad_off_epoch':flags.grad_off_epoch,
                'earlystop':flags.earlystop,
+               'patience':flags.patience,
                }
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
         print("SEED:",flags.seed)
