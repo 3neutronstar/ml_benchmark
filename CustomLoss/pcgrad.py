@@ -41,6 +41,16 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         pc_grad = self._unflatten_grad(pc_grad, shapes[0])
         self._set_grad(pc_grad)
         return
+    
+    def _check_priority(self,my_grads,grads):
+        similarity_grads=list()
+        my_norm=my_grads.norm()
+        for grad in grads:
+            similarity_grads.append((torch.dot(grad,my_grads)/(my_norm*grad.norm())).view(1,-1))
+        
+        sorted_idx=torch.argsort(torch.cat(similarity_grads,dim=1)).view(-1)
+        print(sorted_idx,similarity_grads)
+        return sorted_idx
 
     def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
@@ -53,12 +63,13 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
         # 1.
         for g_i in pc_grad:
-            random.shuffle(grads)
-            for g_j in grads:
-                g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j < 0 and g_j.norm()>1e-20:
+            sorted_idx=self._check_priority(g_i,grads)
+            for j in sorted_idx:
+                g_i_g_j = torch.dot(g_i, grads[j])
+                if g_i_g_j < 0:
+                    if grads[j].norm()>1e-20:
+                        g_i -= (g_i_g_j) * grads[j] / torch.matmul(grads[j],grads[j])
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
         # # 2. 
         # for g_i in pc_grad:
