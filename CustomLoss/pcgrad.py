@@ -193,8 +193,8 @@ class PCGrad_v2(PCGrad):
             
             dot_g_j_g_i=torch.gather(g_j_g_i,dim=1,index=sorted_idx)
             index=sorted_idx[:,idx]
-            index_surgery=torch.bitwise_and(dot_g_j_g_i[index,idx]<0,(norm_g_j>1e-10))
-            g_i[index_surgery]-=torch.div(torch.mul(dot_g_j_g_i[index,idx].view(-1,1),g_j).T,(norm_g_j**2)).T[index_surgery]
+            index_surgery=torch.bitwise_and(dot_g_j_g_i[:,idx]<0,(norm_g_j[index]>1e-10))
+            g_i[index_surgery] -= torch.div(torch.mul(dot_g_j_g_i[:,idx].view(-1,1),g_j[index]).T,(norm_g_j[index]**2)).T[index_surgery]
         #index=[i for i in range(num_task)]# shuffle해서 사용
         #shuffle_index=list()
         #for i in range(num_task):
