@@ -184,35 +184,35 @@ class PCGrad_v2(PCGrad):
         # random.shuffle(grads)
         g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
-        norm_g_j=g_j.norm(dim=1)
-        for idx in range(num_task):
-            g_j_g_i=torch.matmul(g_i,g_j.T)
-            if idx==0:
-                unit_g_j_g_i=torch.div(g_j_g_i,norm_g_j)
-                sorted_idx=torch.argsort(unit_g_j_g_i,dim=1,descending=True)
+        # norm_g_j=g_j.norm(dim=1)
+        # for idx in range(num_task):
+        #     g_j_g_i=torch.matmul(g_i,g_j.T)
+        #     if idx==0:
+        #         unit_g_j_g_i=torch.div(g_j_g_i,norm_g_j)
+        #         sorted_idx=torch.argsort(unit_g_j_g_i,dim=1,descending=True)
             
-            dot_g_j_g_i=torch.gather(g_j_g_i,dim=1,index=sorted_idx)
-            index=sorted_idx[:,idx]
-            index_surgery=torch.bitwise_and(dot_g_j_g_i[:,idx]<0,(norm_g_j[index]>1e-10))
-            g_i[index_surgery] -= torch.div(torch.mul(dot_g_j_g_i[:,idx].view(-1,1),g_j[index]).T,(norm_g_j[index]**2)).T[index_surgery]
-        #index=[i for i in range(num_task)]# shuffle해서 사용
-        #shuffle_index=list()
-        #for i in range(num_task):
-        #    random.shuffle(index)
-        #    shuffle_index.append(copy.deepcopy(index))
+        #     dot_g_j_g_i=torch.gather(g_j_g_i,dim=1,index=sorted_idx)
+        #     index=sorted_idx[:,idx]
+        #     index_surgery=torch.bitwise_and(dot_g_j_g_i[:,idx]<0,(norm_g_j[index]>1e-10))
+        #     g_i[index_surgery] -= torch.div(torch.mul(dot_g_j_g_i[:,idx].view(-1,1),g_j[index]).T,(norm_g_j[index]**2)).T[index_surgery]
+        
+        index=[i for i in range(num_task)]# shuffle해서 사용
+        shuffle_index=list()
+        for i in range(num_task):
+           random.shuffle(index)
+           shuffle_index.append(copy.deepcopy(index))
 
-        ## g_i[index]=g_j
-        #shuffle_index=torch.tensor(shuffle_index)
+        # g_i[index]=g_j
+        shuffle_index=torch.tensor(shuffle_index)
 
-        #for idx in range(num_task):
-        #    index=shuffle_index[:,idx]
-        #    g_j_g_i=torch.matmul(g_i,g_j[index].T)
-        #
-        #    this_g_j_g_i=torch.diagonal(g_j_g_i)
-        #    
-        #    index_surgery=torch.bitwise_and(this_g_j_g_i<0,(g_j[index].norm(dim=1)>1e-10))
-        #
-        #    g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),g_j[index]).T,(g_j[index].norm(dim=1)**2)).T[index_surgery]
+        for idx in range(num_task):
+           index=shuffle_index[:,idx]
+           this_g_j=g_j[index]
+           g_j_g_i=torch.matmul(g_i,this_g_j.T)
+           this_g_j_g_i=torch.diagonal(g_j_g_i)
+           index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
+        
+           g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
                 
         merged_grad = g_i.mean(dim=0)
         return merged_grad

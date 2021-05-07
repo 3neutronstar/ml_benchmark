@@ -1,16 +1,24 @@
+from torch.utils import data
 from torchvision import datasets
 import torchvision.transforms as transforms
 import torch
-from torchvision.transforms.transforms import RandomCrop
+import sys
 
 
 def load_dataset(configs):
+    if sys.platform=='linux':
+        dataset_path='/dataset'
+    elif sys.platform=='win32':
+        dataset_path='\dataset'
+    else:
+        dataset_path='./dataset'
+
     if configs['dataset'] == 'mnist':
         transform = transforms.Compose(
             [transforms.Resize((32, 32)), transforms.ToTensor(),transforms.Normalize((0.1307,), (0.3081,))])
-        train_data = datasets.MNIST(root='\dataset', train=True,
+        train_data = datasets.MNIST(root=dataset_path, train=True,
                                     download=True, transform=transform)
-        test_data = datasets.MNIST(root='\dataset', train=False,
+        test_data = datasets.MNIST(root=dataset_path, train=False,
                                         download=False, transform=transform)
 
     elif configs['dataset'] == 'cifar100':
@@ -27,9 +35,9 @@ def load_dataset(configs):
             transforms.ToTensor(),
             normalize,
         ])
-        train_data = datasets.CIFAR100(root='\dataset', train=True,
+        train_data = datasets.CIFAR100(root=dataset_path, train=True,
                                        download=True, transform=train_transform)
-        test_data = datasets.CIFAR100(root='\dataset', train=False,
+        test_data = datasets.CIFAR100(root=dataset_path, train=False,
                                       download=False, transform=test_transform)
 
     elif configs['dataset'] == 'cifar10':
@@ -47,10 +55,25 @@ def load_dataset(configs):
             normalize,
         ])
         
-        train_data = datasets.CIFAR10(root='\dataset', train=True,
+        train_data = datasets.CIFAR10(root=dataset_path, train=True,
                                       download=True, transform=train_transform)
-        test_data = datasets.CIFAR10(root='\dataset', train=False,
+        test_data = datasets.CIFAR10(root=dataset_path, train=False,
                                      download=False, transform=test_transform)
+    
+    elif configs['dataset']=='fashionmnist':
+        train_transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        test_transform=transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        train_data=datasets.FashionMNIST(root=dataset_path, download=True, train=True, transform=train_transform)
+        test_data=datasets.FashionMNIST(root=dataset_path, download=False, train=False, transform=test_transform)
+    
+    else:
+        raise NotImplementedError
 
     return train_data, test_data
 
