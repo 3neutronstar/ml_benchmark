@@ -62,10 +62,12 @@ def load_dataset(configs):
     
     elif configs['dataset']=='fashionmnist':
         train_transform=transforms.Compose([
+            transforms.Resize((32, 32)),
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,))
         ])
         test_transform=transforms.Compose([
+            transforms.Resize((32, 32)),
             transforms.ToTensor(),
             transforms.Normalize((0.5,), (0.5,))
         ])

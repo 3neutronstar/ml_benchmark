@@ -184,6 +184,7 @@ class PCGrad_v2(PCGrad):
         # random.shuffle(grads)
         g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
+        ##order based learning
         # norm_g_j=g_j.norm(dim=1)
         # for idx in range(num_task):
         #     g_j_g_i=torch.matmul(g_i,g_j.T)
