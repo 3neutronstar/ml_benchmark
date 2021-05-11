@@ -137,7 +137,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
 
     # train data sparsity generator
     for i in reversed(data_classes):
-        if i in sparse_data_classes:
+        if i in sparse_data_classes and configs['mode']:
             locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(my_length/4)]
         else:
             my_length=len(locals()['train_subset_per_class_{}'.format(i)])

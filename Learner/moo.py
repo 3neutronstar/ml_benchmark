@@ -116,7 +116,7 @@ class MOOLearner(BaseLearner):
             total_correct+=class_correct_dict[class_correct_key]
         running_accuracy=100.0*float(total_correct)/float(total_len_data)
         train_metric={'accuracy':running_accuracy,'loss': running_loss/float(total_len_data)}
-        print('Total Accuracy: {:.2f}, Total Loss: {}\n============================'.format(train_metric['accuracy'],train_metric['loss']))
+        print('Total Accuracy: {:.2f}, Total Loss: {}\n'.format(train_metric['accuracy'],train_metric['loss']))
         return train_metric
 
     def _eval(self):
@@ -149,7 +149,7 @@ class MOOLearner(BaseLearner):
             correct+=class_correct_dict[class_correct_key]
             class_accur=100.0*float(class_correct_dict[class_correct_key])/class_total_dict[class_correct_key]
             print('{} class :{}/{} {:2f}%'.format(class_correct_key,class_correct_dict[class_correct_key],class_total_dict[class_correct_key],class_accur))
-        print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)===================\n'.format(
+        print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n==================='.format(
             eval_loss, correct, len(self.test_loader.dataset),
             100.0 * correct / float(len(self.test_loader.dataset))))
         if self.configs['log_extraction']=='true':
