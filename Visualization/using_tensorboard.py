@@ -7,25 +7,25 @@ import os
 
 class Tensorboard():
     def __init__(self, path, configs):
-        if configs['nn_type'] == 'lenet5':
+        if configs['model'] == 'lenet5':
             from NeuralNet.lenet5 import LeNet5
             model=LeNet5(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list,node_size_list=model.get_configs()
+            w_size_list, b_size_list, NN_size_list, model_list, kernel_size_list,node_size_list=model.get_configs()
             self.kernel_size_list = kernel_size_list
-        elif configs['nn_type'] == 'lenet300_100':
+        elif configs['model'] == 'lenet300_100':
             from NeuralNet.lenet300_100 import LeNet_300_100
             model=LeNet_300_100(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list,node_size_list=model.get_configs()
-        elif configs['nn_type'][:3] == 'vgg':
+            w_size_list, b_size_list, NN_size_list, model_list,node_size_list=model.get_configs()
+        elif configs['model'][:3] == 'vgg':
             from NeuralNet.vgg import VGG
             model=VGG(configs)
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list,node_size_list = model.get_configs()
+            w_size_list, b_size_list, NN_size_list, model_list, kernel_size_list,node_size_list = model.get_configs()
             self.kernel_size_list = kernel_size_list
             
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list
         self.NN_size_list = NN_size_list
-        self.NN_type_list = NN_type_list
+        self.model_list = model_list
         self.node_size_list=node_size_list
         self.path=path
         print("node size: ",node_size_list)
@@ -283,7 +283,7 @@ class Tensorboard_elem(Tensorboard_node_base):
                 print('\r {} line complete'.format(t), end='')
             for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.node_size_list)):
                 # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
-                if self.NN_type_list[l] == 'cnn':
+                if self.model_list[l] == 'cnn':
                     # weight
                     tmp_w = tmp_data[:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
                     tmp_data = tmp_data[num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
@@ -308,7 +308,7 @@ class Tensorboard_elem(Tensorboard_node_base):
                         tmp_w = tmp_w[(
                             self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # 내용 제거
 
-                elif self.NN_type_list[l] == 'fc':
+                elif self.model_list[l] == 'fc':
                     # weight
                     tmp_w = tmp_data[:num_b*self.NN_size_list[l]].detach().clone()
                     tmp_data = tmp_data[num_b*self.NN_size_list[l]:]  # remove
@@ -371,7 +371,7 @@ class Tensorboard_elem(Tensorboard_node_base):
         tmp_data = self.total_data.clone().detach()
         for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.node_size_list)):
             # self.timeWriter.add_scalar('norm_grad/{}l'.format(l),tmp_w.norm(),t)#norm in layer(all elem)
-            if self.NN_type_list[l] == 'cnn':
+            if self.model_list[l] == 'cnn':
                 # weight
                 tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
                 tmp_data = tmp_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
@@ -382,7 +382,7 @@ class Tensorboard_elem(Tensorboard_node_base):
                     data_dict['cum_{}l_{}e'.format(l,elem_idx)]=torch.cumsum(w,dim=0)
                 self.num_elem_list.append((self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l])
 
-            elif self.NN_type_list[l] == 'fc':
+            elif self.model_list[l] == 'fc':
                 # weight
                 
                 tmp_w = tmp_data[:,:num_b*self.NN_size_list[l]].detach().clone()
@@ -403,7 +403,7 @@ class Tensorboard_elem(Tensorboard_node_base):
         for l_idx,num_node in enumerate(self.node_size_list):
             if l_idx==2:
                 for n in range(num_node):
-                    if self.NN_type_list[l_idx] == 'cnn':
+                    if self.model_list[l_idx] == 'cnn':
                         node_size=self.kernel_size_list[l_idx][0]*self.kernel_size_list[l_idx][1]*self.NN_size_list[l_idx]
                         for e in range(node_size):
                             for t in self.time_list:
@@ -412,7 +412,7 @@ class Tensorboard_elem(Tensorboard_node_base):
                             self.timeWriter[l_idx].flush()
                             self.timeWriter_cum[l_idx].flush()
                             print('\r {}l_{}n_{}e complete'.format(l_idx,n,e),end='')
-                    if self.NN_type_list[l_idx] == 'fc':
+                    if self.model_list[l_idx] == 'fc':
                         node_size=self.NN_size_list[l_idx]
                         for e in range(node_size):
                             for t in self.time_list:
@@ -430,13 +430,13 @@ class Tensorboard_elem(Tensorboard_node_base):
         tmp_data = self.total_data.clone().detach()
         for l, (num_w, num_b) in enumerate(zip(self.w_size_list, self.node_size_list)):
 
-            if self.NN_type_list[l] == 'cnn':
+            if self.model_list[l] == 'cnn':
                 # weight
                 tmp_w = tmp_data[:,:num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]].detach().clone()
                 tmp_data = tmp_data[:,num_b*(self.kernel_size_list[l][0]*self.kernel_size_list[l][1])*self.NN_size_list[l]:]  # remove
                 node_grad_in_elem=torch.split(tmp_w,self.kernel_size_list[l][0]*self.kernel_size_list[l][1]*self.NN_size_list[l],dim=1)
 
-            elif self.NN_type_list[l] == 'fc':
+            elif self.model_list[l] == 'fc':
                 # weight
                 tmp_w = tmp_data[:,:num_b*self.NN_size_list[l]].detach().clone()
                 tmp_data = tmp_data[:,num_b*self.NN_size_list[l]:]  # remove

@@ -15,7 +15,7 @@ class VGG(nn.Module):
     def __init__(self, config):
         super(VGG, self).__init__()
         final_out=config['num_classes']
-        self.features = self._make_layers(cfg[config['nn_type']])
+        self.features = self._make_layers(cfg[config['model']])
         self.classifier = nn.Sequential(nn.Linear(7*7*512, 4096),
                                         nn.ReLU(inplace=True),
                                         nn.Linear(4096, 4096),
@@ -33,16 +33,16 @@ class VGG(nn.Module):
         self.b_size_list = list()
         self.kernel_size_list = list()
         self.NN_size_list = list()
-        self.NN_type_list = list()
+        self.model_list = list()
         self.node_size_list=list()
         self.input_channels=3
 
         self.NN_size_list.append(self.input_channels)  # 3개 채널 color
 
-        vgg_name=config['nn_type']
+        vgg_name=config['model']
         for cnn_info in cfg[vgg_name]:
             if cnn_info != 'M':
-                self.NN_type_list.append('cnn')
+                self.model_list.append('cnn')
                 self.NN_size_list.append(cnn_info)
                 self.kernel_size_list.append((3, 3))
                 for _ in range(self.input_channels):
@@ -52,7 +52,7 @@ class VGG(nn.Module):
                 self.node_size_list.append(cnn_info)
 
         for fc_info in [4096, 4096, config['num_classes']]:
-            self.NN_type_list.append('fc')
+            self.model_list.append('fc')
             self.NN_size_list.append(fc_info)
             self.b_size_list.append(fc_info)
             self.w_size_list.append(self.b_size_list[-2]*self.b_size_list[-1])
@@ -80,7 +80,7 @@ class VGG(nn.Module):
         return nn.Sequential(*layers)
 
     def get_configs(self):
-        return self.w_size_list, self.b_size_list, self.NN_size_list, self.NN_type_list, self.kernel_size_list,self.node_size_list
+        return self.w_size_list, self.b_size_list, self.NN_size_list, self.model_list, self.kernel_size_list,self.node_size_list
 
 def test():
     net = VGG('VGG11')

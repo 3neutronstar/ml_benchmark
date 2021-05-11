@@ -1,3 +1,4 @@
+from numpy import int16
 from torch.utils import data
 from torchvision import datasets
 import torchvision.transforms as transforms
@@ -98,9 +99,20 @@ def split_class_data_loader(train_data,test_data,configs):
         test_data_loader = torch.utils.data.DataLoader(test_data,
                         batch_size=configs['batch_size'], shuffle=False)
     return train_data_loader, test_data_loader
+
+
 def split_class_list_data_loader(train_data,test_data,configs):
-    data_classes = [i for i in range(configs['num_classes'])]
+    
+    if configs['device'] == 'gpu':
+        pin_memory = True
+        # pin_memory=False
+    else:
+        pin_memory = False
+
+    data_classes = [i for i in range(configs['moo_num_classes'])]
+    sparse_data_classes=[i for i in range(configs['moo_num_sparse_classes'])]
     train_data_loader=list()
+    test_data_loader=list()
     # for idx in data_classes:
     #     locals()['train_subset_per_class_{}'.format(idx)] = list()
     #     for j in range(len(train_data)):
@@ -113,22 +125,57 @@ def split_class_list_data_loader(train_data,test_data,configs):
     #                                             batch_size=configs['batch_size'],
     #                                             shuffle=True
     #                                             )) # 각 loader에 넣기
-    for i in range(configs['num_classes']):
+    locals()['test_subset_per_class']=list()
+    for i in data_classes:
         locals()['train_subset_per_class_{}'.format(i)]=list()
-    for idx,(images, label) in enumerate(train_data):
-        locals()['train_subset_per_class_{}'.format(label)].append(idx)
-    for i in range(configs['num_classes']):
+    #train
+    for idx,(train_images, train_label) in enumerate(train_data):
+        if train_label in data_classes:
+            locals()['train_subset_per_class_{}'.format(train_label)].append(idx)
+        else:
+            continue
+
+    # train data sparsity generator
+    for i in reversed(data_classes):
+        if i in sparse_data_classes:
+            locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(my_length/4)]
+        else:
+            my_length=len(locals()['train_subset_per_class_{}'.format(i)])
+            continue
+        print('{} class have {} data'.format(i,len(locals()['train_subset_per_class_{}'.format(i)])))
+
+    for i in data_classes:
         locals()['trainset_{}'.format(i)] = torch.utils.data.Subset(train_data,
                                                 locals()['train_subset_per_class_{}'.format(i)]) # 인덱스 기반 subset 생성
-        train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(i)],
-                                                batch_size=configs['batch_size'],
-                                                shuffle=True
-                                                )) # 각 loader에 넣기
         
-    test_data_loader = torch.utils.data.DataLoader(test_data,
-                    batch_size=configs['batch_size'], shuffle=False)
+        if i in sparse_data_classes:
+            batch_size=int(configs['batch_size']/4)
+        else:
+            batch_size=configs['batch_size']
+
+        train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(i)],
+                                                    batch_size=batch_size,
+                                                    pin_memory=pin_memory,
+                                                    shuffle=True
+                                                    )) # 각 loader에 넣기
+
+    #test
+    for idx,(test_images, test_label) in enumerate(train_data):
+        if test_label in data_classes:
+            locals()['test_subset_per_class'].append(idx)
+        else:
+            continue
+
+    locals()['testset'] = torch.utils.data.Subset(train_data,
+                                            locals()['test_subset_per_class']) # 인덱스 기반 subset 생성
+    test_data_loader=torch.utils.data.DataLoader(locals()['testset'],
+                                            batch_size=configs['batch_size'],
+                                            pin_memory=pin_memory,
+                                            shuffle=False
+                                            ) # 각 loader에 넣기
     print("Finish Load splitted dataset")
     return train_data_loader, test_data_loader #list(loader),loader return
+
 
 def base_data_loader(train_data,test_data,configs):
     if configs['device'] == 'gpu':
@@ -158,8 +205,8 @@ def data_loader(configs):
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
-    # elif configs['mode']=='train_mtl_v4':# Not Using now
-    #     train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
+    elif 'moo' in configs['mode']:
+        train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
 
 
     return train_data_loader, test_data_loader

@@ -217,3 +217,17 @@ class PCGrad_v2(PCGrad):
                 
         merged_grad = g_i.mean(dim=0)
         return merged_grad
+
+class PCGrad_MOO(PCGrad_v2):
+    '''
+    PC_GRAD for moo
+    '''
+    def __init__(self,optimizer):
+        super(PCGrad_v2,self).__init__(optimizer)
+
+    def pc_backward(self, objectives, labels, epoch, batch_idx=None):
+        pc_objectives=list()
+        for idx in torch.unique(labels):
+            pc_objectives.append(objectives[labels==idx].mean().view(1))
+        super().pc_backward(pc_objectives, labels, epoch=epoch, batch_idx=batch_idx)
+        return torch.cat(pc_objectives,dim=0)

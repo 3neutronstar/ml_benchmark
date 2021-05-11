@@ -64,7 +64,7 @@ class BaseLearner():
             params_write = list()
 
             tik = time.time()
-            if self.configs['nn_type'] == 'lenet300_100' or self.configs['nn_type']=='lenet5':#lenet300 100
+            if self.configs['model'] == 'lenet300_100' or self.configs['model']=='lenet5':#lenet300 100
                 for t, params in enumerate(self.grad_list):
                     if t == 1:
                         for i, p in enumerate(params):  # 각 layer의 params
@@ -76,7 +76,7 @@ class BaseLearner():
                     if t % 100 == 0:
                         print("\r step {} done".format(t), end='')
 
-            # elif self.configs['nn_type'] == 'lenet5': #TODO
+            # elif self.configs['model'] == 'lenet5': #TODO
             #     for t, params in enumerate(self.grad_list):
             #         if t == 1:
             #             for i, p in enumerate(params):  # 각 layer의 params
@@ -106,7 +106,7 @@ class BaseLearner():
                 print("\n")
 
             write_data = torch.cat(params_write, dim=0)
-            if self.configs['nn_type'] != 'lenet300_100' and self.configs['nn_type']!='lenet5':
+            if self.configs['model'] != 'lenet300_100' and self.configs['model']!='lenet5':
                 for epoch in range(1,epochs+1):
                     i = 0
                     epoch_data = list()
@@ -141,14 +141,14 @@ class BaseLearner():
                 for l, p_layers in enumerate(p['params']):
                     
                     # node, rest
-                    if self.configs['nn_type'] == 'lenet300_100' or self.configs['nn_type']=='lenet5':
+                    if self.configs['model'] == 'lenet300_100' or self.configs['model']=='lenet5':
                         if len(p_layers.size()) > 1:  # weight filtering
                             p_nodes = p_layers.grad.cpu().detach().clone()
                             # print(p_nodes.size())
                             for n, p_node in enumerate(p_nodes):
                                 self.grad_list[-1].append(torch.cat([p_node.mean().view(-1), p_node.norm(
                                 ).view(-1), torch.nan_to_num(p_node.var()).view(-1)], dim=0).unsqueeze(0))
-                    # elif self.configs['nn_type'] == 'lenet5':#TODO
+                    # elif self.configs['model'] == 'lenet5':#TODO
                     #     if len(p_layers.size()) > 1:  # weight filtering
                     #         p_node = p_layers.grad.view(
                     #             -1).cpu().detach().clone()
@@ -165,7 +165,7 @@ class BaseLearner():
                                 ).view(-1), torch.nan_to_num(p_node.var()).view(-1)], dim=0).unsqueeze(0))
 
                     p_layers.to(self.device)
-            if 'lenet' not in self.configs['nn_type']:
+            if 'lenet' not in self.configs['model']:
                 npy_path = os.path.join(self.making_path, 'tmp', '{}_{}e_{}.npy'.format(
                     self.time_data, epoch, batch_idx))
                 row_data = torch.cat(save_grad_list, dim=0).unsqueeze(0)

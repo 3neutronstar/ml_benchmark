@@ -8,7 +8,7 @@
             "type": "shell",
             "command": "python",
             "args": [
-                "${workspaceFolder}/run.py","train","--nn_type ","lenet5",
+                "${workspaceFolder}/run.py","train","--model ","lenet5",
             ],
             "options": {
                 "env": {
@@ -42,7 +42,7 @@
             "type": "shell",
             "command": "python",
             "args": [
-                "${workspaceFolder}/run.py","visual_prune","--nn_type","lenet5",
+                "${workspaceFolder}/run.py","visual_prune","--model","lenet5",
             ],
             "options": {
                 "env": {

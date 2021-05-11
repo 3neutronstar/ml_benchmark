@@ -59,7 +59,7 @@ class ConvNet(nn.Module):
         self.w_size_list = [5*5*32, 5*5*32, 5*5*64, 64*4*4*configs['num_classes']]  # weight,bias size
         self.b_size_list = [32, 32, 64, configs['num_classes']]
         self.NN_size_list = [3, 32, 32, 64, configs['num_classes']]  # cnn과 fc_net out 작성
-        self.NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
+        self.model_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
         self.kernel_size_list = [(5, 5), (5, 5), (5, 5)]
         self.node_size_list=[6,16,120,84,configs['num_classes']]
         return
@@ -82,4 +82,4 @@ class ConvNet(nn.Module):
 
     
     def get_configs(self):
-        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list,self.node_size_list
+        return self.w_size_list,self.b_size_list,self.NN_size_list,self.model_list,self.node_size_list

@@ -21,12 +21,12 @@ class LeNet5(nn.Module):
         self.optim = optim.SGD(params=self.parameters(),
                                momentum=config['momentum'], lr=config['lr'], nesterov=True, weight_decay=1e-4)
         self.loss=nn.CrossEntropyLoss()
-        # self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
-        self.scheduler=optim.lr_scheduler.ExponentialLR(self.optim,gamma=0.98)
+        self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
+        # self.scheduler=optim.lr_scheduler.ExponentialLR(self.optim,gamma=0.98)
         self.w_size_list = [150, 2400, 48000, 10080, 84*config['num_classes']]  # weight,bias size
         self.b_size_list = [6, 16, 120, 84, config['num_classes']]
         self.NN_size_list = [1, 6, 16, 120, 84, config['num_classes']]  # cnn과 fc_net out 작성
-        self.NN_type_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
+        self.model_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
         self.kernel_size_list = [(5, 5), (5, 5), (5, 5)]
         self.node_size_list=[6,16,120,84,config['num_classes']]
 
@@ -57,4 +57,4 @@ class LeNet5(nn.Module):
         return x,feature
 
     def get_configs(self):
-        return self.w_size_list,self.b_size_list,self.NN_size_list,self.NN_type_list,self.kernel_size_list,self.node_size_list
+        return self.w_size_list,self.b_size_list,self.NN_size_list,self.model_list,self.kernel_size_list,self.node_size_list

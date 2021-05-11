@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 import numpy as np
 from utils import load_params, save_params
-TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_mtl_v4']
+TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_moo','baseline_moo']
 def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -29,9 +29,9 @@ def parse_args(args):
         help='set mini-batch size')
     parser.add_argument(
         '--patience', type=int, default=10,
-        help='set mini-batch size')
+        help='set patience that the want to handle')
     parser.add_argument(
-        '--nn_type', type=str, default='lenet5',
+        '--model', type=str, default='lenet5',
         help='choose NeuralNetwork type')
     parser.add_argument(
         '--device', type=str, default='gpu',
@@ -43,7 +43,7 @@ def parse_args(args):
         '--num_workers', type=int, default=3,
         help='number of process you have')
     parser.add_argument(
-        '--log', type=str, default='true',
+        '--log_extraction', type=str, default='true',
         help='generate log')
     parser.add_argument(
         '--earlystop', type=bool, default=False,
@@ -52,21 +52,34 @@ def parse_args(args):
     parser.add_argument(
         '--grad_save', type=bool, default=False,
         help='generate grad_save')
-    # prune threshold
-    parser.add_argument(
-        '--threshold', type=int, default=100,
-        help='set prune threshold by cum of norm in elems')
-    # prune threshold
-    parser.add_argument(
-        '--grad_off_epoch', type=int, default=5,
-        help='set gradient off and prune start epoch')
-
 
     #TRAIN OPTION BY NN
-    nn_type = parser.parse_known_args(args)[0].nn_type.lower()
+    model = parser.parse_known_args(args)[0].model.lower()
     from NeuralNet.baseNet import get_hyperparams
-    dataset,epochs,lr,momentum=get_hyperparams(nn_type)
-
+    dataset,epochs,lr,momentum=get_hyperparams(model)
+    # pruning
+    mode=parser.parse_known_args(args)[0].mode.lower()
+    if 'prune' in mode :
+        # prune threshold
+        parser.add_argument(
+            '--threshold', type=int, default=100,
+            help='set prune threshold by cum of norm in elems')
+        # prune threshold
+        parser.add_argument(
+            '--grad_off_epoch', type=int, default=5,
+            help='set gradient off and prune start epoch')
+    elif 'moo' in mode:
+        parser.add_argument(
+            '--moo_num_classes', type=int, default=5,
+            help='num_classes you want to train')
+        parser.add_argument(
+            '--moo_num_sparse_classes', type=int, default=4,
+            help='num_classes you want to train')
+        if parser.parse_known_args(args)[0].moo_num_classes<= parser.parse_known_args(args)[0].moo_num_sparse_classes:
+            raise NotImplementedError
+        if parser.parse_known_args(args)[0].batch_size<8:
+            raise NotImplementedError
+        
     parser.add_argument(
         '--lr', type=float, default=lr,
         help='set learning rate')
@@ -128,30 +141,14 @@ def main(args):
     '''
     Basic Setting
     '''
-    configs = {'device': str(device),
-               'seed': random_seed,
-               'epochs': flags.epochs,
-               'start_epoch':flags.start_epoch,
-               'lr': flags.lr,
-               'batch_size': flags.batch_size,
-               'dataset': flags.dataset.lower(),
-               'nn_type': flags.nn_type.lower(),
-               'colab': flags.colab,
-               'log_extraction': flags.log.lower(),
-               'num_workers': flags.num_workers,
-               'visual_type':flags.visual_type,
-               'mode':flags.mode,
-               'momentum':flags.momentum,
-               'grad_save':flags.grad_save,
-               'threshold':flags.threshold,
-               'grad_off_epoch':flags.grad_off_epoch,
-               'earlystop':flags.earlystop,
-               'patience':flags.patience,
-               }
+    configs=vars(flags)
+    configs ['device']= str(device)
+
+               
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
         print("SEED:",flags.seed)
         save_params(configs, time_data)
-        print("Using device: {}, Mode:{}, Type:{}".format(device,flags.mode,flags.nn_type))
+        print("Using device: {}, Mode:{}, Type:{}".format(device,configs['mode'], configs['model']))
         sys.stdout=open(os.path.join(os.path.dirname(os.path.abspath(__file__)),'grad_data','log_{}.txt'.format(time_data)),'w')
     else:
         if flags.file_name is not None:
@@ -162,10 +159,10 @@ def main(args):
                 CALL_CONFIG['visual_type']=configs['visual_type']
                 print(configs['visual_type'])
             configs=CALL_CONFIG
-            print("Mode:{}, Type:{}".format(configs['mode'],configs['nn_type']))
+            print("Mode:{}, Type:{}".format(configs['mode'],configs['model']))
     
     #Visual
-    if flags.mode == 'visual':
+    if configs['mode'] == 'visual':
         from visualization import visualization
         configs = visualization(configs, file_name)
     else:
@@ -174,24 +171,29 @@ def main(args):
     
     #Train
     file_path=os.path.dirname(os.path.abspath(__file__))
-    if flags.mode == 'train' or flags.mode=='train_weight_prune':
+    if configs['mode'] == 'train' or configs['mode']=='train_weight_prune':
         from Learner.train import ClassicLearner
         learner=ClassicLearner(model,time_data,file_path,configs)
         configs=learner.run()
-    elif flags.mode=='train_lrp' or flags.mode=='train_grad_visual':
+    elif configs['mode']=='train_lrp' or configs['mode']=='train_grad_visual':
         from Learner.gradprune import GradPruneLearner
         learner=GradPruneLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif flags.mode=='train_mtl' or flags.mode=='train_mtl_v2':
+    elif configs['mode']=='train_mtl' or configs['mode']=='train_mtl_v2':
         from Learner.mtl import MTLLearner
         learner=MTLLearner(model,time_data,file_path,configs)
+        configs=learner.run()
+        save_params(configs, time_data)
+    elif configs['mode']=='train_moo':
+        from Learner.moo import MOOLearner
+        learner=MOOLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
 
     
     print("End the process")
-    if flags.log.lower()=='true':
+    if configs['log_extraction']=='true':
         sys.stdout.close()
 
 if __name__ == '__main__':

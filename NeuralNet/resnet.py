@@ -78,7 +78,7 @@ class ResNet(nn.Module):
         'resnet110':([18,18,18],16,BasicBlock),
         'resnet1202':([200,200,200],16,BasicBlock)
         }
-        resnet_type=configs['nn_type']
+        resnet_type=configs['model']
         num_classes=configs['num_classes']
         self.residual_len=len(type_dict[resnet_type][0])
         if self.residual_len==4:

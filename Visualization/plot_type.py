@@ -10,7 +10,7 @@ def print_all_exp(fileTensor,path,file_name,config):
     dataFile = open(os.path.join(path, 'exp.txt'), mode='a')
     from NeuralNet.lenet5 import LeNet5
     model=LeNet5(config)
-    w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list,node_size_list=model.get_configs()
+    w_size_list, b_size_list, NN_size_list, model_list, kernel_size_list,node_size_list=model.get_configs()
     time_list=[]
     nodes_integrated=dict()
     for t, data in enumerate(fileTensor):
@@ -53,7 +53,7 @@ def using_tensorboard(config, path, file_name):
         from visualization import load_npy
         fileTensor = load_npy(path, file_name)
 
-        if config['nn_type'] == 'lenet5':
+        if config['model'] == 'lenet5':
             logger = Tensorboard_node(fileTensor,path, file_name, config) #TODO REMOVE #Tensorboard_elem(fileTensor, path, file_name, config)
             if config['visual_type'] == 'time_domain':
                 logger.time_write()
@@ -65,7 +65,7 @@ def using_tensorboard(config, path, file_name):
                 logger.node_write()
             elif config['visual_type'] == 'node_domain_time': #TODO only in Tensorboard_node
                 logger.node_write_time()
-        elif config['nn_type'] == 'lenet300_100':
+        elif config['model'] == 'lenet300_100':
             logger = Tensorboard_node(fileTensor, path, file_name, config)
             if config['visual_type'] == 'time_domain':
                 logger.time_write()

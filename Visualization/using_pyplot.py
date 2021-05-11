@@ -9,12 +9,12 @@ class Pyplot_node():
     def __init__(self, fileTensor, config, path,file_name):
         NUM_ROWS = config['epochs'] * \
             math.ceil(60000.0/float(config['batch_size']))
-        if config['nn_type'] == 'lenet5':
-            from NeuralNet.lenet5 import w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list
-        elif config['nn_type'][:3] == 'vgg':
+        if config['model'] == 'lenet5':
+            from NeuralNet.lenet5 import w_size_list, b_size_list, NN_size_list, model_list, kernel_size_list
+        elif config['model'][:3] == 'vgg':
             from NeuralNet.vgg import get_nn_config
-            w_size_list, b_size_list, NN_size_list, NN_type_list, kernel_size_list = get_nn_config(
-                config['nn_type'])
+            w_size_list, b_size_list, NN_size_list, model_list, kernel_size_list = get_nn_config(
+                config['model'])
         if os.path.exists(os.path.join(path,file_name)) == False:
             os.mkdir(os.path.join(path,file_name))  
         dir_list=['node_info','node_integrated_info']
@@ -27,7 +27,7 @@ class Pyplot_node():
         self.w_size_list = w_size_list
         self.b_size_list = b_size_list
         self.NN_size_list = NN_size_list
-        self.NN_type_list = NN_type_list
+        self.model_list = model_list
         self.kernel_size_list = kernel_size_list
         self.nodes_integrated = dict()
         total_data = fileTensor.clone()
