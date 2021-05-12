@@ -126,6 +126,12 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data_loader=list()
     test_data_loader=list()
     
+    if isinstance(train_data.targets,list):
+        # train_data.data=torch.tensor(train_data.data) 
+        # test_data.data=torch.tensor(test_data.data) 
+        train_data.targets=torch.tensor(train_data.targets) 
+        test_data.targets=torch.tensor(test_data.targets) 
+
     # train data sparsity generator
     idx=torch.zeros_like(train_data.targets)
     for predict_idx,class_label in enumerate(data_classes):
@@ -148,20 +154,15 @@ def split_class_list_data_loader(train_data,test_data,configs):
                                             shuffle=True
                                             )
     #test
-    locals()['test_subset_per_class']=list()
-    for idx,(test_images, test_label) in enumerate(test_data):
-        if test_label in data_classes:
-            locals()['test_subset_per_class'].append(idx)
-        else:
-            continue
-
+    idx=torch.zeros_like(test_data.targets)
     for predict_idx,class_label in enumerate(data_classes):
         class_idx=(test_data.targets==class_label)
         test_data.targets[class_idx]=predict_idx*torch.ones_like(test_data.targets)[class_idx]# index를 class 맞게 변경
+        idx=torch.bitwise_or(idx,class_idx)
 
-    locals()['testset'] = torch.utils.data.Subset(test_data,
-                                            locals()['test_subset_per_class']) # 인덱스 기반 subset 생성
-    test_data_loader=torch.utils.data.DataLoader(locals()['testset'],
+    test_data.data=test_data.data[idx.bool()]
+    test_data.targets=test_data.targets[idx.bool()] # 인덱스 기반 subset 생성
+    test_data_loader=torch.utils.data.DataLoader(test_data,
                                             batch_size=configs['batch_size'],
                                             pin_memory=pin_memory,
                                             shuffle=False
