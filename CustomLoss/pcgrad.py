@@ -231,3 +231,11 @@ class PCGrad_MOO(PCGrad_v2):
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         super().pc_backward(pc_objectives, labels, epoch=epoch, batch_idx=batch_idx)
         return torch.cat(pc_objectives,dim=0)
+
+class PCGrad_MOO_Baseline(PCGrad_MOO):
+    def __init__(self,optimizer):
+        super(PCGrad_MOO,self).__init__(optimizer)
+
+    def pc_backward(self, objectives, labels, epoch, batch_idx=None):
+        objectives.backward()
+    

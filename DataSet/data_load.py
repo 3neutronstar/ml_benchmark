@@ -98,19 +98,32 @@ def split_class_data_loader(train_data,test_data,configs):
 
         test_data_loader = torch.utils.data.DataLoader(test_data,
                         batch_size=configs['batch_size'], shuffle=False)
+
     return train_data_loader, test_data_loader
 
 
 def split_class_list_data_loader(train_data,test_data,configs):
+    import random
     
     if configs['device'] == 'gpu':
         pin_memory = True
-        # pin_memory=False
     else:
         pin_memory = False
 
+    
     data_classes = [i for i in range(configs['moo_num_classes'])]
-    sparse_data_classes=[i for i in range(configs['moo_num_sparse_classes'])]
+    random.shuffle(data_classes)
+    sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
+
+    if configs['moo_num_sparse_classes']==8:
+        sparse_slice_size=8
+        slice_size=2
+    elif configs['moo_num_sparse_classes']==4:
+        sparse_slice_size=4
+        slice_size=1
+    else:
+        raise NotImplementedError
+
     train_data_loader=list()
     test_data_loader=list()
     # for idx in data_classes:
@@ -135,29 +148,30 @@ def split_class_list_data_loader(train_data,test_data,configs):
         else:
             continue
 
+    min_data_num=min([len(locals()['train_subset_per_class_{}'.format(i)]) for i in data_classes])
     # train data sparsity generator
-    for i in reversed(data_classes):
-        if i in sparse_data_classes and configs['mode']:
-            locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(my_length/4)]
-        else:
-            my_length=len(locals()['train_subset_per_class_{}'.format(i)])
-            continue
-        print('{} class have {} data'.format(i,len(locals()['train_subset_per_class_{}'.format(i)])))
-
     for i in data_classes:
+        #resize batch size
+        if i in sparse_data_classes:
+            batch_size=int(configs['batch_size']/sparse_slice_size)
+        else:
+            batch_size=int(configs['batch_size']/slice_size)
+
+        # sparse는 줄이기
+        if i in sparse_data_classes:
+            locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(min_data_num*configs['moo_sparse_ratio'])]
+        else:
+            locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(min_data_num)]
+
+        # loader에 담기
         locals()['trainset_{}'.format(i)] = torch.utils.data.Subset(train_data,
                                                 locals()['train_subset_per_class_{}'.format(i)]) # 인덱스 기반 subset 생성
-        
-        if i in sparse_data_classes:
-            batch_size=int(configs['batch_size']/4)
-        else:
-            batch_size=configs['batch_size']
-
         train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(i)],
                                                     batch_size=batch_size,
                                                     pin_memory=pin_memory,
                                                     shuffle=True
                                                     )) # 각 loader에 넣기
+        print('{} class have {} data'.format(i,len(locals()['train_subset_per_class_{}'.format(i)])))
 
     #test
     for idx,(test_images, test_label) in enumerate(train_data):

@@ -74,7 +74,10 @@ def parse_args(args):
             help='num_classes you want to train')
         parser.add_argument(
             '--moo_num_sparse_classes', type=int, default=4,
-            help='num_classes you want to train')
+            help='num_sparse_classes you want to train')
+        parser.add_argument(
+            '--moo_sparse_ratio', type=float, default=0.25,
+            help='sparse ratio')
         if parser.parse_known_args(args)[0].moo_num_classes<= parser.parse_known_args(args)[0].moo_num_sparse_classes:
             raise NotImplementedError
         if parser.parse_known_args(args)[0].batch_size<8:
@@ -185,7 +188,7 @@ def main(args):
         learner=MTLLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif configs['mode']=='train_moo':
+    elif configs['mode'] in ['train_moo','baseline_moo']:
         from Learner.moo import MOOLearner
         learner=MOOLearner(model,time_data,file_path,configs)
         configs=learner.run()
