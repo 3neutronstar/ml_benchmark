@@ -127,28 +127,28 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data_loader=list()
     test_data_loader=list()
     # for idx in data_classes:
-    #     locals()['train_subset_per_class_{}'.format(idx)] = list()
+    #     train_subset_dict[ix)] = list()
     #     for j in range(len(train_data)):
     #         if int(train_data[j][1]) == idx:
-    #             locals()['train_subset_per_class_{}'.format(idx)].append(j) # 해당클래스의 인덱스만 추출
+    #             train_subset_dict[ix)].append(j) # 해당클래스의 인덱스만 추출
     #     locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
-    #                                             locals()['train_subset_per_class_{}'.format(idx)]) # 인덱스 기반 subset 생성
+    #                                             train_subset_dict[ix)]) # 인덱스 기반 subset 생성
 
     #     train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
     #                                             batch_size=configs['batch_size'],
     #                                             shuffle=True
     #                                             )) # 각 loader에 넣기
-    locals()['test_subset_per_class']=list()
+    train_subset_dict=dict()
     for i in data_classes:
-        locals()['train_subset_per_class_{}'.format(i)]=list()
+        train_subset_dict[i]=list()
     #train
     for idx,(train_images, train_label) in enumerate(train_data):
         if train_label in data_classes:
-            locals()['train_subset_per_class_{}'.format(train_label)].append(idx)
+            train_subset_dict[train_label].append(idx)
         else:
             continue
 
-    min_data_num=min([len(locals()['train_subset_per_class_{}'.format(i)]) for i in data_classes])
+    min_data_num=min([len(train_subset_dict[i]) for i in data_classes])
     # train data sparsity generator
     for i in data_classes:
         #resize batch size
@@ -159,21 +159,22 @@ def split_class_list_data_loader(train_data,test_data,configs):
 
         # sparse는 줄이기
         if i in sparse_data_classes:
-            locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(min_data_num*configs['moo_sparse_ratio'])]
+            train_subset_dict[i]=train_subset_dict[i][:int(min_data_num*configs['moo_sparse_ratio'])]
         else:
-            locals()['train_subset_per_class_{}'.format(i)]=locals()['train_subset_per_class_{}'.format(i)][:int(min_data_num)]
+            train_subset_dict[i]=train_subset_dict[i][:int(min_data_num)]
 
         # loader에 담기
         locals()['trainset_{}'.format(i)] = torch.utils.data.Subset(train_data,
-                                                locals()['train_subset_per_class_{}'.format(i)]) # 인덱스 기반 subset 생성
+                                                train_subset_dict[i]) # 인덱스 기반 subset 생성
         train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(i)],
                                                     batch_size=batch_size,
                                                     pin_memory=pin_memory,
                                                     shuffle=True
                                                     )) # 각 loader에 넣기
-        print('{} class have {} data'.format(i,len(locals()['train_subset_per_class_{}'.format(i)])))
+        print('{} class have {} data'.format(i,len(train_subset_dict[i])))
 
     #test
+    locals()['test_subset_per_class']=list()
     for idx,(test_images, test_label) in enumerate(train_data):
         if test_label in data_classes:
             locals()['test_subset_per_class'].append(idx)
