@@ -28,7 +28,7 @@ class LeNet_300_100(nn.Module):
         x1 = F.relu(self.fc1(x0))
         x2 = F.relu(self.fc2(x1))
         x3 = self.fc3(x2)
-        return F.log_softmax(x3, dim=1)
-
+        return x3
+        
     def get_configs(self):
         return self.w_size_list,self.b_size_list,self.NN_size_list,self.model_list,self.node_size_list

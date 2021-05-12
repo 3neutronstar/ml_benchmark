@@ -5,7 +5,6 @@ import torchvision.transforms as transforms
 import torch
 import sys
 
-
 def load_dataset(configs):
     if sys.platform=='linux':
         dataset_path='/dataset'
@@ -138,17 +137,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
     #                                             batch_size=configs['batch_size'],
     #                                             shuffle=True
     #                                             )) # 각 loader에 넣기
-    train_subset_dict=dict()
-    for i in data_classes:
-        train_subset_dict[i]=list()
     #train
-    for idx,(train_images, train_label) in enumerate(train_data):
-        if train_label in data_classes:
-            train_subset_dict[train_label].append(idx)
-        else:
-            continue
-
-    min_data_num=min([len(train_subset_dict[i]) for i in data_classes])
     # train data sparsity generator
     for i in data_classes:
         #resize batch size
@@ -162,22 +151,30 @@ def split_class_list_data_loader(train_data,test_data,configs):
         else:
             raise NotImplementedError
 
-        # sparse는 줄이기
+        # # sparse는 줄이기
+        # if i in sparse_data_classes:
+        #     train_subset_dict[i]=train_subset_dict[i][:int(min_data_num*configs['moo_sparse_ratio'])]
+        # else:
+        #     train_subset_dict[i]=train_subset_dict[i][:int(min_data_num)]
+    idx=torch.zeros_like(train_data.targets)
+    for i in data_classes:
         if i in sparse_data_classes:
-            train_subset_dict[i]=train_subset_dict[i][:int(min_data_num*configs['moo_sparse_ratio'])]
+            non_zero_idx=torch.nonzero(train_data.targets==i)
+            class_size=non_zero_idx.size()[0]
+            non_zero_idx=non_zero_idx[torch.randperm(class_size)][:int(class_size*configs['moo_sparse_ratio'])]
+            class_idx=torch.zeros_like(train_data.targets==i)
+            class_idx[non_zero_idx]=1
         else:
-            train_subset_dict[i]=train_subset_dict[i][:int(min_data_num)]
+            class_idx=(train_data.targets==i)
+        idx=torch.bitwise_or(idx,class_idx)
+    train_data.data=train_data.data[idx.bool()]
+    train_data.targets=train_data.targets[idx.bool()]
 
-        # loader에 담기
-        locals()['trainset_{}'.format(i)] = torch.utils.data.Subset(train_data,
-                                                train_subset_dict[i]) # 인덱스 기반 subset 생성
-        train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(i)],
-                                                    batch_size=batch_size,
-                                                    pin_memory=pin_memory,
-                                                    shuffle=True
-                                                    )) # 각 loader에 넣기
-        print('{} class have {} data'.format(i,len(train_subset_dict[i])))
-
+    train_data_loader=torch.utils.data.DataLoader(train_data,
+                                            batch_size=configs['batch_size'],
+                                            pin_memory=pin_memory,
+                                            shuffle=True
+                                            )
     #test
     locals()['test_subset_per_class']=list()
     for idx,(test_images, test_label) in enumerate(test_data):
@@ -227,6 +224,9 @@ def data_loader(configs):
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
     elif 'moo' in configs['mode']:
         train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
+    else:
+        raise NotImplementedError
+
 
 
     return train_data_loader, test_data_loader

@@ -223,7 +223,7 @@ class PCGrad_MOO(PCGrad_v2):
     PC_GRAD for moo
     '''
     def __init__(self,optimizer):
-        super(PCGrad_v2,self).__init__(optimizer)
+        super(PCGrad_MOO,self).__init__(optimizer)
 
     def pc_backward(self, objectives, labels, epoch, batch_idx=None):
         pc_objectives=list()
@@ -232,10 +232,11 @@ class PCGrad_MOO(PCGrad_v2):
         super().pc_backward(pc_objectives, labels, epoch=epoch, batch_idx=batch_idx)
         return torch.cat(pc_objectives,dim=0)
 
-class PCGrad_MOO_Baseline(PCGrad_MOO):
+class PCGrad_MOO_Baseline(PCGrad):
     def __init__(self,optimizer):
-        super(PCGrad_MOO,self).__init__(optimizer)
+        super(PCGrad_MOO_Baseline,self).__init__(optimizer)
 
     def pc_backward(self, objectives, labels, epoch, batch_idx=None):
+        self._optim.zero_grad()
         objectives.backward()
     

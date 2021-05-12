@@ -48,27 +48,6 @@ class MOOLearner(BaseLearner):
         configs = self.save_grad(epoch)
         return configs
 
-    # def _class_wise_write(self,loader):
-    #     data,target=next(loader)
-    #     data,target = data.to(self.device), target.to(
-    #             self.device)
-    #     output = self.model(data)
-    #     loss = self.criterion(output, target) 
-    #     pred = output.argmax(dim=1, keepdim=True)
-    #     correct = pred.eq(target.view_as(pred)).sum().item()
-    #     self.optimizer.pc_backward(loss,target)
-    #     data_num=len(data)
-    #     return correct,loss,data_num
-
-    def _catenate_class_load_data(self,loaders):
-        cat_data,cat_target=[],[]
-        for loader in loaders:
-            data,target=next(loader)
-            cat_data.append(data)
-            cat_target.append(target)
-        cat_data=torch.cat(cat_data,dim=0)
-        cat_target=torch.cat(cat_target,dim=0)
-        return cat_data,cat_target
 
     def _train(self, epoch):
         tik = time.time()
@@ -78,21 +57,21 @@ class MOOLearner(BaseLearner):
         len_data=dict()
         class_correct_dict=dict()
         train_loader=list()
-        for i,class_data_loader in enumerate(self.train_loader):
+        for i in range(self.configs['num_classes']):
             class_correct_dict[i]=0
-            len_data[i]=len(class_data_loader.dataset)
-            total_len_data+=len_data[i]
-            train_loader.append(iter(class_data_loader))
+            len_data[i]=0
+        #     len_data[i]=len(class_data_loader.dataset)
+        #     train_loader.append(iter(class_data_loader))
         current_len_data=0
-        while True:
-            data, target=self._catenate_class_load_data(train_loader)
+        total_len_data=len(self.train_loader.dataset)
+        for idx,(data,target) in enumerate(self.train_loader):
             data, target = data.to(self.device), target.to(self.device)  # gpu로 올림
             output = self.model(data)
             loss = self.criterion(output, target)
-            print(loss)
             pred = output.argmax(dim=1, keepdim=True)
             for class_idx in target.unique():
                 class_correct_dict[int(class_idx)]+=pred.eq(target.view_as(pred))[target==class_idx].sum().item()
+                len_data[int(class_idx)]+=(target==class_idx).sum()
 
             running_loss+=loss.sum().item()
             self.optimizer.pc_backward(loss,target,epoch)
@@ -101,7 +80,7 @@ class MOOLearner(BaseLearner):
             current_len_data+=target.size()[0]
             if total_len_data<=current_len_data:
                 break
-            if current_len_data % self.configs['batch_size']*self.log_interval == 0:
+            if idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, current_len_data, total_len_data ,
                                                                                 100.0 * float(current_len_data) / float(total_len_data), loss.sum().item()), end='')
 
@@ -120,7 +99,6 @@ class MOOLearner(BaseLearner):
         return train_metric
 
     def _eval(self):
-
         self.model.eval()
         eval_loss = 0
         correct = 0

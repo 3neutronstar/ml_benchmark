@@ -147,7 +147,6 @@ def main(args):
     configs=vars(flags)
     configs ['device']= str(device)
 
-               
     if configs['log_extraction'] == 'true' and configs['mode'] in train_mode_list:
         print("SEED:",flags.seed)
         save_params(configs, time_data)
