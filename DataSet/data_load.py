@@ -116,11 +116,12 @@ def split_class_list_data_loader(train_data,test_data,configs):
         dataset_total_num_classes=1000
 
     data_classes = torch.randperm(dataset_total_num_classes)[:configs['moo_num_classes']].tolist()
-    print('picked class:',data_classes)
     random.shuffle(data_classes)
     sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
     data_classes.sort()
     sparse_data_classes.sort()
+    print('picked class:',data_classes)
+    print('sparse_class:',sparse_data_classes)
 
     train_data_loader=list()
     test_data_loader=list()
@@ -157,7 +158,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
     for predict_idx,class_label in enumerate(data_classes):
         class_idx=(test_data.targets==class_label)
         test_data.targets[class_idx]=predict_idx*torch.ones_like(test_data.targets)[class_idx]# index를 class 맞게 변경
-        
+
     locals()['testset'] = torch.utils.data.Subset(test_data,
                                             locals()['test_subset_per_class']) # 인덱스 기반 subset 생성
     test_data_loader=torch.utils.data.DataLoader(locals()['testset'],
