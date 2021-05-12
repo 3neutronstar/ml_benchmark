@@ -152,10 +152,15 @@ def split_class_list_data_loader(train_data,test_data,configs):
     # train data sparsity generator
     for i in data_classes:
         #resize batch size
-        if i in sparse_data_classes:
-            batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/slice_size)
+        if configs['mode']=='train_moo':
+            if i in sparse_data_classes:
+                batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/slice_size)
+            else:
+                batch_size=int(configs['batch_size']/slice_size)
+        elif configs['mode']=='baseline_moo':
+            batch_size=int(configs['batch_size']/configs['num_classes'])
         else:
-            batch_size=int(configs['batch_size']/slice_size)
+            raise NotImplementedError
 
         # sparse는 줄이기
         if i in sparse_data_classes:
@@ -175,13 +180,13 @@ def split_class_list_data_loader(train_data,test_data,configs):
 
     #test
     locals()['test_subset_per_class']=list()
-    for idx,(test_images, test_label) in enumerate(train_data):
+    for idx,(test_images, test_label) in enumerate(test_data):
         if test_label in data_classes:
             locals()['test_subset_per_class'].append(idx)
         else:
             continue
 
-    locals()['testset'] = torch.utils.data.Subset(train_data,
+    locals()['testset'] = torch.utils.data.Subset(test_data,
                                             locals()['test_subset_per_class']) # 인덱스 기반 subset 생성
     test_data_loader=torch.utils.data.DataLoader(locals()['testset'],
                                             batch_size=configs['batch_size'],

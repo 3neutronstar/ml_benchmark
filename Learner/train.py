@@ -125,6 +125,11 @@ class ClassicLearner(BaseLearner):
         self.model.eval()
         eval_loss = 0
         correct = 0
+        class_correct_dict=dict()
+        class_total_dict=dict()
+        for i in range(self.configs['num_classes']):
+            class_correct_dict[i]=0
+            class_total_dict[i]=0
         with torch.no_grad():
             for data, target in self.test_loader:
                 data, target = data.to(self.device), target.to(self.device)
@@ -134,7 +139,12 @@ class ClassicLearner(BaseLearner):
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()
-
+                for label in target.unique():
+                    # print(label,pred.eq(target.view_as(pred))[target==label].sum().item())
+                    class_correct_dict[int(label)]+=pred.eq(target.view_as(pred))[target==int(label)].sum().item()
+                    class_total_dict[int(label)]+=(target==label).sum().item()
+        for keys in class_correct_dict.keys():
+            print('{} class : {}/{} [{:.2f}%]'.format(keys,class_correct_dict[keys],class_total_dict[keys],100.0*class_correct_dict[keys]/class_total_dict[keys]))
         eval_loss = eval_loss / len(self.test_loader.dataset)
 
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(

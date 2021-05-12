@@ -48,19 +48,17 @@ class MOOLearner(BaseLearner):
         configs = self.save_grad(epoch)
         return configs
 
-    def _class_wise_write(self,loader):
-        data,target=next(loader)
-        data,target = data.to(self.device), target.to(
-                self.device)
-        output = self.model(data)
-        loss = self.criterion(output, target) 
-
-        pred = output.argmax(dim=1, keepdim=True)
-        correct = pred.eq(target.view_as(pred)).sum().item()
-
-        self.optimizer.pc_backward(loss,target)
-        data_num=len(data)
-        return correct,loss,data_num
+    # def _class_wise_write(self,loader):
+    #     data,target=next(loader)
+    #     data,target = data.to(self.device), target.to(
+    #             self.device)
+    #     output = self.model(data)
+    #     loss = self.criterion(output, target) 
+    #     pred = output.argmax(dim=1, keepdim=True)
+    #     correct = pred.eq(target.view_as(pred)).sum().item()
+    #     self.optimizer.pc_backward(loss,target)
+    #     data_num=len(data)
+    #     return correct,loss,data_num
 
     def _catenate_class_load_data(self,loaders):
         cat_data,cat_target=[],[]
@@ -70,8 +68,6 @@ class MOOLearner(BaseLearner):
             cat_target.append(target)
         cat_data=torch.cat(cat_data,dim=0)
         cat_target=torch.cat(cat_target,dim=0)
-        print(cat_target)
-
         return cat_data,cat_target
 
     def _train(self, epoch):
@@ -93,13 +89,13 @@ class MOOLearner(BaseLearner):
             data, target = data.to(self.device), target.to(self.device)  # gpu로 올림
             output = self.model(data)
             loss = self.criterion(output, target)
-
+            print(loss)
             pred = output.argmax(dim=1, keepdim=True)
             for class_idx in target.unique():
                 class_correct_dict[int(class_idx)]+=pred.eq(target.view_as(pred))[target==class_idx].sum().item()
 
-            self.optimizer.pc_backward(loss,target,epoch)
             running_loss+=loss.sum().item()
+            self.optimizer.pc_backward(loss,target,epoch)
             self.optimizer.step()
 
             current_len_data+=target.size()[0]
@@ -112,7 +108,7 @@ class MOOLearner(BaseLearner):
         tok=time.time()
         if self.configs['log_extraction']=='true':
             sys.stdout.flush()
-        print("\n ============================\n Learning Time:{}s \t Class Accuracy".format(tok-tik))
+        print("\n ============================\nTrain Learning Time:{}s \t Class Accuracy".format(tok-tik))
         total_correct=0
         for class_correct_key in class_correct_dict.keys():
             class_accur=100.0*float(class_correct_dict[class_correct_key])/float(len_data[class_correct_key])
@@ -142,6 +138,7 @@ class MOOLearner(BaseLearner):
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)
                 for label in target.unique():
+                    # print(label,pred.eq(target.view_as(pred))[target==label].sum().item())
                     class_correct_dict[int(label)]+=pred.eq(target.view_as(pred))[target==label].sum().item()
                     class_total_dict[int(label)]+=(target==label).sum().item()
 

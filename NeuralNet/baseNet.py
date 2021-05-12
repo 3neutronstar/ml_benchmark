@@ -40,13 +40,15 @@ def get_hyperparams(model):
 
 class BaseNet():
     def __init__(self,configs):
-        
-        if configs['dataset']=='cifar10' or 'mnist' in configs['dataset']:
-            configs['num_classes']=10
-        elif configs['dataset']=='cifar100':
-            configs['num_classes']=100
-        elif configs['dataset']=='imagenet':
-            configs['num_classes']=1000
+        if 'moo' in configs['mode']:
+            configs['num_classes']=configs['moo_num_classes']
+        else:
+            if configs['dataset']=='cifar10' or 'mnist' in configs['dataset']:
+                configs['num_classes']=10
+            elif configs['dataset']=='cifar100':
+                configs['num_classes']=100
+            elif configs['dataset']=='imagenet':
+                configs['num_classes']=1000
 
         if configs['model'] == 'lenet5':
             from NeuralNet.lenet5 import LeNet5
