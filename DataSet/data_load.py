@@ -116,10 +116,8 @@ def split_class_list_data_loader(train_data,test_data,configs):
     sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
 
     if configs['moo_num_sparse_classes']==8:
-        sparse_slice_size=8
         slice_size=2
     elif configs['moo_num_sparse_classes']==4:
-        sparse_slice_size=4
         slice_size=1
     else:
         raise NotImplementedError
@@ -153,7 +151,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
     for i in data_classes:
         #resize batch size
         if i in sparse_data_classes:
-            batch_size=int(configs['batch_size']/sparse_slice_size)
+            batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/slice_size)
         else:
             batch_size=int(configs['batch_size']/slice_size)
 
