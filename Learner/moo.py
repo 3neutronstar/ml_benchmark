@@ -70,6 +70,7 @@ class MOOLearner(BaseLearner):
             cat_target.append(target)
         cat_data=torch.cat(cat_data,dim=0)
         cat_target=torch.cat(cat_target,dim=0)
+        print(cat_target)
 
         return cat_data,cat_target
 

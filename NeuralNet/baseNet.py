@@ -17,7 +17,7 @@ def get_hyperparams(model):
         momentum=0.9
     elif 'resnet' in model:
         dataset='cifar10'
-        lr=1e-1
+        lr=1e-2
         epochs=200
         momentum=0.9
     elif model=='convnet':

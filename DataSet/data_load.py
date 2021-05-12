@@ -114,6 +114,8 @@ def split_class_list_data_loader(train_data,test_data,configs):
     data_classes = [i for i in range(configs['moo_num_classes'])]
     random.shuffle(data_classes)
     sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
+    data_classes.sort()
+    sparse_data_classes.sort()
 
     if configs['moo_num_sparse_classes']==8:
         slice_size=2
