@@ -108,64 +108,35 @@ def split_class_list_data_loader(train_data,test_data,configs):
         pin_memory = True
     else:
         pin_memory = False
+    if configs['dataset']=='cifar10' or 'mnist' in configs['dataset']:
+        dataset_total_num_classes=10
+    elif configs['dataset']=='cifar100':
+        dataset_total_num_classes=100
+    elif configs['dataset']=='imagenet':
+        dataset_total_num_classes=1000
 
-    
-    data_classes = [i for i in range(configs['moo_num_classes'])]
+    data_classes = torch.randperm(dataset_total_num_classes)[:configs['moo_num_classes']].tolist()
+    print('picked class:',data_classes)
     random.shuffle(data_classes)
     sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
     data_classes.sort()
     sparse_data_classes.sort()
 
-    if configs['moo_num_sparse_classes']==8:
-        slice_size=2
-    elif configs['moo_num_sparse_classes']==4:
-        slice_size=1
-    else:
-        raise NotImplementedError
-
     train_data_loader=list()
     test_data_loader=list()
-    # for idx in data_classes:
-    #     train_subset_dict[ix)] = list()
-    #     for j in range(len(train_data)):
-    #         if int(train_data[j][1]) == idx:
-    #             train_subset_dict[ix)].append(j) # 해당클래스의 인덱스만 추출
-    #     locals()['trainset_{}'.format(idx)] = torch.utils.data.Subset(train_data,
-    #                                             train_subset_dict[ix)]) # 인덱스 기반 subset 생성
-
-    #     train_data_loader.append(torch.utils.data.DataLoader(locals()['trainset_{}'.format(idx)],
-    #                                             batch_size=configs['batch_size'],
-    #                                             shuffle=True
-    #                                             )) # 각 loader에 넣기
-    #train
+    
     # train data sparsity generator
-    for i in data_classes:
-        #resize batch size
-        if configs['mode']=='train_moo':
-            if i in sparse_data_classes:
-                batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/slice_size)
-            else:
-                batch_size=int(configs['batch_size']/slice_size)
-        elif configs['mode']=='baseline_moo':
-            batch_size=int(configs['batch_size']/configs['num_classes'])
-        else:
-            raise NotImplementedError
-
-        # # sparse는 줄이기
-        # if i in sparse_data_classes:
-        #     train_subset_dict[i]=train_subset_dict[i][:int(min_data_num*configs['moo_sparse_ratio'])]
-        # else:
-        #     train_subset_dict[i]=train_subset_dict[i][:int(min_data_num)]
     idx=torch.zeros_like(train_data.targets)
-    for i in data_classes:
-        if i in sparse_data_classes:
-            non_zero_idx=torch.nonzero(train_data.targets==i)
+    for predict_idx,class_label in enumerate(data_classes):
+        if class_label in sparse_data_classes:
+            non_zero_idx=torch.nonzero(train_data.targets==class_label)
             class_size=non_zero_idx.size()[0]
             non_zero_idx=non_zero_idx[torch.randperm(class_size)][:int(class_size*configs['moo_sparse_ratio'])]
-            class_idx=torch.zeros_like(train_data.targets==i)
+            class_idx=torch.zeros_like(train_data.targets==class_label)
             class_idx[non_zero_idx]=1
         else:
-            class_idx=(train_data.targets==i)
+            class_idx=(train_data.targets==class_label)
+        train_data.targets[class_idx]=predict_idx*torch.ones_like(train_data.targets)[class_idx]# index를 class 맞게 변경
         idx=torch.bitwise_or(idx,class_idx)
     train_data.data=train_data.data[idx.bool()]
     train_data.targets=train_data.targets[idx.bool()]
@@ -183,6 +154,10 @@ def split_class_list_data_loader(train_data,test_data,configs):
         else:
             continue
 
+    for predict_idx,class_label in enumerate(data_classes):
+        class_idx=(test_data.targets==class_label)
+        test_data.targets[class_idx]=predict_idx*torch.ones_like(test_data.targets)[class_idx]# index를 class 맞게 변경
+        
     locals()['testset'] = torch.utils.data.Subset(test_data,
                                             locals()['test_subset_per_class']) # 인덱스 기반 subset 생성
     test_data_loader=torch.utils.data.DataLoader(locals()['testset'],

@@ -56,17 +56,15 @@ class MOOLearner(BaseLearner):
         total_len_data=0
         len_data=dict()
         class_correct_dict=dict()
-        train_loader=list()
         for i in range(self.configs['num_classes']):
             class_correct_dict[i]=0
             len_data[i]=0
-        #     len_data[i]=len(class_data_loader.dataset)
-        #     train_loader.append(iter(class_data_loader))
         current_len_data=0
         total_len_data=len(self.train_loader.dataset)
         for idx,(data,target) in enumerate(self.train_loader):
             data, target = data.to(self.device), target.to(self.device)  # gpu로 올림
             output = self.model(data)
+            # print(target)
             loss = self.criterion(output, target)
             pred = output.argmax(dim=1, keepdim=True)
             for class_idx in target.unique():
