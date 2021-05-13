@@ -31,13 +31,11 @@ def split_class_list_data_loader(train_dataloader,configs):
     # train data sparsity generator
     for i in data_classes:
         #resize batch size
-        if i in sparse_data_classes:
-            batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/configs['num_classes'])
         if 'train_moo' in configs['mode']:
             if i in sparse_data_classes:
-                batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/configs['num_classes'])
+                batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/configs['moo_num_sparse_classes'])
             else:
-                batch_size=int(configs['batch_size']/configs['num_classes'])
+                batch_size=int(configs['batch_size']/configs['moo_num_sparse_classes'])
         elif configs['mode']=='baseline_moo':
             batch_size=int(configs['batch_size']/configs['num_classes'])
         else:
