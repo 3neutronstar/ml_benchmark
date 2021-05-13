@@ -24,7 +24,7 @@ def split_class_list_data_loader(train_dataloader,configs):
     #train
     for idx,(train_images, train_label) in enumerate(train_data):
         if train_label in data_classes:
-            train_subset_dict[train_label].append(idx)
+            train_subset_dict[int(train_label)].append(idx)
         else:
             continue
     min_data_num=min([len(train_subset_dict[i]) for i in data_classes])
