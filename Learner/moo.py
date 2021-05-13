@@ -8,7 +8,7 @@ from CustomLoss.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline
 class MOOLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MOOLearner,self).__init__(model,time_data,file_path,configs)
-        if 'train_moo' ==configs['mode']:
+        if 'train_moo' in configs['mode']:
             reduction='none'
             self.optimizer=PCGrad_MOO(self.optimizer)
         elif 'baseline_moo'==configs['mode']:
@@ -93,7 +93,7 @@ class MOOLearner(BaseLearner):
             total_correct+=class_correct_dict[class_correct_key]
         running_accuracy=100.0*float(total_correct)/float(total_len_data)
         train_metric={'accuracy':running_accuracy,'loss': running_loss/float(total_len_data)}
-        print('Total Accuracy: {:.2f}%, Total Loss: {}\n'.format(train_metric['accuracy'],train_metric['loss']))
+        print('{} epoch Total Accuracy: {:.2f}%, Total Loss: {}\n'.format(epoch,train_metric['accuracy'],train_metric['loss']))
         return train_metric
 
     def _eval(self):
