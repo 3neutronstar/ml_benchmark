@@ -22,7 +22,19 @@ def save_params(configs, time_data):
 def load_model(model,file_path,file_name):
     model.load_state_dict(torch.load(os.path.join(file_path,'grad_data','checkpoint_'+file_name+'.pt')))
     return model
-
+    
+def make_weights_for_balanced_classes(images, nclasses):                        
+    count = [0] * nclasses                                                      
+    for item in images:                                                         
+        count[item[1]] += 1                                                     
+    weight_per_class = [0.] * nclasses                                      
+    N = float(sum(count))                                                   
+    for i in range(nclasses):                                                   
+        weight_per_class[i] = N/float(count[i])                                 
+    weight = [0] * len(images)                                              
+    for idx, val in enumerate(images):                                          
+        weight[idx] = weight_per_class[val[1]]                                  
+    return weight               
 class EarlyStopping:
     """주어진 patience 이후로 train loss가 개선되지 않으면 학습을 조기 중지"""
 

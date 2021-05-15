@@ -1,5 +1,5 @@
 from numpy import int16
-from torch.utils import data
+from utils import make_weights_for_balanced_classes
 from torchvision import datasets
 import torchvision.transforms as transforms
 import torch
@@ -148,10 +148,21 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data.data=train_data.data[idx.bool()]
     train_data.targets=train_data.targets[idx.bool()]
 
+    #sampler setting
+    if configs['mode'] in['train_moo','baseline_moo']:
+        sampler=None
+        shuffle=True
+
+    elif configs['mode'] in ['train_moo_v2','baseline_moo_v2']:
+        sample_weight=make_weights_for_balanced_classes(train_data,nclasses=len(data_classes))       
+        sampler=torch.utils.data.WeightedRandomSampler(sample_weight,len(sample_weight))
+        shuffle=False
+
     train_data_loader=torch.utils.data.DataLoader(train_data,
                                             batch_size=configs['batch_size'],
                                             pin_memory=pin_memory,
-                                            shuffle=True
+                                            shuffle=shuffle,
+                                            sampler=sampler
                                             )
     #test
     idx=torch.zeros_like(test_data.targets)
