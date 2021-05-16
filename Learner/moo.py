@@ -11,7 +11,7 @@ class MOOLearner(BaseLearner):
         if 'train_moo' in configs['mode']:
             reduction='none'
             self.optimizer=PCGrad_MOO(self.optimizer)
-        elif 'baseline_moo'==configs['mode']:
+        elif 'baseline_moo' in configs['mode']:
             reduction='mean'
             self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
         else:
@@ -134,3 +134,5 @@ class MOOLearner(BaseLearner):
         eval_metric={'accuracy':eval_accuracy,'loss': eval_loss}
 
         return eval_metric
+
+        
