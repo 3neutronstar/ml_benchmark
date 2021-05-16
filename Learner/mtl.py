@@ -4,7 +4,7 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomLoss.pcgrad import PCGrad, PCGrad_v2
+from CustomOptimizer.pcgrad import PCGrad, PCGrad_v2
 
 class MTLLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):

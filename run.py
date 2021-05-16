@@ -192,11 +192,16 @@ def main(args):
         learner=MOOLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif configs['mode']=='train_moo_v2':
+    elif configs['mode'] in ['train_moo_v2','baseline_moo_v2']:
         from Learner.moo_v2 import MOO_V2Learner
         learner=MOO_V2Learner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
+    elif configs['mode']=='test':
+        from utils import TestPerformance
+        tester=TestPerformance(model,time_data,file_path,configs)
+        tester.run()
+
         
 
     

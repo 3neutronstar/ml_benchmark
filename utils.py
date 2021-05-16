@@ -1,9 +1,8 @@
 import json
 import os
+import sys
 import torch
 import numpy as np
-import torch.nn as nn
-from torch.utils import data
 from torch.utils.tensorboard import SummaryWriter
 
 def load_params(configs, file_name):
@@ -76,3 +75,57 @@ class EarlyStopping:
                 f'Eval loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
+
+class TestPerformance():
+    def __init__(self,model,file_name,file_path,configs):
+        self.model=model
+        model.load_state_dict(torch.load(os.path.join(file_path,'grad_data','checkpoint_'+file_name+'.pt')))
+        self.device=configs['device']
+        model.to(self.device)
+
+        self.file_path=file_path
+        from DataSet.data_load import data_loader
+        _,self.test_loader=data_loader(configs)
+        self.criterion = self.model.loss
+        self.configs=configs
+
+
+    def run(self):
+        self.model.eval()
+        eval_loss = 0
+        correct = 0
+        class_correct_dict=dict()
+        class_total_dict=dict()
+        for i in range(self.configs['num_classes']):
+            class_correct_dict[i]=0
+            class_total_dict[i]=0
+        with torch.no_grad():
+            for data, target in self.test_loader:
+                data, target = data.to(self.device), target.to(self.device)
+                output = self.model(data)
+                loss = self.criterion(output, target)
+                eval_loss += loss.sum().item()
+                # get the index of the max log-probability
+                pred = output.argmax(dim=1, keepdim=True)
+                for label in target.unique():
+                    # print(label,pred.eq(target.view_as(pred))[target==label].sum().item())
+                    class_correct_dict[int(label)]+=pred.eq(target.view_as(pred))[target==label].sum().item()
+                    class_total_dict[int(label)]+=(target==label).sum().item()
+
+        eval_loss = eval_loss / len(self.test_loader.dataset)
+
+        correct=0
+        print("=================Eval=================")
+        for class_correct_key in class_correct_dict.keys():
+            correct+=class_correct_dict[class_correct_key]
+            class_accur=100.0*float(class_correct_dict[class_correct_key])/class_total_dict[class_correct_key]
+            print('{} class :{}/{} {:2f}%'.format(class_correct_key,class_correct_dict[class_correct_key],class_total_dict[class_correct_key],class_accur))
+        print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n==================='.format(
+            eval_loss, correct, len(self.test_loader.dataset),
+            100.0 * correct / float(len(self.test_loader.dataset))))
+        if self.configs['log_extraction']=='true':
+            sys.stdout.flush()
+        eval_accuracy = 100.0*correct/float(len(self.test_loader.dataset))
+        eval_metric={'accuracy':eval_accuracy,'loss': eval_loss}
+
+        return eval_metric

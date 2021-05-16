@@ -4,14 +4,14 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomLoss.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline
+from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline
 class MOOLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MOOLearner,self).__init__(model,time_data,file_path,configs)
         if 'train_moo' in configs['mode']:
             reduction='none'
             self.optimizer=PCGrad_MOO(self.optimizer)
-        elif 'baseline_moo'==configs['mode']:
+        elif 'baseline_moo' in configs['mode']:
             reduction='mean'
             self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
         else:
@@ -85,7 +85,7 @@ class MOOLearner(BaseLearner):
         tok=time.time()
         if self.configs['log_extraction']=='true':
             sys.stdout.flush()
-        print("\n ============================\nTrain Learning Time:{}s \t Class Accuracy".format(tok-tik))
+        print("\n ============================\nTrain Learning Time:{:.2f}s \t Class Accuracy".format(tok-tik))
         total_correct=0
         for class_correct_key in class_correct_dict.keys():
             class_accur=100.0*float(class_correct_dict[class_correct_key])/float(len_data[class_correct_key])

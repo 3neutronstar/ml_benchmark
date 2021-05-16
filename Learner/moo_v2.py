@@ -36,7 +36,7 @@ def split_class_list_data_loader(train_dataloader,configs):
                 batch_size=int(configs['batch_size']*configs['moo_sparse_ratio']/configs['moo_num_sparse_classes'])
             else:
                 batch_size=int(configs['batch_size']/configs['moo_num_sparse_classes'])
-        elif configs['mode']=='baseline_moo':
+        elif 'baseline_moo' in configs['mode']:
             batch_size=int(configs['batch_size']/configs['num_classes'])
         else:
             batch_size=int(configs['batch_size'])
