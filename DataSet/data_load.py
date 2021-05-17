@@ -4,14 +4,18 @@ from torchvision import datasets
 import torchvision.transforms as transforms
 import torch
 import sys
-
+from six.moves import urllib
 def load_dataset(configs):
     if sys.platform=='linux':
-        dataset_path='/dataset'
+        dataset_path='./dataset'
     elif sys.platform=='win32':
         dataset_path='\dataset'
     else:
         dataset_path='./dataset'
+    
+    opener = urllib.request.build_opener()
+    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
+    urllib.request.install_opener(opener)
 
     if configs['dataset'] == 'mnist':
         transform = transforms.Compose(
