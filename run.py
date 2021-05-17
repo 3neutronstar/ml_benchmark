@@ -89,6 +89,7 @@ def parse_args(args):
         if parser.parse_known_args(args)[0].moo_custom==True:
             parser.add_argument('--class','-c',action='append', dest='moo_custom_class_list')
             parser.add_argument('--s-class','-sc',action='append', dest='moo_sparse_custom_class_list')
+            
     parser.add_argument(
         '--lr', type=float, default=lr,
         help='set learning rate')
