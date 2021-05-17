@@ -35,8 +35,12 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         input:
         - objectives: a list of objectives
         '''
+        class_wise_objectives=list() # class wise objectives is added
+        for label in torch.unique(labels):
+            class_wise_objectives.append(objectives[labels==label].mean())
+        
 
-        grads, shapes = self._pack_grad(objectives)
+        grads, shapes = self._pack_grad(class_wise_objectives)
         pc_grad = self._project_conflicting(grads, epoch=epoch,batch_idx=batch_idx)
         pc_grad = self._unflatten_grad(pc_grad, shapes[0])
         self._set_grad(pc_grad)

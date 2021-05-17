@@ -115,9 +115,13 @@ def split_class_list_data_loader(train_data,test_data,configs):
     elif configs['dataset']=='imagenet':
         dataset_total_num_classes=1000
 
-    data_classes = torch.randperm(dataset_total_num_classes)[:configs['moo_num_classes']].tolist()
-    random.shuffle(data_classes)
-    sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
+    if configs['moo_custom']==False:
+        data_classes = torch.randperm(dataset_total_num_classes)[:configs['moo_num_classes']].tolist()
+        random.shuffle(data_classes)
+        sparse_data_classes=data_classes[:configs['moo_num_sparse_classes']]
+    else:
+        data_classes=configs['moo_custom_class_list']
+        sparse_data_classes=configs['moo_sparse_custom_class_list']
     data_classes.sort()
     sparse_data_classes.sort()
     print('picked class:',data_classes)
