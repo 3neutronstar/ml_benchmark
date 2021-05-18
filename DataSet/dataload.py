@@ -1,5 +1,4 @@
 from numpy import int16
-from utils import make_weights_for_balanced_classes
 from torchvision import datasets
 import torchvision.transforms as transforms
 import torch
@@ -162,6 +161,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
         shuffle=True
 
     elif configs['mode'] in ['train_moo_v2','baseline_moo_v2']:
+        from utils import make_weights_for_balanced_classes
         sample_weight=make_weights_for_balanced_classes(train_data,nclasses=len(data_classes))       
         sampler=torch.utils.data.WeightedRandomSampler(sample_weight,len(sample_weight))
         shuffle=False
@@ -214,7 +214,7 @@ def base_data_loader(train_data,test_data,configs):
 
 def data_loader(configs):
     train_data, test_data = load_dataset(configs)
-    if configs['mode']=='train' or configs['mode']=='train_weight_prune' or configs['mode']=='train_mtl' or configs['mode']=='train_mtl_v2' or configs['mode']=='test':
+    if configs['mode'] in ['train','train_weight_prune','train_mtl','train_mtl_v2','test','train_lbl']:
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)

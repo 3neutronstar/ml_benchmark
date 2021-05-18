@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 import numpy as np
 from utils import load_params, save_params
-TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_moo','baseline_moo','train_moo_v2','baseline_moo_v2']
+TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_moo','baseline_moo','train_moo_v2','baseline_moo_v2','train_lbl']
 def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -181,7 +181,7 @@ def main(args):
     #Train
     file_path=os.path.dirname(os.path.abspath(__file__))
     if configs['mode'] == 'train' or configs['mode']=='train_weight_prune':
-        from Learner.train import ClassicLearner
+        from Learner.classic_learner import ClassicLearner
         learner=ClassicLearner(model,time_data,file_path,configs)
         configs=learner.run()
     elif configs['mode']=='train_lrp' or configs['mode']=='train_grad_visual':
@@ -203,6 +203,10 @@ def main(args):
         from utils import TestPerformance
         tester=TestPerformance(model,time_data,file_path,configs)
         tester.run()
+    elif configs['mode']=='train_lbl':
+        from Learner.layerbylayer_learner import LBLLearner
+        learner=LBLLearner(model,time_data,file_path,configs)
+        learner.run()
     
     print("End the process")
     if configs['log_extraction']=='true':

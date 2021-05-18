@@ -1,12 +1,9 @@
 from pandas.core.frame import DataFrame
 import torch
 import time
-import math
-import matplotlib.pyplot as plt
 import pandas as pd
 import os
 import numpy as np
-from utils import load_params
 from Visualization.plot_type import using_plt, using_tensorboard
 
 

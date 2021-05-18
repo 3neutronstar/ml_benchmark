@@ -1,5 +1,5 @@
 import torch
-from DataSet.data_load import data_loader
+from Dataset.dataload import data_loader
 
 import pickle
 import torch.nn as nn

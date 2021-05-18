@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.autograd import Variable
 
-
-class LeNet_300_100(nn.Module):
+class LeNet300_100(nn.Module):
 
     def __init__(self,configs):
-        super(LeNet_300_100, self).__init__()
+        super(LeNet300_100, self).__init__()
         self.configs=configs
         self.fc1 = nn.Linear(32*32, 300, bias=True)
         self.fc2 = nn.Linear(300, 100, bias=True)
@@ -22,6 +22,11 @@ class LeNet_300_100(nn.Module):
         self.NN_size_list = [1, 300, 100 ,configs['num_classes']]  # cnn과 fc_net out 작성
         self.model_list = ['fc', 'fc', 'fc']
         self.node_size_list=[300,100,configs['num_classes']]
+        
+        self.output=list()# for layerbylayer
+        self.relu1=nn.ReLU()
+        self.relu2=nn.ReLU()
+        self.module_list=nn.ModuleList([self.fc1,self.relu1,self.fc2,self.relu2,self.fc3])
 
     def forward(self, x):
         x0 = x.view(-1, 32*32)
@@ -32,3 +37,20 @@ class LeNet_300_100(nn.Module):
         
     def get_configs(self):
         return self.w_size_list,self.b_size_list,self.NN_size_list,self.model_list,self.node_size_list
+
+    def layerbylayer_forward(self,x):
+        self.output = []
+        self.input = []
+        x=x.view(-1,32*32)
+        for layer in self.module_list:
+            # detach from previous history
+            x = Variable(x.data, requires_grad=True)
+            self.input.append(x)
+
+            # compute output
+            x = layer(x)
+
+            # add to list of outputs
+            self.output.append(x)
+        return x
+    

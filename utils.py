@@ -4,6 +4,7 @@ import sys
 import torch
 import numpy as np
 from torch.utils.tensorboard import SummaryWriter
+from Dataset.dataload import data_loader
 
 def load_params(configs, file_name):
     current_path = os.path.dirname(os.path.abspath(__file__))
@@ -34,6 +35,7 @@ def make_weights_for_balanced_classes(images, nclasses):
     for idx, val in enumerate(images):                                          
         weight[idx] = weight_per_class[val[1]]                                  
     return weight               
+    
 class EarlyStopping:
     """주어진 patience 이후로 train loss가 개선되지 않으면 학습을 조기 중지"""
 
@@ -96,7 +98,6 @@ class TestPerformance():
         model.to(self.device)
 
         self.file_path=file_path
-        from DataSet.data_load import data_loader
         _,self.test_loader=data_loader(configs)
         self.criterion = self.model.loss
         self.configs=configs

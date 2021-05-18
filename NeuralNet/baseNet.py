@@ -58,8 +58,8 @@ class BaseNet():
             model = VGG(configs).to(configs['device'])
             # print(model)
         if configs['model']=='lenet300_100':
-            from NeuralNet.lenet300_100 import LeNet_300_100
-            model = LeNet_300_100(configs).to(configs['device'])
+            from NeuralNet.lenet300_100 import LeNet300_100
+            model = LeNet300_100(configs).to(configs['device'])
         if configs['model'][:6]=='resnet':
             from NeuralNet.resnet import ResNet
             model = ResNet(configs).to(configs['device'])
