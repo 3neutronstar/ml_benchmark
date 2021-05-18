@@ -38,19 +38,14 @@ class LeNet300_100(nn.Module):
     def get_configs(self):
         return self.w_size_list,self.b_size_list,self.NN_size_list,self.model_list,self.node_size_list
 
-    def layerbylayer_forward(self,x):
-        self.output = []
-        self.input = []
-        x=x.view(-1,32*32)
-        for layer in self.module_list:
-            # detach from previous history
-            x = Variable(x.data, requires_grad=True)
-            self.input.append(x)
-
-            # compute output
-            x = layer(x)
-
-            # add to list of outputs
-            self.output.append(x)
-        return x
-    
+class Hook():
+    def __init__(self, module, backward=False):
+        if backward==False:
+            self.hook = module.register_forward_hook(self.hook_fn)
+        else:
+            self.hook = module.register_backward_hook(self.hook_fn)
+    def hook_fn(self, module, input, output):
+        self.input = input
+        self.output = output
+    def close(self):
+        self.hook.remove()

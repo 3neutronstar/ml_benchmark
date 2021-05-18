@@ -24,70 +24,42 @@ class LayerByLayerOptimizer():
 
         return self._optim.step()
 
-    def _flatten_grad(self, grads, shapes):
-        flatten_grad = torch.cat([g.flatten() for g in grads])
-        return flatten_grad
+class Hook():
+    def __init__(self, module, backward=False):
+        if backward==False:
+            self.hook = module.register_forward_hook(self.hook_fn)
+        else:
+            self.hook = module.register_backward_hook(self.hook_fn)
+    def hook_fn(self, module, input, output):
+        self.input = input
+        self.output = output
+    def close(self):
+        self.hook.remove()
 
-    def _retrieve_grad(self,tensor_value):
-        '''
-        get the gradient of the parameters of the network with specific 
-        objective
-        
-        output:
-        - grad: a list of the gradient of the parameters
-        - shape: a list of the shape of the parameters
-        - has_grad: a list of mask represent whether the parameter has gradient
-        '''
+'''
+        What is the input and output of forward and backward pass?
+Things to notice:
+Because backward pass runs from back to the start, it's parameter order should be reversed compared to the forward pass. Therefore, to be it clearer, I'll use a different naming convention below.
+For forward pass, previous layer of layer 2 is layer1; for backward pass, previous layer of layer 2 is layer 3.
+Model output is the output of last layer in forward pass.
+layer.register_backward_hook(module, input, output)
 
-        grad, shape = [], []
-        for group in self._optim.param_groups:
-            for p in group['params']:
-                # if p.grad is None: continue
-                # tackle the multi-head scenario
-                if p.grad is None:
-                    shape.append(p.shape)
-                    grad.append(torch.zeros_like(p).to(p.device))
-                    continue
-                shape.append(p.grad.shape)
-                grad.append(p.grad.clone())
-        return grad, shape
+Input: previous layer's output
+Output: current layer's output
+layer.register_backward_hook(module, grad_out, grad_in)
 
+Grad_in: gradient of model output wrt. layer output       # from forward pass
+= a tensor that represent the error of each neuron in this layer (= gradient of model output wrt. layer output = how much it should be improved)
+For the last layer: eg. [1,1] <=> gradient of model output wrt. itself, which means calculate all gradients as normal
+It can also be considered as a weight map: eg. [1,0] turn off the second gradient; [2,1] put double weight on first gradient etc.
 
-    def _pack_grad(self, objectives,idx_reversed):
-        '''
-        pack the gradient of the parameters of the network for each objective
-        
-        output:
-        - grad: a list of the gradient of the parameters
-        - shape: a list of the shape of the parameters
-        - has_grad: a list of mask represent whether the parameter has gradient
-        '''
+Grad_out: Grad_in * (gradient of layer output wrt. layer input)
+= next layer's error(due to chain rule)
+Check the print from the cell above to confirm and enhance your understanding!
+'''
 
-        grads, shapes = [], []
-        for obj in objectives:
-            self._optim.zero_grad(set_to_none=True)
-            obj.backward(retain_graph=True)
-            grad, shape= self._retrieve_grad(self._model.input[idx_reversed+1])
-            grads.append(self._flatten_grad(grad, shape))
-            shapes.append(shape)
-        return grads, shapes
-        
-    def backward(self, objectives,labels):
-        '''
-        calculate the gradient of the parameters over classes
-        input:
-        - objectives: a list of objectives
-        '''
-        self._optim.zero_grad()
-        classwise_objectives=list()
-        for label in labels.unique():
-           classwise_objectives.append(objectives[labels==label].mean().view(1))
-        classwise_objectives=torch.cat(classwise_objectives,dim=0)
-        for i, output in reversed(list(enumerate(self._model.output))):
-            if i == (len(self._model.output) - 1):
-                # for last node, use g
-                objectives.backward()
-            else:
-                output.backward(self._model.input[i+1].grad.data)
-                # print(i, self._model.input[i+1].grad.data)
-        return
+'''
+Modify gradients with hooks
+Hook function doesn't change gradients by default
+But if return is called, the returned value will be the gradient output
+'''
