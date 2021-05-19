@@ -43,7 +43,7 @@ def parse_args(args):
         '--num_workers', type=int, default=3,
         help='number of process you have')
     parser.add_argument(
-        '--log_extraction', type=str, default='true',
+        '--log_extraction','-l', type=str, default='true',
         help='generate log')
     parser.add_argument(
         '--earlystop', type=bool, default=False,
