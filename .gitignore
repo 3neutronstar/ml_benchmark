@@ -134,4 +134,3 @@ tensorboard/
 training_data/
 visualizing_data/
 log/
-numpy*
