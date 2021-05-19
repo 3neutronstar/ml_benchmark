@@ -1,9 +1,23 @@
 import torch
 
+class Hook():
+    def __init__(self, module, backward=False):
+        if backward==False:
+            self.hook = module.register_forward_hook(self.hook_fn)
+        else:
+            self.hook = module.register_backward_hook(self.hook_fn)
+    def hook_fn(self, module, input, output):
+        self.input = input
+        self.output = output
+    def close(self):
+        self.hook.remove()
+
 class LayerByLayerOptimizer():
     def __init__(self, model,optimizer):
         self._optim = optimizer
         self._model=model
+        self.hookBackward=[Hook(layer[1],backward=True) for layer in list(model._modules.items())]
+        self.hookForward=[Hook(layer[1],backward=False) for layer in list(model._modules.items())]
         return
 
     @property
@@ -24,17 +38,21 @@ class LayerByLayerOptimizer():
 
         return self._optim.step()
 
-class Hook():
-    def __init__(self, module, backward=False):
-        if backward==False:
-            self.hook = module.register_forward_hook(self.hook_fn)
-        else:
-            self.hook = module.register_backward_hook(self.hook_fn)
-    def hook_fn(self, module, input, output):
-        self.input = input
-        self.output = output
-    def close(self):
-        self.hook.remove()
+    def backward(self,objectives,labels):
+
+        pc_objectives=list()
+        for idx in labels.unique():
+            pc_objectives.append(objectives[labels==idx].mean().view(1))
+        # pc_objectives=torch.cat(pc_objectives,dim=0)
+        # pc_objectives.backward(retain_graph=True)
+        for i,(fhook,bhook) in enumerate(reversed(zip(self.hookForward,self.hookBackward))):
+            if i==0:
+                for pc_obj in pc_objectives:
+                    self._optim.zero_grad()
+                    pc_obj.backward(retain_graph=True)
+
+        return
+
 
 '''
         What is the input and output of forward and backward pass?
