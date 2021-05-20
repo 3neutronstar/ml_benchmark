@@ -65,10 +65,10 @@ class LBLLearner(BaseLearner):
             self.optimizer.backward(loss,target)  # 역전파
             self.optimizer.step()
 
-            running_loss += loss.sum().item()
+            running_loss += loss.mean().item()
             if batch_idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
-                    data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.sum().item()), end='')
+                    data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.mean().item()), end='')
             if self.configs['log_extraction']=='true':
                 sys.stdout.flush()         
 
@@ -93,7 +93,7 @@ class LBLLearner(BaseLearner):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
-                eval_loss += loss.sum().item()
+                eval_loss += loss.mean().item()
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)
                 correct += pred.eq(target.view_as(pred)).sum().item()

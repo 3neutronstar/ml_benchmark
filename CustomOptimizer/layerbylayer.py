@@ -112,7 +112,7 @@ class LayerByLayerOptimizer():
             for g_j in grads:
                 for g_l_i,g_l_j in zip(g_i,g_j):
                     g_i_g_j = torch.dot(g_l_i, g_l_j)
-                    if g_i_g_j < 0 or g_i_g_j>-(1e-20):
+                    if g_i_g_j < 0 or g_i_g_j<-(1e-20):
                         g_l_i -= (g_i_g_j) * g_l_j / (g_l_j.norm()**2)
         merged_grad=[]
         for layer_idx,g_l_i in enumerate(pc_grad[0]):
