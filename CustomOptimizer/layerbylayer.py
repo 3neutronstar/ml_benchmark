@@ -1,23 +1,12 @@
 import torch
-
-class Hook():
-    def __init__(self, module, backward=False):
-        if backward==False:
-            self.hook = module.register_forward_hook(self.hook_fn)
-        else:
-            self.hook = module.register_backward_hook(self.hook_fn)
-    def hook_fn(self, module, input, output):
-        self.input = input
-        self.output = output
-    def close(self):
-        self.hook.remove()
+import copy
+import random
+import numpy as np
 
 class LayerByLayerOptimizer():
     def __init__(self, model,optimizer):
         self._optim = optimizer
         self._model=model
-        self.hookBackward=[Hook(layer[1],backward=True) for layer in list(model._modules.items())]
-        self.hookForward=[Hook(layer[1],backward=False) for layer in list(model._modules.items())]
         return
 
     @property
@@ -45,39 +34,108 @@ class LayerByLayerOptimizer():
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         # pc_objectives=torch.cat(pc_objectives,dim=0)
         # pc_objectives.backward(retain_graph=True)
-        for i,(fhook,bhook) in enumerate(reversed(zip(self.hookForward,self.hookBackward))):
-            if i==0:
-                for pc_obj in pc_objectives:
-                    self._optim.zero_grad()
-                    pc_obj.backward(retain_graph=True)
+        #for i,(fhook,bhook) in enumerate(reversed(zip(self.hookForward,self.hookBackward))):
+        #    if i==0:
+        #        for pc_obj in pc_objectives:
+        #            self._optim.zero_grad()
+        #            pc_obj.backward(retain_graph=True)
+        grads, shapes = self._pack_grad(pc_objectives)
+        pc_grad = self._project_conflicting(grads)
+        pc_grad = self._unflatten_grad(pc_grad, shapes[0])
+        self._set_grad(pc_grad)
+               
 
         return
 
+    def _pack_grad(self, objectives):
+        '''
+        pack the gradient of the parameters of the network for each objective
+        
+        output:
+        - grad: a list of the gradient of the parameters
+        - shape: a list of the shape of the parameters
+        - has_grad: a list of mask represent whether the parameter has gradient
+        '''
 
-'''
-        What is the input and output of forward and backward pass?
-Things to notice:
-Because backward pass runs from back to the start, it's parameter order should be reversed compared to the forward pass. Therefore, to be it clearer, I'll use a different naming convention below.
-For forward pass, previous layer of layer 2 is layer1; for backward pass, previous layer of layer 2 is layer 3.
-Model output is the output of last layer in forward pass.
-layer.register_backward_hook(module, input, output)
+        grads, shapes = [], []
+        for obj in objectives:
+            self._optim.zero_grad(set_to_none=True)
+            obj.backward(retain_graph=True)
+            grad, shape= self._retrieve_grad()
+            grads.append(self._flatten_grad(grad, shape))
+            shapes.append(shape)
+        return grads, shapes
 
-Input: previous layer's output
-Output: current layer's output
-layer.register_backward_hook(module, grad_out, grad_in)
 
-Grad_in: gradient of model output wrt. layer output       # from forward pass
-= a tensor that represent the error of each neuron in this layer (= gradient of model output wrt. layer output = how much it should be improved)
-For the last layer: eg. [1,1] <=> gradient of model output wrt. itself, which means calculate all gradients as normal
-It can also be considered as a weight map: eg. [1,0] turn off the second gradient; [2,1] put double weight on first gradient etc.
+    def _retrieve_grad(self):
+        '''
+        get the gradient of the parameters of the network with specific 
+        objective
+        
+        output:
+        - grad: a list of the gradient of the parameters
+        - shape: a list of the shape of the parameters
+        - has_grad: a list of mask represent whether the parameter has gradient
+        '''
 
-Grad_out: Grad_in * (gradient of layer output wrt. layer input)
-= next layer's error(due to chain rule)
-Check the print from the cell above to confirm and enhance your understanding!
-'''
+        grad, shape = [], []
+        for group in self._optim.param_groups:
+            for p in group['params']:
+                # if p.grad is None: continue
+                # tackle the multi-head scenario
+                if p.grad is None:
+                    shape.append(p.shape)
+                    grad.append(torch.zeros_like(p).to(p.device))
+                    continue
+                shape.append(p.grad.shape)
+                grad.append(p.grad.clone())
+        return grad, shape
 
-'''
-Modify gradients with hooks
-Hook function doesn't change gradients by default
-But if return is called, the returned value will be the gradient output
-'''
+
+    def _flatten_grad(self, grads, shapes):
+        flatten_grad = [g.flatten() for g in grads]
+        return flatten_grad
+
+
+    def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
+        pc_grad, num_task = copy.deepcopy(grads), len(grads)
+        #print_norm_before=list()
+        #print_norm_after=list()
+        #if batch_idx is not None and batch_idx % 10==0:
+        #        for g in pc_grad:
+        #            print_norm_before.append(g.norm().cpu().clone())
+        # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
+
+        # 1.
+        for g_i in pc_grad:
+            random.shuffle(grads)
+            for g_j in grads:
+                for g_l_i,g_l_j in zip(g_i,g_j):
+                    g_i_g_j = torch.dot(g_l_i, g_l_j)
+                    if g_i_g_j < 0 or g_i_g_j>-(1e-20):
+                        g_l_i -= (g_i_g_j) * g_l_j / (g_l_j.norm()**2)
+        merged_grad=[]
+        for layer_idx,g_l_i in enumerate(pc_grad[0]):
+            merged_grad.append(torch.cat([grad[layer_idx] for grad in pc_grad],dim=0).view(num_task,-1).mean(dim=0))
+        return merged_grad
+
+    def _unflatten_grad(self, grads, shapes):
+        unflatten_grad, idx = [], 0
+        for grad,shape in zip(grads,shapes):
+            length = np.prod(shape)
+            unflatten_grad.append(grad.view(shape).clone())
+            idx += length
+        return unflatten_grad
+
+    def _set_grad(self, grads):
+        '''
+        set the modified gradients to the network
+        '''
+
+        idx = 0
+        for group in self._optim.param_groups:
+            for p in group['params']:
+                # if p.grad is None: continue
+                p.grad = grads[idx]
+                idx += 1
+        return

@@ -11,16 +11,14 @@
             "program": "${workspaceFolder}/run.py",
             "console": "integratedTerminal",
             "args": [
-                "train_mtl",
+                "train_lbl",
                 "--model",
                 "lenet5",
                 "--batch_size",
-                "16",
+                "4",
                 //"--epochs",
                 //"1",
-                "--lr",
-                "0.01",
-                "--log",
+                "-l",
                 "false",
             ]
         }

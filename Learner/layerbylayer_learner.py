@@ -56,7 +56,7 @@ class LBLLearner(BaseLearner):
                 self.device)  # gpu로 올림
             # weight prune #TODO
             # model에서 입력과 출력이 나옴 batch 수만큼 들어가서 batch수만큼 결과가 나옴 (1개 인풋 1개 아웃풋 아님)
-            output = self.model.layerbylayer_forward(data)
+            output = self.model(data)
             loss = self.criterion(output, target)  # 결과와 target을 비교하여 계산
             # get the index of the max log-probability
             pred = output.argmax(dim=1, keepdim=True)
@@ -91,7 +91,7 @@ class LBLLearner(BaseLearner):
         with torch.no_grad():
             for data, target in self.test_loader:
                 data, target = data.to(self.device), target.to(self.device)
-                output = self.model.layerbylayer_forward(data)
+                output = self.model(data)
                 loss = self.criterion(output, target)
                 eval_loss += loss.sum().item()
                 # get the index of the max log-probability
