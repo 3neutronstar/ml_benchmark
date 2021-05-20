@@ -99,22 +99,15 @@ class LayerByLayerOptimizer():
 
     def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
-        #print_norm_before=list()
-        #print_norm_after=list()
-        #if batch_idx is not None and batch_idx % 10==0:
-        #        for g in pc_grad:
-        #            print_norm_before.append(g.norm().cpu().clone())
-        # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
 
-        # 1.
         for g_i in pc_grad:
             random.shuffle(grads)
             for g_j in grads:
                 for g_l_i,g_l_j in zip(g_i,g_j):
                     g_i_g_j = torch.dot(g_l_i, g_l_j)
                     g_l_j_norm=(g_l_j.norm()**2)
-                    if g_i_g_j < 0 or (g_i_g_j<-(1e-10) and g_l_j_norm>1e-10):
-                        g_l_i -= (g_i_g_j) * g_l_j / g_l_j_norm
+                    if g_l_j_norm>1e-10 and g_i_g_j<-(1e-10): #g_i_g_j<0:
+                            g_l_i -= (g_i_g_j) * g_l_j / g_l_j_norm
         merged_grad=[]
         for layer_idx,g_l_i in enumerate(pc_grad[0]):
             merged_grad.append(torch.cat([grad[layer_idx] for grad in pc_grad],dim=0).view(num_task,-1).mean(dim=0))
