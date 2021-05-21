@@ -156,7 +156,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data.targets=train_data.targets[idx.bool()]
 
     #sampler setting
-    if configs['mode'] in['train_moo','baseline_moo']:
+    if configs['mode'] in['train_moo','baseline_moo','train_lbl']:
         sampler=None
         shuffle=True
 
@@ -214,11 +214,11 @@ def base_data_loader(train_data,test_data,configs):
 
 def data_loader(configs):
     train_data, test_data = load_dataset(configs)
-    if configs['mode'] in ['train','train_weight_prune','train_mtl','train_mtl_v2','test','train_lbl']:
+    if configs['mode'] in ['train','train_weight_prune','train_mtl','train_mtl_v2','test']:
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
-    elif 'moo' in configs['mode']:
+    elif 'moo' in configs['mode'] or configs['mode']=='train_lbl':
         train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
     else:
         raise NotImplementedError

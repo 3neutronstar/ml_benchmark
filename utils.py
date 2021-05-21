@@ -9,14 +9,15 @@ from Dataset.dataload import data_loader
 def load_params(configs, file_name):
     current_path = os.path.dirname(os.path.abspath(__file__))
     ''' replay_name from flags.replay_name '''
-    with open(os.path.join(current_path, 'grad_data', '{}.json'.format(file_name)), 'r') as fp:
+    with open(os.path.join(current_path, 'grad_data',file_name,'{}.json'.format(file_name)), 'r') as fp:
         configs = json.load(fp)
     return configs
 
 
 def save_params(configs, time_data):
     current_path = os.path.dirname(os.path.abspath(__file__))
-    with open(os.path.join(current_path, 'grad_data', '{}.json'.format(time_data)), 'w') as fp:
+    os.makedirs(os.path.join(current_path, 'grad_data',time_data))
+    with open(os.path.join(current_path, 'grad_data',time_data,'{}.json'.format(time_data)), 'w') as fp:
         json.dump(configs, fp, indent=2)
 
 def load_model(model,file_path,file_name):
@@ -35,7 +36,7 @@ def make_weights_for_balanced_classes(images, nclasses):
     for idx, val in enumerate(images):                                          
         weight[idx] = weight_per_class[val[1]]                                  
     return weight               
-    
+
 class EarlyStopping:
     """주어진 patience 이후로 train loss가 개선되지 않으면 학습을 조기 중지"""
 
@@ -59,7 +60,7 @@ class EarlyStopping:
         self.early_stop = False
         self.val_loss_min = np.Inf
         self.delta = delta
-        self.path = os.path.join(file_path,'grad_data','checkpoint_{}.pt'.format(time_data))
+        self.path = os.path.join(file_path,'grad_data',time_data,'checkpoint_{}.pt'.format(time_data))
 
     def __call__(self, val_loss, model):
 
@@ -93,7 +94,7 @@ class EarlyStopping:
 class TestPerformance():
     def __init__(self,model,file_name,file_path,configs):
         self.model=model
-        model.load_state_dict(torch.load(os.path.join(file_path,'grad_data','checkpoint_'+file_name+'.pt')))
+        model.load_state_dict(torch.load(os.path.join(file_path,'grad_data',file_name,'checkpoint_'+file_name+'.pt')))
         self.device=configs['device']
         model.to(self.device)
 

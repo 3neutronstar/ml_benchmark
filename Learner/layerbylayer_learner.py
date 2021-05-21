@@ -102,6 +102,8 @@ class LBLLearner(BaseLearner):
                     class_correct_dict[int(label)]+=pred.eq(target.view_as(pred))[target==int(label)].sum().item()
                     class_total_dict[int(label)]+=(target==label).sum().item()
         for keys in class_correct_dict.keys():
+            if class_total_dict[keys] ==0:
+                continue
             print('{} class : {}/{} [{:.2f}%]'.format(keys,class_correct_dict[keys],class_total_dict[keys],100.0*class_correct_dict[keys]/class_total_dict[keys]))
         eval_loss = eval_loss / len(self.test_loader.dataset)
 
