@@ -78,9 +78,10 @@ class LBLLearner(BaseLearner):
                 sys.stdout.flush()
 
         total_correct=0
+        print('\n')
         for class_correct_key in class_correct_dict.keys():
             class_accur=100.0*float(class_correct_dict[class_correct_key])/float(len_data[class_correct_key])
-            print('\n{} class :{}/{} {:2f}%'.format(class_correct_key,class_correct_dict[class_correct_key],len_data[class_correct_key],class_accur))
+            print('{} class :{}/{} {:2f}%'.format(class_correct_key,class_correct_dict[class_correct_key],len_data[class_correct_key],class_accur))
             total_correct+=class_correct_dict[class_correct_key]
         running_loss /= num_training_data
         tok = time.time()

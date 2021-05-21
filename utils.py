@@ -16,7 +16,8 @@ def load_params(configs, file_name):
 
 def save_params(configs, time_data):
     current_path = os.path.dirname(os.path.abspath(__file__))
-    os.makedirs(os.path.join(current_path, 'grad_data',time_data))
+    if os.path.exists(os.path.dirname(os.path.join(os.path.abspath(__file__),'grad_data',time_data))):
+        os.makedirs(os.path.join(current_path, 'grad_data',time_data))
     with open(os.path.join(current_path, 'grad_data',time_data,'{}.json'.format(time_data)), 'w') as fp:
         json.dump(configs, fp, indent=2)
 

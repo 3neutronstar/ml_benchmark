@@ -1,7 +1,13 @@
 #!/bin/bash
 echo 'train lenet5'
 conda activate bench
-SET=$(seq 1 35)
+MODE=$(train_lbl, baseline_moo)
+SET=$(0.1,0.2,0.3,0.4)
+SPARSE_VALUE=$(1,2,3)
 for VALUE in $SET; do
-    CUDA_VISIBLE_DEVICES=1 python run.py train --test_seed $VALUE
+for SPARSE_VALUE in $SPARSE_SET; do
+for MODE_VAL in $MODE; do
+    python run.py $MODE_VAL --model vgg16 --moo_sparse_ratio $VALUE --moo_num_classes 5 --moo_num_sparse_classes $SPARSE_VALUE
+done
+done
 done
