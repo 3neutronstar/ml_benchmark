@@ -70,16 +70,14 @@ class MOOLearner(BaseLearner):
                 class_correct_dict[int(class_idx)]+=pred.eq(target.view_as(pred))[target==class_idx].sum().item()
                 len_data[int(class_idx)]+=(target==class_idx).sum()
 
-            running_loss+=loss.sum().item()
+            running_loss+=loss.mean().item()
             self.optimizer.pc_backward(loss,target,epoch)
             self.optimizer.step()
 
             current_len_data+=target.size()[0]
-            if total_len_data<=current_len_data:
-                break
             if idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, current_len_data, total_len_data ,
-                                                                                100.0 * float(current_len_data) / float(total_len_data), loss.sum().item()), end='')
+                                                                                100.0 * float(current_len_data) / float(total_len_data), loss.mean().item()), end='')
 
         tok=time.time()
         if self.configs['log_extraction']=='true':
@@ -109,7 +107,7 @@ class MOOLearner(BaseLearner):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
-                eval_loss += loss.sum().item()
+                eval_loss += loss.mean().item()
                 # get the index of the max log-probability
                 pred = output.argmax(dim=1, keepdim=True)
                 for label in target.unique():

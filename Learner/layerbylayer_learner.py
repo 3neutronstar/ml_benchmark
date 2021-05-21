@@ -48,9 +48,11 @@ class LBLLearner(BaseLearner):
         running_loss = 0.0
         correct = 0
         num_training_data = len(self.train_loader.dataset)
-        # defalut is mean of mini-batchsamples, loss type설정
-        # loss함수에 softmax 함수가 포함되어있음
-        # 몇개씩(batch size) 로더에서 가져올지 정함 #enumerate로 batch_idx표현
+        len_data=dict()
+        class_correct_dict=dict()
+        for i in range(self.configs['num_classes']):
+            class_correct_dict[i]=0
+            len_data[i]=0
         for batch_idx, (data, target) in enumerate(self.train_loader):
             data, target = data.to(self.device), target.to(
                 self.device)  # gpu로 올림
@@ -64,14 +66,22 @@ class LBLLearner(BaseLearner):
             self.optimizer.zero_grad()  # optimizer zero로 초기화
             self.optimizer.backward(loss,target)  # 역전파
             self.optimizer.step()
+            for class_idx in target.unique():
+                class_correct_dict[int(class_idx)]+=pred.eq(target.view_as(pred))[target==class_idx].sum().item()
+                len_data[int(class_idx)]+=(target==class_idx).sum()
 
             running_loss += loss.mean().item()
             if batch_idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, batch_idx * len(
                     data), num_training_data, 100.0 * batch_idx / len(self.train_loader), loss.mean().item()), end='')
             if self.configs['log_extraction']=='true':
-                sys.stdout.flush()         
+                sys.stdout.flush()
 
+        total_correct=0
+        for class_correct_key in class_correct_dict.keys():
+            class_accur=100.0*float(class_correct_dict[class_correct_key])/float(len_data[class_correct_key])
+            print('\n{} class :{}/{} {:2f}%'.format(class_correct_key,class_correct_dict[class_correct_key],len_data[class_correct_key],class_accur))
+            total_correct+=class_correct_dict[class_correct_key]
         running_loss /= num_training_data
         tok = time.time()
         running_accuracy = 100.0 * correct / float(num_training_data)

@@ -40,7 +40,7 @@ def get_hyperparams(model):
 
 class BaseNet():
     def __init__(self,configs):
-        if 'moo' in configs['mode']:
+        if 'moo' in configs['mode'] or 'train_lbl'==configs['mode']:
             configs['num_classes']=configs['moo_num_classes']
         else:
             if configs['dataset']=='cifar10' or 'mnist' in configs['dataset']:
