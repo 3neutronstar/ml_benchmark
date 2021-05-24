@@ -68,7 +68,7 @@ def parse_args(args):
         parser.add_argument(
             '--grad_off_epoch', type=int, default=5,
             help='set gradient off and prune start epoch')
-    elif 'moo' in mode or mode=='train_lbl':
+    elif 'moo' in mode or 'train_lbl' in mode:
         parser.add_argument(
             '--moo_num_classes', type=int, default=5,
             help='num_classes you want to train')
