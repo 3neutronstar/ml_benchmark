@@ -127,9 +127,9 @@ def main(args):
         time_data = time.strftime(
             '%m-%d_%H-%M-%S', time.localtime(time.time()))
         print(time_data)
-        current_path=os.path.abspath(__file__)
-        if os.path.exists(os.path.dirname(os.path.join(current_path,'grad_data'))) == False and flags.log_extraction =='true':
-            os.mkdir(os.path.dirname(os.path.join(current_path,'grad_data')))
+        current_path=os.path.dirname(os.path.abspath(__file__))
+        if os.path.exists(os.path.join(current_path,'grad_data')) == False and flags.log_extraction =='true':
+            os.mkdir(os.path.join(current_path,'grad_data'))
         if os.path.exists(os.path.join(current_path,'grad_data',time_data))==False and flags.log_extraction:
             os.makedirs(os.path.join(current_path, 'grad_data',time_data))
     elif flags.file_name is not None and flags.mode not in train_mode_list:  # load param when not training
