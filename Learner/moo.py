@@ -4,13 +4,16 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline
+from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline,PCGrad_MOO_V2
 class MOOLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MOOLearner,self).__init__(model,time_data,file_path,configs)
-        if 'train_moo' in configs['mode']:
+        if 'train_moo' == configs['mode']:
             reduction='none'
             self.optimizer=PCGrad_MOO(self.optimizer)
+        elif 'train_moo_v2' == configs['mode']:
+            reduction='none'
+            self.optimizer=PCGrad_MOO_V2(self.optimizer)
         elif 'baseline_moo' in configs['mode']:
             reduction='mean'
             self.optimizer=PCGrad_MOO_Baseline(self.optimizer)

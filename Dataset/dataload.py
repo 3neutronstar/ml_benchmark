@@ -156,15 +156,17 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data.targets=train_data.targets[idx.bool()]
 
     #sampler setting
-    if configs['mode'] in['train_moo','baseline_moo','train_lbl','train_lbl_v2']:
+    if configs['mode'] in['train_moo','baseline_moo','train_lbl','train_lbl_v2','train_moo_v2']:#v2 for weighted sum
         sampler=None
         shuffle=True
 
-    elif configs['mode'] in ['train_moo_v2','baseline_moo_v2']:
-        from utils import make_weights_for_balanced_classes
-        sample_weight=make_weights_for_balanced_classes(train_data,nclasses=len(data_classes))       
-        sampler=torch.utils.data.WeightedRandomSampler(sample_weight,len(sample_weight))
-        shuffle=False
+    # elif configs['mode'] in ['train_moo_v2','baseline_moo_v2']:
+    #     from utils import make_weights_for_balanced_classes
+    #     sample_weight=make_weights_for_balanced_classes(train_data,nclasses=len(data_classes))       
+    #     sampler=torch.utils.data.WeightedRandomSampler(sample_weight,len(sample_weight))
+    #     shuffle=False
+    else:
+        raise NotImplementedError
 
     train_data_loader=torch.utils.data.DataLoader(train_data,
                                             batch_size=configs['batch_size'],

@@ -29,7 +29,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
         return self._optim.step()
 
-    def pc_backward(self, objectives,labels,epoch=None,batch_idx=None):
+    def pc_backward(self, objectives,labels,epoch=None):
         '''
         calculate the gradient of the parameters
         input:
@@ -37,7 +37,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         '''
 
         grads, shapes = self._pack_grad(objectives)
-        pc_grad = self._project_conflicting(grads, epoch=epoch,batch_idx=batch_idx)
+        pc_grad = self._project_conflicting(grads, labels=labels, epoch=epoch)
         pc_grad = self._unflatten_grad(pc_grad, shapes[0])
         self._set_grad(pc_grad)
         return
@@ -51,7 +51,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #print(sorted_idx,similarity_grads)
         return sorted_idx
 
-    def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
+    def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         #print_norm_before=list()
         #print_norm_after=list()
@@ -179,7 +179,7 @@ class PCGrad_v2(PCGrad):
         flatten_grad = torch.cat([g.flatten() for g in grads]).view(1,-1)
         return flatten_grad
 
-    def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
+    def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         # random.shuffle(grads)
         g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
@@ -225,18 +225,61 @@ class PCGrad_MOO(PCGrad_v2):
     def __init__(self,optimizer):
         super(PCGrad_MOO,self).__init__(optimizer)
 
-    def pc_backward(self, objectives, labels, epoch, batch_idx=None):
+    def pc_backward(self, objectives, labels, epoch):
         pc_objectives=list()
         for idx in torch.unique(labels):
             pc_objectives.append(objectives[labels==idx].mean().view(1))
-        super().pc_backward(pc_objectives, labels, epoch=epoch, batch_idx=batch_idx)
+        super().pc_backward(pc_objectives, labels, epoch=epoch)
         return torch.cat(pc_objectives,dim=0)
+
+class PCGrad_MOO_V2(PCGrad_v2):
+    '''
+    PC_GRAD for moo
+    '''
+    def __init__(self,optimizer):
+        super(PCGrad_MOO_V2,self).__init__(optimizer)
+
+    def pc_backward(self, objectives, labels, epoch):
+        pc_objectives=list()
+        for idx in torch.unique(labels):
+            pc_objectives.append(objectives[labels==idx].mean().view(1))
+        super().pc_backward(pc_objectives, labels, epoch=epoch)
+        return torch.cat(pc_objectives,dim=0)
+
+    def _project_conflicting(self, grads,shapes=None,labels=None, epoch=None):
+        pc_grad, num_task = copy.deepcopy(grads), len(grads)
+        # random.shuffle(grads)
+        g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
+
+        index=[i for i in range(num_task)]# shuffle해서 사용
+        shuffle_index=list()
+        for i in range(num_task):
+           random.shuffle(index)
+           shuffle_index.append(copy.deepcopy(index))
+
+        # g_i[index]=g_j
+        shuffle_index=torch.tensor(shuffle_index)
+
+        for idx in range(num_task):
+           index=shuffle_index[:,idx]
+           this_g_j=g_j[index]
+           g_j_g_i=torch.matmul(g_i,this_g_j.T)
+           this_g_j_g_i=torch.diagonal(g_j_g_i)
+           index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
+        
+           g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
+        
+        weight_grad= torch.bincount(labels).float()/float(torch.numel(labels))
+        assert(weight_grad.size()!=labels.unique())
+        merged_grad = torch.matmul(weight_grad[labels.unique()],g_i)
+        return merged_grad
+
 
 class PCGrad_MOO_Baseline(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_MOO_Baseline,self).__init__(optimizer)
 
-    def pc_backward(self, objectives, labels, epoch, batch_idx=None):
+    def pc_backward(self, objectives, labels, epoch):
         self._optim.zero_grad()
         objectives.backward()
     
