@@ -218,7 +218,7 @@ def data_loader(configs):
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)
-    elif 'moo' in configs['mode'] or configs['mode']=='train_lbl':
+    elif 'moo' in configs['mode'] or 'train_lbl' in configs['mode']:
         train_data_loader, test_data_loader=split_class_list_data_loader(train_data, test_data,configs)
     else:
         raise NotImplementedError
