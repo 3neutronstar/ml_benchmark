@@ -149,19 +149,19 @@ class LayerByLayerOptimizer_V2(LayerByLayerOptimizer):
                     shape.append(p.shape)
                     grad.append(torch.zeros_like(p).to(p.device))
                     continue
-                if group['params'][-1]==p or group['params'][-2]==p:# classifier만
+                if torch.equal(group['params'][-1],p) or torch.equal(group['params'][-2],p):# classifier만
                     shape.append(p.grad.shape)
                     grad.append(p.grad.clone())
-        return
+        return grad,shape
     
     def _set_grad(self, grads):
         idx = 0
         for group in self._optim.param_groups:
             for p in group['params']:
                 # if p.grad is None: continue
-                if group['params'][-1]==p:
+                if torch.equal(group['params'][-1],p):
                     p.grad = grads[1]
-                if group['params'][-2]==p:
+                if torch.equal(group['params'][-2],p):
                     p.grad = grads[0]
                 idx += 1
         return
