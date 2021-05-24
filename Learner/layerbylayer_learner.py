@@ -4,13 +4,16 @@ import time
 import numpy as np
 import torch
 from Learner.base_learner import BaseLearner
-from CustomOptimizer.layerbylayer import LayerByLayerOptimizer
+from CustomOptimizer.layerbylayer import LayerByLayerOptimizer,LayerByLayerOptimizer_V2
 import sys
 
 class LBLLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(LBLLearner,self).__init__(model,time_data,file_path,configs)
-        self.optimizer=LayerByLayerOptimizer(self.model,self.optimizer)
+        if configs['mode']=='train_lbl_v2':
+            self.optimizer=LayerByLayerOptimizer_V2(self.model,self.optimizer)
+        else:
+            self.optimizer=LayerByLayerOptimizer(self.model,self.optimizer)
         self.criterion=self.criterion.__class__(reduction='none')
 
     def run(self):

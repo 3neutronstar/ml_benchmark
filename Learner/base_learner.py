@@ -57,7 +57,6 @@ class BaseLearner():
 
     def save_grad(self, epochs):
         # Save all grad to the file
-        self.configs['end_epoch'] = epochs
         if self.configs['grad_save'] == True:
             self.grad_list.append([])
             param_size = list()

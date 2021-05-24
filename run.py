@@ -8,7 +8,7 @@ import torch.optim as optim
 import random
 import numpy as np
 from utils import load_params, save_params
-TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_moo','baseline_moo','train_moo_v2','baseline_moo_v2','train_lbl']
+TRAIN_MODE=['train','train_weight_prune', 'train_grad_visual', 'train_lrp','train_mtl','train_mtl_v2','train_moo','baseline_moo','train_moo_v2','baseline_moo_v2','train_lbl','train_lbl_v2']
 def parse_args(args):
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -206,7 +206,7 @@ def main(args):
         from utils import TestPerformance
         tester=TestPerformance(model,time_data,file_path,configs)
         tester.run()
-    elif configs['mode']=='train_lbl':
+    elif configs['mode']=='train_lbl' or configs['mode']=='train_lbl_v2':
         from Learner.layerbylayer_learner import LBLLearner
         learner=LBLLearner(model,time_data,file_path,configs)
         learner.run()
