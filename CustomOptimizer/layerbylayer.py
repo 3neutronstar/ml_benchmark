@@ -165,3 +165,33 @@ class LayerByLayerOptimizer_V2(LayerByLayerOptimizer):
                     p.grad = grads[0]
                 idx += 1
         return
+
+    def _unflatten_grad(self, grads, shapes):
+        unflatten_grad, idx = [], 0
+        for shape in shapes:
+            length = np.prod(shape)
+            unflatten_grad.append(grads[idx:idx + length].view(shape).clone())
+            idx += length
+        return unflatten_grad
+
+
+    def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
+        pc_grad, num_task = copy.deepcopy(grads), len(grads)
+
+
+        # original
+        for g_i in pc_grad:
+            random.shuffle(grads)
+            for g_j in grads:
+                g_i_g_j = torch.dot(g_i, g_j)
+                if g_i_g_j<-(1e-20):
+                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+
+        merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
+        
+        return merged_grad
+
+    def _flatten_grad(self, grads, shapes):
+        flatten_grad = torch.cat([g.flatten() for g in grads])
+        return flatten_grad

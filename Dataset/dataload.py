@@ -156,7 +156,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data.targets=train_data.targets[idx.bool()]
 
     #sampler setting
-    if configs['mode'] in['train_moo','baseline_moo','train_lbl','train_lbl_v2','train_moo_v2']:#v2 for weighted sum
+    if configs['mode'] in['train_moo','baseline_moo','train_lbl','train_lbl_v2','train_moo_v2','baseline_moo_v2']:#v2 for weighted sum
         sampler=None
         shuffle=True
 

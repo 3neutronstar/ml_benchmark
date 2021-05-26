@@ -4,7 +4,7 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline,PCGrad_MOO_V2
+from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline,PCGrad_MOO_V2,PCGrad_MOO_Baseline_V2
 class MOOLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MOOLearner,self).__init__(model,time_data,file_path,configs)
@@ -14,9 +14,12 @@ class MOOLearner(BaseLearner):
         elif 'train_moo_v2' == configs['mode']:
             reduction='none'
             self.optimizer=PCGrad_MOO_V2(self.optimizer)
-        elif 'baseline_moo' in configs['mode']:
+        elif 'baseline_moo' == configs['mode']:
             reduction='mean'
             self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
+        elif 'baseline_moo_v2' == configs['mode']:
+            reduction='none'
+            self.optimizer=PCGrad_MOO_Baseline_V2(self.optimizer)
         else:
             raise NotImplementedError
 
