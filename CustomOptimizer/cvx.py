@@ -55,7 +55,6 @@ class CVXOptimizer():
         prob.solve()
         alpha_tensor=torch.tensor(alpha.value,dtype=torch.float,device='cuda').view(1,-1)
         cvx_grad=torch.matmul(alpha_tensor,cp_grads).view(-1)
-        cp.abs
         
         return cvx_grad
 
