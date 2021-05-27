@@ -68,6 +68,7 @@ class CVXLearner(BaseLearner):
                 len_data[int(class_idx)]+=(target==class_idx).sum()
 
             running_loss+=loss.mean().item()
+            self.optimizer.zero_grad()
             self.optimizer.cvx_backward(loss)
             self.optimizer.step()
 

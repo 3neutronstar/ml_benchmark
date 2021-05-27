@@ -2,6 +2,48 @@ import torch
 import cvxpy as cp
 import numpy as np
 
+# class CVXOptimizer():
+#     def __init__(self,optimizer):
+#         self._optim=optimizer
+
+    
+#     @property
+#     def optimizer(self):
+#         return self._optim
+
+#     def zero_grad(self):
+#         '''
+#         clear the gradient of the parameters
+#         '''
+
+#         return self._optim.zero_grad(set_to_none=True)
+
+#     def step(self):
+#         '''
+#         update the parameters with the gradient
+#         '''
+
+#         return self._optim.step()
+
+
+#     def cvx_backward(self,objectives):
+#         cp_loss=objectives.data.cpu().numpy()
+        
+#         alpha_size=objectives.size()[0]
+#         alpha=cp.Variable((alpha_size),nonneg=True)
+#         alpha.value=torch.rand(alpha_size).numpy()
+#         objective=cp.Minimize(cp.square(cp.abs(cp.sum(cp_loss@alpha))))
+#         constraints=[0<=alpha,alpha<=1,sum(alpha)==1.0]
+#         prob = cp.Problem(objective, constraints)
+#         prob.solve()
+#         # print(cp_loss@alpha.value,sum(alpha.value))
+#         alpha_tensor=torch.tensor(alpha.value,dtype=torch.float,device='cuda').view(1,-1)
+#         cvx_loss=torch.matmul(alpha_tensor,objectives)
+#         cvx_loss.backward()      
+
+#         return
+
+
 class CVXOptimizer():
     def __init__(self,optimizer):
         self._optim=optimizer
@@ -50,7 +92,7 @@ class CVXOptimizer():
         alpha.value=torch.rand(len(grads)).numpy()
         cp_grads=torch.cat(grads,dim=0)
         objective=cp.Minimize(cp.square(cp.abs(cp.sum(cp_grads.T.cpu().numpy()@alpha))))
-        constraints=[0<=alpha,sum(alpha)==1]
+        constraints=[0<=alpha,alpha<=1,sum(alpha)==1.0]
         prob = cp.Problem(objective, constraints)
         prob.solve()
         alpha_tensor=torch.tensor(alpha.value,dtype=torch.float,device='cuda').view(1,-1)
@@ -113,3 +155,4 @@ class CVXOptimizer():
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
         return grad, shape
+
