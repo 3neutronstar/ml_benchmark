@@ -4,22 +4,13 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline,PCGrad_MOO_V2,PCGrad_MOO_Baseline_V2
-class MOOLearner(BaseLearner):
+from CustomOptimizer.cvx import CVXOptimizer
+class CVXLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
-        super(MOOLearner,self).__init__(model,time_data,file_path,configs)
-        if 'train_moo' == configs['mode']:
+        super(CVXLearner,self).__init__(model,time_data,file_path,configs)
+        if 'train_cvx' in configs['mode']:
             reduction='none'
-            self.optimizer=PCGrad_MOO(self.optimizer)
-        elif 'train_moo_v2' == configs['mode']:
-            reduction='none'
-            self.optimizer=PCGrad_MOO_V2(self.optimizer)
-        elif 'baseline_moo' == configs['mode']:
-            reduction='mean'
-            self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
-        elif 'baseline_moo_v2' == configs['mode']:
-            reduction='none'
-            self.optimizer=PCGrad_MOO_Baseline_V2(self.optimizer)
+            self.optimizer=CVXOptimizer(self.optimizer)
         else:
             raise NotImplementedError
 
@@ -77,7 +68,8 @@ class MOOLearner(BaseLearner):
                 len_data[int(class_idx)]+=(target==class_idx).sum()
 
             running_loss+=loss.mean().item()
-            self.optimizer.pc_backward(loss,target,epoch)
+            self.optimizer.zero_grad()
+            self.optimizer.cvx_backward(loss)
             self.optimizer.step()
 
             current_len_data+=target.size()[0]
@@ -105,7 +97,7 @@ class MOOLearner(BaseLearner):
         correct = 0
         class_correct_dict=dict()
         class_total_dict=dict()
-        for i in range(self.configs['moo_num_classes']):
+        for i in range(self.configs['num_classes']):
             class_correct_dict[i]=0
             class_total_dict[i]=0
         with torch.no_grad():

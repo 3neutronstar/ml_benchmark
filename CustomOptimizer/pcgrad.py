@@ -53,12 +53,6 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
-        #print_norm_before=list()
-        #print_norm_after=list()
-        #if batch_idx is not None and batch_idx % 10==0:
-        #        for g in pc_grad:
-        #            print_norm_before.append(g.norm().cpu().clone())
-        # print('before',torch.cat(grads,dim=0).view(num_task,-1).mean(dim=1).norm())
 
         # 1.
         for g_i in pc_grad:
@@ -70,28 +64,13 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                         g_i -= (g_i_g_j) * grads[j] / torch.matmul(grads[j],grads[j])
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
 
-        # # 2. 
-        # for g_i in pc_grad:
-        #     surgery=list()
-        #     random.shuffle(grads)
-        #     for g_j in grads:
-        #         g_i_g_j = torch.dot(g_i, g_j)
-        #         if g_i_g_j < 0 and g_j.norm()>1e-20:
-        #             # surgery.append(((g_i_g_j) * g_j / (g_j.norm()**2)).view(1,-1))
-        #             # surgery.append(((g_i_g_j) * g_j / (g_j.T*g_j).sum()).view(1,-1))
-        #             surgery.append(((g_i_g_j) * g_j / torch.matmul(g_j,g_j)).view(1,-1).clone())
-        #     if len(surgery)==0:
-        #         continue
-        #     else:
-        #         g_i-=torch.cat(surgery,dim=0).mean(dim=0)
 
-
-        # 3. # original v_2
+        # 3. # original
         #for g_i in pc_grad:
         #    random.shuffle(grads)
         #    for g_j in grads:
         #        g_i_g_j = torch.dot(g_i, g_j)
-        #        if g_i_g_j < 0 or g_i_g_j>-(1e-20):
+        #        if g_i_g_j < 0 or g_i_g_j<-(1e-20):
         #            # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
         #            g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
@@ -276,4 +255,18 @@ class PCGrad_MOO_Baseline(PCGrad):
     def pc_backward(self, objectives, labels, epoch):
         self._optim.zero_grad()
         objectives.backward()
-    
+        return
+
+class PCGrad_MOO_Baseline_V2(PCGrad_MOO_Baseline):
+
+    def __init__(self,optimizer):
+        super().__init__(optimizer)
+
+    def pc_backward(self, objectives, labels, epoch):
+        self._optim.zero_grad()
+        pc_objectives=list()
+        for label in labels.unique():
+            pc_objectives.append(objectives[label==labels].mean().view(1))
+        mean_objectives=torch.cat(pc_objectives).mean()
+        mean_objectives.backward()
+        return
