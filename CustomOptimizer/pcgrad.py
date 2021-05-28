@@ -155,13 +155,13 @@ class PCGrad_v2(PCGrad):
         super(PCGrad_v2,self).__init__(optimizer)
 
     def _flatten_grad(self, grads, shapes):
-        flatten_grad = torch.cat([g.flatten() for g in grads]).view(1,-1)
+        flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
         return flatten_grad
 
     def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         # random.shuffle(grads)
-        g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
+        # g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
         ## Vectorized version
         # index=[i for i in range(num_task)]# shuffle해서 사용
@@ -181,6 +181,7 @@ class PCGrad_v2(PCGrad):
         #    index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
         
         #    g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
+        # merged_grad = g_i.mean(dim=0).view(-1)
         for g_i in pc_grad:
            random.shuffle(grads)
            for g_j in grads:
@@ -188,7 +189,7 @@ class PCGrad_v2(PCGrad):
                if g_i_g_j < 0 or g_i_g_j<-(1e-20):
                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
-        merged_grad = g_i.mean(dim=0)
+        merged_grad=torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         return merged_grad
 
 class PCGrad_MOO(PCGrad_v2):
