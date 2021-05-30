@@ -1,6 +1,6 @@
 #!/bin/bash
 MODE="train_moo  baseline_moo";  
-SET="0.1";
+SET="0.2";
 SPARSE_SET="1 2 3 4";
 for VALUE in ${SET}
 do
