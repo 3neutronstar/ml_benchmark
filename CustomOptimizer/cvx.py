@@ -91,10 +91,10 @@ class CVXOptimizer():
         alpha=cp.Variable((alpha),nonneg=True)
         alpha.value=torch.rand(len(grads)).numpy()
         cp_grads=torch.cat(grads,dim=0)
-        objective=cp.Minimize(cp.square(cp.abs(cp.sum(cp_grads.T.cpu().numpy()@alpha))))
+        objective=cp.Minimize(cp.norm2(cp_grads.T.cpu().numpy()@alpha))
         constraints=[0<=alpha,alpha<=1,sum(alpha)==1.0]
         prob = cp.Problem(objective, constraints)
-        prob.solve()
+        prob.solve(solver=cp.SCS)
         alpha_tensor=torch.tensor(alpha.value,dtype=torch.float,device='cuda').view(1,-1)
         cvx_grad=torch.matmul(alpha_tensor,cp_grads).view(-1)
         

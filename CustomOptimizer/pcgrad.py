@@ -54,25 +54,25 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
 
-        # 1.
-        for g_i in pc_grad:
-            sorted_idx=self._check_priority(g_i,grads)
-            for j in sorted_idx:
-                g_i_g_j = torch.dot(g_i, grads[j])
-                if g_i_g_j < 0:
-                    if grads[j].norm()>1e-20:
-                        g_i -= (g_i_g_j) * grads[j] / torch.matmul(grads[j],grads[j])
-                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+        # # 1.
+        # for g_i in pc_grad:
+        #     sorted_idx=self._check_priority(g_i,grads)
+        #     for j in sorted_idx:
+        #         g_i_g_j = torch.dot(g_i, grads[j])
+        #         if g_i_g_j < 0:
+        #             if grads[j].norm()>1e-20:
+        #                 g_i -= (g_i_g_j) * grads[j] / torch.matmul(grads[j],grads[j])
+        #             # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
 
 
         # 3. # original
-        #for g_i in pc_grad:
-        #    random.shuffle(grads)
-        #    for g_j in grads:
-        #        g_i_g_j = torch.dot(g_i, g_j)
-        #        if g_i_g_j < 0 or g_i_g_j<-(1e-20):
-        #            # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-        #            g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+        for g_i in pc_grad:
+           random.shuffle(grads)
+           for g_j in grads:
+               g_i_g_j = torch.dot(g_i, g_j)
+               if  g_i_g_j<-(1e-20):
+                   # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                   g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
         merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         
@@ -190,7 +190,7 @@ class PCGrad_v2(PCGrad):
            this_g_j=g_j[index]
            g_j_g_i=torch.matmul(g_i,this_g_j.T)
            this_g_j_g_i=torch.diagonal(g_j_g_i)
-           index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
+           index_surgery=torch.bitwise_and(this_g_j_g_i<-(1e-10),(this_g_j.norm(dim=1)>1e-10))
         
            g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
                 
