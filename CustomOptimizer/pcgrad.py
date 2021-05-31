@@ -159,7 +159,10 @@ class PCGrad_v2(PCGrad):
         return flatten_grad
 
     def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
-        pc_grad, num_task = copy.deepcopy(grads), len(grads)
+        
+        num_task = len(grads)
+        pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
+
         # random.shuffle(grads)
         # g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
@@ -189,7 +192,7 @@ class PCGrad_v2(PCGrad):
                if g_i_g_j<-(1e-10):
                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
-        merged_grad=torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
+        merged_grad=pc_grad.mean(dim=0)
         return merged_grad
 
 class PCGrad_MOO(PCGrad_v2):
