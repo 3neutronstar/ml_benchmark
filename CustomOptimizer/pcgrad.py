@@ -108,6 +108,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
             grad, shape= self._retrieve_grad()
             grads.append(self._flatten_grad(grad, shape))
             shapes.append(shape)
+        self._optim.zero_grad(set_to_none=True)
         return grads, shapes
 
     def _unflatten_grad(self, grads, shapes):
