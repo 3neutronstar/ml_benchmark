@@ -125,6 +125,8 @@ def split_class_list_data_loader(train_data,test_data,configs):
     else:
         data_classes=configs['moo_custom_class_list']
         sparse_data_classes=configs['moo_sparse_custom_class_list']
+        data_classes=[int(d) for d in data_classes]
+        sparse_data_classes=[int(sd) for sd in sparse_data_classes]
     data_classes.sort()
     sparse_data_classes.sort()
     print('picked class:',data_classes)
@@ -141,6 +143,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
 
     # train data sparsity generator
     idx=torch.zeros_like(train_data.targets)
+    print(data_classes)
     for predict_idx,class_label in enumerate(data_classes):
         if class_label in sparse_data_classes:
             non_zero_idx=torch.nonzero(train_data.targets==class_label)
