@@ -48,7 +48,7 @@ class MOOLearner(BaseLearner):
                 break
             if self.device == 'gpu':
                 torch.cuda.empty_cache()
-
+        print("Total Conflict Number: {}".format(self.optimizer.total_conflict_num))
         print("Best Accuracy: "+str(best_accuracy))
         self.configs['train_end_epoch']=epoch
         configs = self.save_grad(epoch)

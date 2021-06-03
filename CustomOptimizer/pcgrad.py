@@ -154,6 +154,7 @@ class PCGrad_v2(PCGrad):
     '''
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
+        self.conflict_num=0
 
     def _flatten_grad(self, grads, shapes):
         flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
@@ -193,6 +194,7 @@ class PCGrad_v2(PCGrad):
                if g_i_g_j<-(1e-10):
                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+                   self.conflict_num+=1
         merged_grad=pc_grad.mean(dim=0)
         return merged_grad
 
@@ -202,12 +204,16 @@ class PCGrad_MOO(PCGrad_v2):
     '''
     def __init__(self,optimizer):
         super(PCGrad_MOO,self).__init__(optimizer)
+        self.total_conflict_num=0
 
     def pc_backward(self, objectives, labels, epoch):
         pc_objectives=list()
         for idx in torch.unique(labels):
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         super().pc_backward(pc_objectives, labels, epoch=epoch)
+        print('{} epoch, the number of conflict: {}'.format(epoch,self.conflict_num))
+        self.total_conflict_num+=self.conflict_num
+        self.conflict_num=0
         return torch.cat(pc_objectives,dim=0)
 
 class PCGrad_MOO_V2(PCGrad_v2):
@@ -222,6 +228,7 @@ class PCGrad_MOO_V2(PCGrad_v2):
         for idx in torch.unique(labels):
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         super().pc_backward(pc_objectives, labels, epoch=epoch)
+
         return torch.cat(pc_objectives,dim=0)
 
     def _project_conflicting(self, grads,shapes=None,labels=None, epoch=None):

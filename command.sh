@@ -8,7 +8,7 @@ do
     do
         for MODE_VAL in ${MODE}
         do
-            python run.py $MODE_VAL --model vgg16 --moo_sparse_ratio $VALUE --moo_num_classes 5  --moo_num_sparse_classes $SPARSE_VALUE
+            python run.py $MODE_VAL --model vgg16 --moo_sparse_ratio $VALUE --moo_num_classes 5  --moo_num_sparse_classes $SPARSE_VALUE --moo_custom 1 -c 0 -c 3 -c 6 -c 8 -c 9 -sc 0
         done
     done
 done
