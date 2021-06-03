@@ -205,14 +205,15 @@ class PCGrad_MOO(PCGrad_v2):
     def __init__(self,optimizer):
         super(PCGrad_MOO,self).__init__(optimizer)
         self.total_conflict_num=0
+        self.epoch_conflict_num=0
 
     def pc_backward(self, objectives, labels, epoch):
         pc_objectives=list()
         for idx in torch.unique(labels):
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         super().pc_backward(pc_objectives, labels, epoch=epoch)
-        print('{} epoch, the number of conflict: {}'.format(epoch,self.conflict_num))
         self.total_conflict_num+=self.conflict_num
+        self.epoch_conflict_num+=self.conflict_num
         self.conflict_num=0
         return torch.cat(pc_objectives,dim=0)
 

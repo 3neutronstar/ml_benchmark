@@ -97,6 +97,8 @@ class MOOLearner(BaseLearner):
         running_accuracy=100.0*float(total_correct)/float(total_len_data)
         train_metric={'accuracy':running_accuracy,'loss': running_loss/float(total_len_data)}
         print('{} epoch Total Accuracy: {:.2f}%, Total Loss: {}\n'.format(epoch,train_metric['accuracy'],train_metric['loss']))
+        print('The number of conflicting projection in this epoch: ', self.optimizer.epoch_conflict_num)
+        self.optimizer.epoch_conflict_num=0
         return train_metric
 
     def _eval(self):
