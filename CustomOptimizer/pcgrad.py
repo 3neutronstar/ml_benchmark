@@ -154,7 +154,7 @@ class PCGrad_v2(PCGrad):
     '''
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
-        self.conflict_num=0
+        self.conflict_num=list()
 
     def _flatten_grad(self, grads, shapes):
         flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
@@ -187,14 +187,14 @@ class PCGrad_v2(PCGrad):
         
         #    g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
         # merged_grad = g_i.mean(dim=0).view(-1)
-        for g_i in pc_grad:
+        for label_idx,g_i in enumerate(pc_grad):
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j<-(1e-10):
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                     g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
-                    self.conflict_num+=1
+                    self.conflict_num[label_idx]+=1
                 elif g_i_g_j>1e-10:
                     g_i += (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
         merged_grad=pc_grad.mean(dim=0)
@@ -207,16 +207,22 @@ class PCGrad_MOO(PCGrad_v2):
     def __init__(self,optimizer):
         super(PCGrad_MOO,self).__init__(optimizer)
         self.total_conflict_num=0
-        self.epoch_conflict_num=0
+        self.epoch_conflict_num=list()
 
     def pc_backward(self, objectives, labels, epoch):
         pc_objectives=list()
+        if len(self.epoch_conflict_num)==0:
+            self.epoch_conflict_num=[0 for i in labels.unique()]
         for idx in torch.unique(labels):
+            self.conflict_num.append(0)
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         super().pc_backward(pc_objectives, labels, epoch=epoch)
-        self.total_conflict_num+=self.conflict_num
-        self.epoch_conflict_num+=self.conflict_num
-        self.conflict_num=0
+
+        for label_i,class_conflict_num in enumerate(self.conflict_num):
+            self.epoch_conflict_num[label_i]+=class_conflict_num
+        self.total_conflict_num+=sum(self.conflict_num)
+        self.conflict_num=list()
+
         return torch.cat(pc_objectives,dim=0)
 
 class PCGrad_MOO_V2(PCGrad_v2):

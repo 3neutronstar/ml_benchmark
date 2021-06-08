@@ -99,9 +99,8 @@ class MOOLearner(BaseLearner):
         train_metric={'accuracy':running_accuracy,'loss': running_loss/float(total_len_data)}
         print('{} epoch Total Accuracy: {:.2f}%, Total Loss: {}\n'.format(epoch,train_metric['accuracy'],train_metric['loss']))
         if 'train' in self.configs['mode']:
-            self.optimizer.total_conflict_num+=self.optimizer.epoch_conflict_num
             print("The number of conflict Number:",self.optimizer.epoch_conflict_num)
-            self.optimizer.epoch_conflict_num=0
+            self.optimizer.epoch_conflict_num=list()
                 
         return train_metric
 
