@@ -70,9 +70,9 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
            random.shuffle(grads)
            for g_j in grads:
                g_i_g_j = torch.dot(g_i, g_j)
-               if  g_i_g_j<-(1e-20):
+               if  g_i_g_j>-(1e-20):
                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                   g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+                   g_i += (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
         merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         
@@ -154,7 +154,7 @@ class PCGrad_v2(PCGrad):
     '''
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
-        self.conflict_num=list()
+        self.conflict_list=None
 
     def _flatten_grad(self, grads, shapes):
         flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
@@ -163,8 +163,10 @@ class PCGrad_v2(PCGrad):
     def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
         
         num_task = len(grads)
+        if self.conflict_list is None:
+            self.conflict_list=[[[]for i in range(10)]for i in range(10)]
         pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
-
+        grads=list(enumerate(grads))
         # random.shuffle(grads)
         # g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
@@ -187,18 +189,28 @@ class PCGrad_v2(PCGrad):
         
         #    g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
         # merged_grad = g_i.mean(dim=0).view(-1)
+
+        #check the confliction
+        for label_idx,g_i in enumerate(pc_grad):
+            for j,g_j in grads:
+                if label_idx<=j:#자기 자신 및 중복 데이터 제외
+                    continue
+                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
+                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
+
+
         for label_idx,g_i in enumerate(pc_grad):
             random.shuffle(grads)
-            for g_j in grads:
+            for j,g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j<-(1e-10):
+                if g_i_g_j<-(1e-20):
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                    g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
-                    self.conflict_num[label_idx]+=1
-                elif g_i_g_j>1e-10:
-                    g_i += (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+                    g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
+
+
         merged_grad=pc_grad.mean(dim=0)
         return merged_grad
+
 
 class PCGrad_MOO(PCGrad_v2):
     '''
@@ -206,22 +218,12 @@ class PCGrad_MOO(PCGrad_v2):
     '''
     def __init__(self,optimizer):
         super(PCGrad_MOO,self).__init__(optimizer)
-        self.total_conflict_num=0
-        self.epoch_conflict_num=list()
 
     def pc_backward(self, objectives, labels, epoch):
         pc_objectives=list()
-        if len(self.epoch_conflict_num)==0:
-            self.epoch_conflict_num=[0 for i in labels.unique()]
         for idx in torch.unique(labels):
-            self.conflict_num.append(0)
             pc_objectives.append(objectives[labels==idx].mean().view(1))
         super().pc_backward(pc_objectives, labels, epoch=epoch)
-
-        for label_i,class_conflict_num in enumerate(self.conflict_num):
-            self.epoch_conflict_num[label_i]+=class_conflict_num
-        self.total_conflict_num+=sum(self.conflict_num)
-        self.conflict_num=list()
 
         return torch.cat(pc_objectives,dim=0)
 
@@ -268,6 +270,34 @@ class PCGrad_MOO_V2(PCGrad_v2):
         merged_grad = torch.matmul(weight_grad[labels.unique()],g_i)
         return merged_grad
 
+    def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
+        
+        num_task = len(grads)
+        if self.conflict_list is None:
+            self.conflict_list=[[[]for i in range(10)]for i in range(10)]
+        pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
+        grads=list(enumerate(grads))
+
+        #check the confliction #TODO
+        for label_idx,g_i in enumerate(pc_grad):
+            for j,g_j in grads:
+                if label_idx<=j:#자기 자신 및 중복 데이터 제외
+                    continue
+                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
+                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
+
+
+        for label_idx,g_i in enumerate(pc_grad):
+            random.shuffle(grads)
+            for j,g_j in grads:
+                g_i_g_j = torch.dot(g_i, g_j)
+                if g_i_g_j<-(1e-20):
+                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
+
+
+        merged_grad=pc_grad.mean(dim=0)
+        return merged_grad
 
 class PCGrad_MOO_Baseline(PCGrad):
     def __init__(self,optimizer):
