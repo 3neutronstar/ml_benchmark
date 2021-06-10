@@ -235,69 +235,66 @@ class PCGrad_MOO_V2(PCGrad_v2):
         super(PCGrad_MOO_V2,self).__init__(optimizer)
 
     def pc_backward(self, objectives, labels, epoch):
-        pc_objectives=list()
-        for idx in torch.unique(labels):
-            pc_objectives.append(objectives[labels==idx].mean().view(1))
-        super().pc_backward(pc_objectives, labels, epoch=epoch)
+        # pc_objectives=list()
+        # for idx in torch.unique(labels):
+        #     pc_objectives.append(objectives[labels==idx].mean().view(1))
+        # super().pc_backward(pc_objectives, labels, epoch=epoch)
+        super().pc_backward(objectives, labels, epoch=epoch)
 
-        return torch.cat(pc_objectives,dim=0)
+        # return torch.cat(pc_objectives,dim=0)
+        return objectives
 
-    def _project_conflicting(self, grads,shapes=None,labels=None, epoch=None):
-        pc_grad, num_task = copy.deepcopy(grads), len(grads)
-        # random.shuffle(grads)
-        g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
+    # def _project_conflicting(self, grads,shapes=None,labels=None, epoch=None):
+    #     pc_grad, num_task = copy.deepcopy(grads), len(grads)
+    #     # random.shuffle(grads)
+    #     g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
-        index=[i for i in range(num_task)]# shuffle해서 사용
-        shuffle_index=list()
-        for i in range(num_task):
-           random.shuffle(index)
-           shuffle_index.append(copy.deepcopy(index))
+    #     index=[i for i in range(num_task)]# shuffle해서 사용
+    #     shuffle_index=list()
+    #     for i in range(num_task):
+    #        random.shuffle(index)
+    #        shuffle_index.append(copy.deepcopy(index))
 
-        # g_i[index]=g_j
-        shuffle_index=torch.tensor(shuffle_index)
+    #     # g_i[index]=g_j
+    #     shuffle_index=torch.tensor(shuffle_index)
 
-        for idx in range(num_task):
-           index=shuffle_index[:,idx]
-           this_g_j=g_j[index]
-           g_j_g_i=torch.matmul(g_i,this_g_j.T)
-           this_g_j_g_i=torch.diagonal(g_j_g_i)
-           index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
+    #     for idx in range(num_task):
+    #        index=shuffle_index[:,idx]
+    #        this_g_j=g_j[index]
+    #        g_j_g_i=torch.matmul(g_i,this_g_j.T)
+    #        this_g_j_g_i=torch.diagonal(g_j_g_i)
+    #        index_surgery=torch.bitwise_and(this_g_j_g_i<0,(this_g_j.norm(dim=1)>1e-10))
         
-           g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
+    #        g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
         
-        weight_grad= torch.bincount(labels).float()/float(torch.numel(labels))
-        assert(weight_grad.size()!=labels.unique())
-        merged_grad = torch.matmul(weight_grad[labels.unique()],g_i)
-        return merged_grad
+    #     weight_grad= torch.bincount(labels).float()/float(torch.numel(labels))
+    #     assert(weight_grad.size()!=labels.unique())
+    #     merged_grad = torch.matmul(weight_grad[labels.unique()],g_i)
+    #     return merged_grad
 
     def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
-        
         num_task = len(grads)
-        if self.conflict_list is None:
-            self.conflict_list=[[[]for i in range(10)]for i in range(10)]
+        # print(grads)
         pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
-        grads=list(enumerate(grads))
-
-        #check the confliction #TODO
-        for label_idx,g_i in enumerate(pc_grad):
-            for j,g_j in grads:
-                if label_idx<=j:#자기 자신 및 중복 데이터 제외
-                    continue
-                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
-                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
-
-
-        for label_idx,g_i in enumerate(pc_grad):
-            random.shuffle(grads)
-            for j,g_j in grads:
-                g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j<-(1e-20):
-                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                    g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
-
-
-        merged_grad=pc_grad.mean(dim=0)
-        return merged_grad
+        merged_grad=list()
+        for label in labels.unique():
+            label_idx=(label==labels).nonzero().view(-1).clone()
+            for l_idx in label_idx:
+                g_i=pc_grad[l_idx]
+                shuffle_idx=torch.randperm(label_idx.size()[0])#변경점 (log false인거 기준)
+                shuffle_label_idx=label_idx[shuffle_idx].clone()# 변경점
+                for s_idx in shuffle_label_idx:
+                    g_j=grads[s_idx]
+                    g_i_g_j = torch.dot(g_i, g_j)
+                    if g_i_g_j<-(1e-20):
+                        # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                        g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
+                    if g_i_g_j>(1e-20):
+                        g_i += (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
+                        # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+            merged_grad.append(pc_grad[label_idx].mean(dim=0).view(1,-1))
+        merged_pc_grad=torch.cat(merged_grad,dim=0).mean(dim=0)
+        return merged_pc_grad
 
 class PCGrad_MOO_Baseline(PCGrad):
     def __init__(self,optimizer):
