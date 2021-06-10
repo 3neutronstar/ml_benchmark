@@ -286,9 +286,9 @@ class PCGrad_MOO_V2(PCGrad_v2):
                 for s_idx in shuffle_label_idx:
                     g_j=grads[s_idx]
                     g_i_g_j = torch.dot(g_i, g_j)
-                    if g_i_g_j<-(1e-20):
-                        # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                        g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
+                    # if g_i_g_j<-(1e-20):
+                    #     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+                    #     g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
                     if g_i_g_j>(1e-20):
                         g_i += (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
                         # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
