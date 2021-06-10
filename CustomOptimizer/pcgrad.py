@@ -55,9 +55,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
     def _check_cosine_similarity(self,grads,labels=None):
         if self.conflict_list is None:
             self.conflict_list=[[[]for i in range(10)]for i in range(10)]
-        grads=list(enumerate(grads))
         for label_idx,g_i in enumerate(grads):
-            for j,g_j in grads:
+            for j,g_j in enumerate(grads):
                 if label_idx<=j:#자기 자신 및 중복 데이터 제외
                     continue
                 cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
