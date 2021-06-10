@@ -315,7 +315,7 @@ class PCGrad_MOO_Baseline_V2(PCGrad_v2):
         super().pc_backward(objectives, labels, epoch=epoch)
         return
 
-    def _project_conflicting(self, grads, shapes, labels, epoch):
+    def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
         num_task = len(grads)
         self._check_cosine_similarity(grads,labels)
         pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
