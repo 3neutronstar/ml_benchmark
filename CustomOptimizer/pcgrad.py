@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 class PCGrad(): # mtl_v2 only# cpu 안내리기
     def __init__(self, optimizer):
         self._optim = optimizer
+        self.conflict_list=None
         return
 
     @property
@@ -51,6 +52,17 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #print(sorted_idx,similarity_grads)
         return sorted_idx
 
+    def _check_cosine_similarity(self,grads,labels=None):
+        if self.conflict_list is None:
+            self.conflict_list=[[[]for i in range(10)]for i in range(10)]
+        grads=list(enumerate(grads))
+        for label_idx,g_i in enumerate(grads):
+            for j,g_j in grads:
+                if label_idx<=j:#자기 자신 및 중복 데이터 제외
+                    continue
+                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
+                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
+
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
 
@@ -63,7 +75,6 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         #             if grads[j].norm()>1e-20:
         #                 g_i -= (g_i_g_j) * grads[j] / torch.matmul(grads[j],grads[j])
         #             # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-
 
         # 3. # original
         for g_i in pc_grad:
@@ -146,6 +157,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 shape.append(p.grad.shape)
                 grad.append(p.grad.clone())
         return grad, shape
+    
 
 
 class PCGrad_v2(PCGrad):
@@ -154,7 +166,6 @@ class PCGrad_v2(PCGrad):
     '''
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
-        self.conflict_list=None
 
     def _flatten_grad(self, grads, shapes):
         flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
@@ -163,10 +174,7 @@ class PCGrad_v2(PCGrad):
     def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
         
         num_task = len(grads)
-        if self.conflict_list is None:
-            self.conflict_list=[[[]for i in range(10)]for i in range(10)]
         pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
-        grads=list(enumerate(grads))
         # random.shuffle(grads)
         # g_i,g_j=torch.cat(pc_grad,dim=0),torch.cat(grads,dim=0)        
 
@@ -189,19 +197,11 @@ class PCGrad_v2(PCGrad):
         
         #    g_i[index_surgery]-=torch.div(torch.mul(this_g_j_g_i.view(-1,1),this_g_j).T,(this_g_j.norm(dim=1)**2)).T[index_surgery]
         # merged_grad = g_i.mean(dim=0).view(-1)
-
+        self._check_cosine_similarity(grads,labels)
         #check the confliction
         for label_idx,g_i in enumerate(pc_grad):
-            for j,g_j in grads:
-                if label_idx<=j:#자기 자신 및 중복 데이터 제외
-                    continue
-                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
-                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
-
-
-        for label_idx,g_i in enumerate(pc_grad):
             random.shuffle(grads)
-            for j,g_j in grads:
+            for j,g_j in enumerate(grads):
                 g_i_g_j = torch.dot(g_i, g_j)
                 if g_i_g_j<-(1e-20):
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
@@ -305,16 +305,21 @@ class PCGrad_MOO_Baseline(PCGrad):
         objectives.backward()
         return
 
-class PCGrad_MOO_Baseline_V2(PCGrad_MOO_Baseline):
+class PCGrad_MOO_Baseline_V2(PCGrad_v2):
 
     def __init__(self,optimizer):
         super().__init__(optimizer)
 
     def pc_backward(self, objectives, labels, epoch):
         self._optim.zero_grad()
-        pc_objectives=list()
-        for label in labels.unique():
-            pc_objectives.append(objectives[label==labels].mean().view(1))
-        mean_objectives=torch.cat(pc_objectives).mean()
-        mean_objectives.backward()
+        super().pc_backward(objectives, labels, epoch=epoch)
         return
+
+    def _project_conflicting(self, grads, shapes, labels, epoch):
+        num_task = len(grads)
+        self._check_cosine_similarity(grads,labels)
+        pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
+        del grads
+        pc_grad=pc_grad.mean(dim=0)
+        return pc_grad
+

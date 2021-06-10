@@ -98,13 +98,13 @@ class MOOLearner(BaseLearner):
         running_accuracy=100.0*float(total_correct)/float(total_len_data)
         train_metric={'accuracy':running_accuracy,'loss': running_loss/float(total_len_data)}
         print('{} epoch Total Accuracy: {:.2f}%, Total Loss: {}\n'.format(epoch,train_metric['accuracy'],train_metric['loss']))
-        # if 'train' in self.configs['mode']:
-        #     for i,i_grad_conflict in enumerate(self.optimizer.conflict_list):
-        #         for i_j,i_j_conflict in enumerate(i_grad_conflict):
-        #             if epoch ==1:
-        #                 self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor([-1.0,1.0]),0)
-        #             self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor(i_j_conflict),epoch)
-        #     self.optimizer.conflict_list=None
+        if self.optimizer.conflict_list != None:
+            for i,i_grad_conflict in enumerate(self.optimizer.conflict_list):
+                for i_j,i_j_conflict in enumerate(i_grad_conflict):
+                    if epoch ==1:
+                        self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor([-1.0,1.0]),0)
+                    self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor(i_j_conflict),epoch)
+            self.optimizer.conflict_list=None
 
                 
         return train_metric
