@@ -10,6 +10,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
     def __init__(self, optimizer):
         self._optim = optimizer
         self.conflict_list=None
+        self.total_conflict_num=None
         return
 
     @property
