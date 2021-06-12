@@ -89,7 +89,18 @@ def parse_args(args):
         if parser.parse_known_args(args)[0].moo_custom==True:
             parser.add_argument('--class','-c',action='append', dest='moo_custom_class_list')
             parser.add_argument('--s-class','-sc',action='append', dest='moo_sparse_custom_class_list')
+    elif mode in ['train_grad_visual','cam']:
+        # VISUAL and CAM SECTION
+        parser.add_argument(
+            '--visual_type', type=str, default='time_domain',
+            help='visualization domain decision [time,node]')
+        parser.add_argument(
+            '--num_result', type=int, default=1,
+            help='grad_data/grad_[].log file load')
 
+    parser.add_argument(
+        '--file_name', type=str, default=None,
+        help='grad_data/log_[].txt for check log or grad_[].pt file load for CAM and VISUAL mode')
     parser.add_argument(
         '--lr', type=float, default=lr,
         help='set learning rate')
@@ -106,16 +117,14 @@ def parse_args(args):
         '--dataset', type=str, default=dataset,
         help='choose dataset, if nn==lenet5,mnist elif nn==vgg16,cifar10')
     
-    # VISUAL and CAM SECTION
     parser.add_argument(
-        '--file_name', type=str, default=None,
-        help='grad_data/grad_[].log for VISUAL and grad_[].pt file load for CAM')
-    parser.add_argument(
-        '--visual_type', type=str, default='time_domain',
-        help='visualization domain decision [time,node]')
-    parser.add_argument(
-        '--num_result', type=int, default=1,
-        help='grad_data/grad_[].log file load')
+        '--custom_loss', type=str, default=None,
+        help='follow existing loss or not')
+    if parser.parse_known_args(args)[0].custom_loss is not None:
+        parser.add_argument(
+            '--custom_loss_reduction', type=str, default='mean',
+            help='follow existing loss or not')
+
         
     return parser.parse_known_args(args)[0]
 
@@ -192,12 +201,7 @@ def main(args):
         learner=GradPruneLearner(model,time_data,file_path,configs)
         configs=learner.run()
         save_params(configs, time_data)
-    elif configs['mode'] in['train_mtl','train_mtl_v2']:
-        from Learner.mtl import MTLLearner
-        learner=MTLLearner(model,time_data,file_path,configs)
-        configs=learner.run()
-        save_params(configs, time_data)
-    elif configs['mode'] in ['train_moo','baseline_moo','train_moo_v2','baseline_moo_v2']:
+    elif configs['mode'] in ['train_moo','baseline_moo','train_moo_v2','baseline_moo_v2','train_mtl','train_mtl_v2']:
         from Learner.moo import MOOLearner
         learner=MOOLearner(model,time_data,file_path,configs)
         configs=learner.run()
