@@ -4,28 +4,15 @@ import sys
 import torch
 from torch import optim
 from Learner.base_learner import BaseLearner
-from CustomOptimizer.pcgrad import PCGrad_MOO,PCGrad_MOO_Baseline,PCGrad_MOO_V2,PCGrad_MOO_Baseline_V2
+from CustomOptimizer.pcgrad import *
 class MOOLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(MOOLearner,self).__init__(model,time_data,file_path,configs)
-        if 'train_moo' == configs['mode']:
-            reduction='none'
-            self.optimizer=PCGrad_MOO(self.optimizer)
-        elif 'train_moo_v2' == configs['mode']:
-            reduction='none'
-            self.optimizer=PCGrad_MOO_V2(self.optimizer)
-        elif 'baseline_moo' == configs['mode']:
-            reduction='mean'
-            self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
-        elif 'baseline_moo_v2' == configs['mode']:
-            reduction='none'
-            self.optimizer=PCGrad_MOO_Baseline_V2(self.optimizer)
-        else:
-            raise NotImplementedError
 
-        self.criterion=self.criterion.__class__(reduction=reduction) # grad vector (no scalar)
         if os.path.exists(os.path.join(self.making_path, time_data)) == False:
             os.mkdir(os.path.join(self.making_path, time_data))
+        # if os.path.exists(os.path.join(self.making_path, 'png')) == False:
+        #     os.mkdir(os.path.join(self.making_path, 'png'))
 
     def run(self):
         print("Training {} epochs".format(self.configs['epochs']))
@@ -48,7 +35,7 @@ class MOOLearner(BaseLearner):
                 break
             if self.device == 'gpu':
                 torch.cuda.empty_cache()
-        if 'train' in self.configs['mode']:
+        if 'train_moo' in self.configs['mode']:
             print("Total Conflict Number: {}".format(self.optimizer.total_conflict_num))
         print("Best Accuracy: "+str(best_accuracy))
         self.configs['train_end_epoch']=epoch
@@ -115,7 +102,7 @@ class MOOLearner(BaseLearner):
         correct = 0
         class_correct_dict=dict()
         class_total_dict=dict()
-        for i in range(self.configs['moo_num_classes']):
+        for i in range(self.configs['num_classes']):
             class_correct_dict[i]=0
             class_total_dict[i]=0
         with torch.no_grad():

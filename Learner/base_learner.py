@@ -12,11 +12,52 @@ from utils import EarlyStopping
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from CustomOptimizer.pcgrad import *
+
+from CustomLoss.crossentropyloss import CrossEntropyLoss,ModifyTargetCrossEntropyLoss
+
+CUSTOM_LOSS={
+    'crossentropy':CrossEntropyLoss,
+    'modifytargetcrossentropy':ModifyTargetCrossEntropyLoss,
+}
+
+
 class BaseLearner():
     def __init__(self,model,time_data,file_path,configs):
         self.model = model
         self.optimizer = self.model.optim
-        self.criterion = self.model.loss
+        if 'train_moo' == configs['mode']:
+            reduction='none'
+            self.optimizer=PCGrad_MOO(self.optimizer)
+        elif 'train_moo_v2' == configs['mode']:
+            reduction='none'
+            self.optimizer=PCGrad_MOO_V2(self.optimizer)
+        elif 'baseline_moo' == configs['mode']:
+            reduction='mean'
+            self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
+        elif 'baseline_moo_v2' == configs['mode']:
+            reduction='none'
+            self.optimizer=PCGrad_MOO_Baseline_V2(self.optimizer)
+        elif configs['mode']=='train_mtl':
+            self.optimizer=PCGrad(self.optimizer)
+            reduction='none'
+        elif configs['mode']=='train_mtl_v2':
+            self.optimizer=PCGrad_v2(self.optimizer)
+            reduction='none'
+        else:
+            reduction='mean'
+
+        if configs['custom_loss']==None:
+            self.criterion = self.model.loss
+            self.criterion=self.criterion.__class__(reduction=reduction) # grad vector (no scalar)
+        else:
+            if 'custom_loss_reduction' not in configs.keys():
+                custom_loss_reduction='mean'
+            else:
+                custom_loss_reduction=configs['custom_loss_reduction']
+            self.criterion=CUSTOM_LOSS[configs['custom_loss']](self.model.loss,custom_loss_reduction=custom_loss_reduction,reduction=reduction)
+
+
         self.scheduler = self.model.scheduler
         self.configs = configs
         self.grad_list = list()
