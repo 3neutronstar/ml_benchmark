@@ -50,19 +50,10 @@ class ConvNet(nn.Module):
         self.pool3 = nn.AvgPool2d(kernel_size=3, stride=2, padding=1)
         self.ip1 = nn.Linear(64*4*4, configs['num_classes'])
         
-        self.optim=optim.SGD(params=self.parameters(),momentum=self.configs['momentum'],lr=self.configs['lr'],nesterov=True)
+        self.optim=optim.SGD(params=self.parameters(),momentum=self.configs['momentum'],lr=self.configs['lr'],nesterov=configs['nesterov'],weight_decay=configs['weight_decay'])
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
                         100, 150], gamma=0.1)
         self.loss=nn.CrossEntropyLoss()
-
-
-        self.w_size_list = [5*5*32, 5*5*32, 5*5*64, 64*4*4*configs['num_classes']]  # weight,bias size
-        self.b_size_list = [32, 32, 64, configs['num_classes']]
-        self.NN_size_list = [3, 32, 32, 64, configs['num_classes']]  # cnn과 fc_net out 작성
-        self.model_list = ['cnn', 'cnn', 'cnn', 'fc', 'fc']
-        self.kernel_size_list = [(5, 5), (5, 5), (5, 5)]
-        self.node_size_list=[6,16,120,84,configs['num_classes']]
-        return
 
     def forward(self, x):
         x = self.conv1(x)
@@ -79,7 +70,3 @@ class ConvNet(nn.Module):
         x = x.view(x.size(0), 64*4*4)
         x = self.ip1(x)
         return x
-
-    
-    def get_configs(self):
-        return self.w_size_list,self.b_size_list,self.NN_size_list,self.model_list,self.node_size_list

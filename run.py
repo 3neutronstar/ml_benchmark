@@ -108,6 +108,12 @@ def parse_args(args):
         '--momentum', type=float, default=momentum,
         help='set learning rate')
     parser.add_argument(
+        '--nesterov', type=bool, default=False,
+        help='set optimizer nesterov momentum')
+    parser.add_argument(
+        '--weight_decay', type=float, default=1e-4,
+        help='set optimizer\'s weight decay')
+    parser.add_argument(
         '--epochs', type=int, default=epochs,
         help='run epochs')
     parser.add_argument(
