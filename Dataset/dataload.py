@@ -6,11 +6,11 @@ import sys
 from six.moves import urllib
 def load_dataset(configs):
     if sys.platform=='linux':
-        dataset_path='/data/dataset'
+        dataset_path='../data/dataset'
     elif sys.platform=='win32':
-        dataset_path='\data\dataset'
+        dataset_path='..\data\dataset'
     else:
-        dataset_path='/data/dataset'
+        dataset_path='../data/dataset'
     
     opener = urllib.request.build_opener()
     opener.addheaders = [('User-agent', 'Mozilla/5.0')]
@@ -159,7 +159,7 @@ def split_class_list_data_loader(train_data,test_data,configs):
     train_data.targets=train_data.targets[idx.bool()]
 
     #sampler setting
-    if configs['mode'] in['train_moo','baseline_moo','train_lbl','train_lbl_v2','train_moo_v2','baseline_moo_v2']:#v2 for weighted sum
+    if configs['mode'] in['train_moo','baseline_moo','train_lbl','train_lbl_v2','train_moo_v2','baseline_moo_v2','baseline_moo_v3']:#v2 for weighted sum
         sampler=None
         shuffle=True
 

@@ -5,12 +5,13 @@ import copy
 import random
 import numpy as np
 import matplotlib.pyplot as plt
-
+import time
 class PCGrad(): # mtl_v2 only# cpu 안내리기
     def __init__(self, optimizer):
         self._optim = optimizer
         self.conflict_list=None
         self.total_conflict_num=None
+        self.layer_conflict_list=None
         return
 
     @property
@@ -55,15 +56,15 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
 
     def _check_cosine_similarity(self,grads,labels=None,extracting_list=None):
         if self.conflict_list is None:
-            self.conflict_list=[[[]for i in range(100)]for i in range(100)]
+            self.conflict_list=[[[]for i in range(extracting_list[-1]+1)]for i in range(extracting_list[-1]+1)]
         for label_idx,g_i in enumerate(grads):
             for j,g_j in enumerate(grads):
                 if label_idx<=j:#자기 자신 및 중복 데이터 제외
                     continue
                 if extracting_list is not None:
-                    if labels[label_idx] not in extracting_list and labels[j] not in extracting_list:
+                    if labels[label_idx] not in extracting_list or labels[j] not in extracting_list:
                         continue
-                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
+                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()**2)
                 self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
 
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
@@ -280,25 +281,33 @@ class PCGrad_MOO_Baseline_V2(PCGrad_v2):
 class PCGrad_MOO_Baseline_V3(PCGrad):
     def __init__(self,optimizer):
         super().__init__(optimizer)
-        self.layer_conflict_list=list()
         self.searching_layer=[0,-2,-4]
     
     def pc_backward(self, objectives, labels, epoch):
+        self.layer_conflict_list=list()
         layer_grads=list()
+        tik=time.time()
         for i,obj in enumerate(objectives):
             self._optim.zero_grad()
             obj.backward(retain_graph=True)
+            if i==0:
+                for s_l in self.searching_layer:
+                    layer_grads.append([]) 
             for group in self._optim.param_groups:
                 for l,p in enumerate(group['params']):
-                    if i==0:
-                        for s_l in self.searching_layer:
-                            if group['params'][s_l]==p:
-                                layer_grads.append([])
-                    for s_l in self.searching_layer:
-                        if group['params'][s_l]==p:            
-                            layer_grads[l].append(p.grad)
+                    
+                    for order,s_l in enumerate(self.searching_layer):
+                        if torch.equal(group['params'][s_l],p):
+                            layer_grads[order].append(p.grad.flatten())
+        print(time.time()-tik,'s: extract')
         for grads in layer_grads:
+            tik=time.time()
             self._check_cosine_similarity(grads,labels,extracting_list=[1,3,5,7,9])
+            print(time.time()-tik,'s')
             self.layer_conflict_list.append(self.conflict_list)
             self.conflict_list=None
-        objectives
+        objectives=objectives.mean()
+        self._optim.zero_grad()
+        objectives.backward()
+        self._optim.step()
+        return

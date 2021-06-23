@@ -55,7 +55,7 @@ def parse_args(args):
 
     #TRAIN OPTION BY NN
     model = parser.parse_known_args(args)[0].model.lower()
-    from NeuralNet.baseNet import get_hyperparams
+    from Model.baseNet import get_hyperparams
     dataset,epochs,lr,momentum=get_hyperparams(model)
     # pruning
     mode=parser.parse_known_args(args)[0].mode.lower()
@@ -193,7 +193,7 @@ def main(args):
         from visualization import visualization
         configs = visualization(configs, file_name)
     else:
-        from NeuralNet.baseNet import BaseNet
+        from Model.baseNet import BaseNet
         model=BaseNet(configs).model
     
     #Train

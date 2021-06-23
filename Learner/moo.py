@@ -129,7 +129,7 @@ class MOOLearner(BaseLearner):
         return eval_metric
 
     def _show_conflicting_grad(self,epoch):
-        if self.optimizer.conflict_list != None :
+        if self.optimizer.conflict_list != None or self.optimizer.layer_conflict_list != None:
             if self.configs['mode']=='baseline_v2':
                 for i,i_grad_conflict in enumerate(self.optimizer.conflict_list):
                     for i_j,i_j_conflict in enumerate(i_grad_conflict):
@@ -142,7 +142,7 @@ class MOOLearner(BaseLearner):
                         for i_j,i_j_conflict in enumerate(i_grad_conflict):
                             if epoch ==1:
                                 self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor([-1.0,1.0]),0)
-                            self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_li,i_j),torch.tensor(i_j_conflict),epoch)
-            
+                            self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor(i_j_conflict),epoch)
+                self.optimizer.layer_conflict_list=list()
 
         self.optimizer.conflict_list=None
