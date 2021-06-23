@@ -294,11 +294,9 @@ class PCGrad_MOO_Baseline_V3(PCGrad):
                 for s_l in self.searching_layer:
                     layer_grads.append([]) 
             for group in self._optim.param_groups:
-                for l,p in enumerate(group['params']):
-                    
-                    for order,s_l in enumerate(self.searching_layer):
-                        if torch.equal(group['params'][s_l],p):
-                            layer_grads[order].append(p.grad.flatten())
+                for order,s_l in enumerate(self.searching_layer):
+                    layer_grads[order].append(group['params'][s_l].grad.flatten())
+        print(len(layer_grads[0]),len(layer_grads[1]),len(layer_grads[2]))
         print(time.time()-tik,'s: extract')
         for grads in layer_grads:
             tik=time.time()
