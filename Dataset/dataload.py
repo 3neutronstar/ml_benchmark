@@ -6,11 +6,11 @@ import sys
 from six.moves import urllib
 def load_dataset(configs):
     if sys.platform=='linux':
-        dataset_path='./dataset'
+        dataset_path='/data/dataset'
     elif sys.platform=='win32':
-        dataset_path='\dataset'
+        dataset_path='\data\dataset'
     else:
-        dataset_path='./dataset'
+        dataset_path='/data/dataset'
     
     opener = urllib.request.build_opener()
     opener.addheaders = [('User-agent', 'Mozilla/5.0')]

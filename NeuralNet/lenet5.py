@@ -5,7 +5,7 @@ import random
 import torch
 
 class LeNet5(nn.Module):
-    def __init__(self, config):
+    def __init__(self, configs):
         super(LeNet5, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=6,
                                kernel_size=(5, 5))  # 5x5+1 params
@@ -14,19 +14,19 @@ class LeNet5(nn.Module):
             in_channels=6, out_channels=16, kernel_size=(5, 5))  # 5x5+1 params
         self.fc1 = nn.Linear(400, 120)
         self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, config['num_classes'])
+        self.fc3 = nn.Linear(84, configs['num_classes'])
         
         self.optim = optim.SGD(params=self.parameters(),
-                               momentum=config['momentum'], lr=config['lr'], nesterov=True, weight_decay=1e-4)
+                               momentum=configs['momentum'], lr=configs['lr'], nesterov=configs['nesterov'], weight_decay=configs['weight_decay'])
         self.loss=nn.CrossEntropyLoss()
         self.scheduler=optim.lr_scheduler.StepLR(self.optim,step_size=15,gamma=0.1)
         # self.scheduler=optim.lr_scheduler.ExponentialLR(self.optim,gamma=0.98)
-        self.w_size_list = [150, 2400, 48000, 10080, 84*config['num_classes']]  # weight,bias size
-        self.b_size_list = [6, 16, 120, 84, config['num_classes']]
-        self.NN_size_list = [1, 6, 16, 120, 84, config['num_classes']]  # cnn과 fc_net out 작성
+        self.w_size_list = [150, 2400, 48000, 10080, 84*configs['num_classes']]  # weight,bias size
+        self.b_size_list = [6, 16, 120, 84, configs['num_classes']]
+        self.NN_size_list = [1, 6, 16, 120, 84, configs['num_classes']]  # cnn과 fc_net out 작성
         self.model_list = ['cnn', 'cnn', 'fc', 'fc', 'fc']
         self.kernel_size_list = [(5, 5), (5, 5)]
-        self.node_size_list=[6,16,120,84,config['num_classes']]
+        self.node_size_list=[6,16,120,84,configs['num_classes']]
 
     def forward(self, x):
         x = F.relu(self.conv1(x))

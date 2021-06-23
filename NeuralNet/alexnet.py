@@ -33,7 +33,7 @@ class AlexNet(nn.Module):
             nn.Linear(4096, self.num_classes),
         )
         self.optim = optim.SGD(params=self.parameters(),
-                               momentum=configs['momentum'], lr=configs['lr'], nesterov=True, weight_decay=1e-4)
+                               momentum=configs['momentum'], lr=configs['lr'], nesterov=configs['nesterov'], weight_decay=configs['weight_decay'])
 
         self.loss=nn.CrossEntropyLoss()
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[

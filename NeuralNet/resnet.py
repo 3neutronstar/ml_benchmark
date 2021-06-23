@@ -103,7 +103,7 @@ class ResNet(nn.Module):
             residual.append(self._make_layer(type_dict[resnet_type][2],planes,num_blocks,strides))
         self.residual_layer=nn.Sequential(*residual)
         self.optim = optim.SGD(params=self.parameters(),
-                               momentum=configs['momentum'], lr=configs['lr'], nesterov=True, weight_decay=1e-4)
+                               momentum=configs['momentum'], lr=configs['lr'], nesterov=configs['nesterov'], weight_decay=configs['weight_decay'])
         self.loss=nn.CrossEntropyLoss()
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
                                 100, 150], gamma=0.1)

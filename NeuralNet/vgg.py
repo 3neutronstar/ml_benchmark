@@ -12,10 +12,10 @@ cfg = {
 
 
 class VGG(nn.Module):
-    def __init__(self, config):
+    def __init__(self, configs):
         super(VGG, self).__init__()
-        final_out=config['num_classes']
-        self.features = self._make_layers(cfg[config['model']])
+        final_out=configs['num_classes']
+        self.features = self._make_layers(cfg[configs['model']])
         self.classifier = nn.Sequential(nn.Linear(7*7*512, 4096),
                                         nn.ReLU(inplace=True),
                                         nn.Linear(4096, 4096),
@@ -23,40 +23,15 @@ class VGG(nn.Module):
                                         nn.Linear(4096, final_out),
                                         )
         self.optim = optim.SGD(params=self.parameters(),
-                               momentum=0.9, lr=config['lr'], nesterov=True)
+                               momentum=configs['momentum'], lr=configs['lr'], nesterov=configs['nesterov'],weight_decay=configs['weight_decay'])
         self.loss=nn.CrossEntropyLoss()
         self.scheduler = optim.lr_scheduler.MultiStepLR(optimizer=self.optim, milestones=[
                                 150, 225], gamma=0.1)
 
-        #basic config
-        self.w_size_list = list()
-        self.b_size_list = list()
-        self.kernel_size_list = list()
-        self.NN_size_list = list()
-        self.model_list = list()
-        self.node_size_list=list()
+        #basic configs
         self.input_channels=3
 
-        self.NN_size_list.append(self.input_channels)  # 3개 채널 color
-
-        vgg_name=config['model']
-        for cnn_info in cfg[vgg_name]:
-            if cnn_info != 'M':
-                self.model_list.append('cnn')
-                self.NN_size_list.append(cnn_info)
-                self.kernel_size_list.append((3, 3))
-                for _ in range(self.input_channels):
-                    self.b_size_list.append(cnn_info)
-                self.w_size_list.append(
-                    self.kernel_size_list[-1][0]*self.kernel_size_list[-1][1]*self.b_size_list[-1])
-                self.node_size_list.append(cnn_info)
-
-        for fc_info in [4096, 4096, config['num_classes']]:
-            self.model_list.append('fc')
-            self.NN_size_list.append(fc_info)
-            self.b_size_list.append(fc_info)
-            self.w_size_list.append(self.b_size_list[-2]*self.b_size_list[-1])
-            self.node_size_list.append(fc_info)
+        vgg_name=configs['model']
 
     def forward(self, x):
         out = self.features(x)
@@ -78,9 +53,6 @@ class VGG(nn.Module):
         layers += [nn.AdaptiveAvgPool2d(output_size=(7, 7))]
 
         return nn.Sequential(*layers)
-
-    def get_configs(self):
-        return self.w_size_list, self.b_size_list, self.NN_size_list, self.model_list, self.kernel_size_list,self.node_size_list
 
 def test():
     net = VGG('VGG11')
