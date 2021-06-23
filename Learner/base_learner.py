@@ -35,9 +35,12 @@ class BaseLearner():
         elif 'baseline_moo' == configs['mode']:
             reduction='mean'
             self.optimizer=PCGrad_MOO_Baseline(self.optimizer)
-        elif 'baseline_moo_v2' == configs['mode']:
+        elif 'baseline_moo_v2' == configs['mode']: #충돌 확인용
             reduction='none'
             self.optimizer=PCGrad_MOO_Baseline_V2(self.optimizer)
+        elif 'baseline_moo_v2' == configs['mode']: #충돌 확인용
+            reduction='none'
+            self.optimizer=PCGrad_MOO_Baseline_V3(self.optimizer)
         elif configs['mode']=='train_mtl':
             self.optimizer=PCGrad(self.optimizer)
             reduction='none'

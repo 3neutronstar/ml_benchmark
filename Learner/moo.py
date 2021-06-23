@@ -85,15 +85,7 @@ class MOOLearner(BaseLearner):
         running_accuracy=100.0*float(total_correct)/float(total_len_data)
         train_metric={'accuracy':running_accuracy,'loss': running_loss/float(total_len_data)}
         print('{} epoch Total Accuracy: {:.2f}%, Total Loss: {}\n'.format(epoch,train_metric['accuracy'],train_metric['loss']))
-        if self.optimizer.conflict_list != None:
-            for i,i_grad_conflict in enumerate(self.optimizer.conflict_list):
-                for i_j,i_j_conflict in enumerate(i_grad_conflict):
-                    if epoch ==1:
-                        self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor([-1.0,1.0]),0)
-                    self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor(i_j_conflict),epoch)
-            self.optimizer.conflict_list=None
-
-                
+        self._show_conflicting_grad(epoch)
         return train_metric
 
     def _eval(self):
@@ -136,4 +128,21 @@ class MOOLearner(BaseLearner):
 
         return eval_metric
 
-        
+    def _show_conflicting_grad(self,epoch):
+        if self.optimizer.conflict_list != None :
+            if self.configs['mode']=='baseline_v2':
+                for i,i_grad_conflict in enumerate(self.optimizer.conflict_list):
+                    for i_j,i_j_conflict in enumerate(i_grad_conflict):
+                        if epoch ==1:
+                            self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor([-1.0,1.0]),0)
+                        self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor(i_j_conflict),epoch)
+            elif self.configs['mode']=='baseline_v3':
+                for s_l,layer_conflict_list in zip(self.optimizer.searching_layer,self.optimizer.layer_conflict_list):
+                    for i,i_grad_conflict in enumerate(layer_conflict_list):
+                        for i_j,i_j_conflict in enumerate(i_grad_conflict):
+                            if epoch ==1:
+                                self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor([-1.0,1.0]),0)
+                            self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_li,i_j),torch.tensor(i_j_conflict),epoch)
+            
+
+        self.optimizer.conflict_list=None

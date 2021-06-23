@@ -100,6 +100,9 @@ class ClassicLearner(BaseLearner):
             p_groups = self.optimizer.param_groups  # group에 각 layer별 파라미터
             # show grad
             #self._show_grad(output, target,p_groups,epoch,batch_idx)
+
+            # visual grad
+            self._save_conflict_grad(p_groups,epoch,target)
             # grad prune
             self._prune_grad(p_groups, epoch, batch_idx)
             # grad save(prune후 save)
@@ -248,4 +251,4 @@ class ClassicLearner(BaseLearner):
                         p_layers.data[self.grad_off_mask[l]]=torch.zeros_like(p_layers.data[self.grad_off_mask[l]])
                         #print(l,"layer",torch.nonzero(p_layers.grad).size()," ",p_layers.grad.size())            
             self.turn_requires_grad_(p_groups,on_off=True)
-    
+
