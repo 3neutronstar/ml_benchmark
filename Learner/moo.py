@@ -142,6 +142,8 @@ class MOOLearner(BaseLearner):
                         for i_j,i_j_conflict in enumerate(i_grad_conflict):
                             if epoch ==1:
                                 self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor([-1.0,1.0]),0)
+                            if len(i_j_conflict)==0:
+                                continue
                             self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor(i_j_conflict),epoch)
                 self.optimizer.layer_conflict_list=list()
 
