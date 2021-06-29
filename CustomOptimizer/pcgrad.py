@@ -64,7 +64,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                 if extracting_list is not None:
                     if labels[label_idx] not in extracting_list or labels[j] not in extracting_list:
                         continue
-                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()**2)
+                cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
                 self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
 
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
@@ -286,7 +286,6 @@ class PCGrad_MOO_Baseline_V3(PCGrad):
     def pc_backward(self, objectives, labels, epoch):
         self.layer_conflict_list=list()
         layer_grads=list()
-        tik=time.time()
         for i,obj in enumerate(objectives):
             self._optim.zero_grad()
             obj.backward(retain_graph=True)
@@ -296,12 +295,8 @@ class PCGrad_MOO_Baseline_V3(PCGrad):
             for group in self._optim.param_groups:
                 for order,s_l in enumerate(self.searching_layer):
                     layer_grads[order].append(group['params'][s_l].grad.flatten())
-        print(len(layer_grads[0]),len(layer_grads[1]),len(layer_grads[2]))
-        print(time.time()-tik,'s: extract')
         for grads in layer_grads:
-            tik=time.time()
             self._check_cosine_similarity(grads,labels,extracting_list=[1,3,5,7,9])
-            print(time.time()-tik,'s')
             self.layer_conflict_list.append(self.conflict_list)
             self.conflict_list=None
         objectives=objectives.mean()
@@ -309,3 +304,17 @@ class PCGrad_MOO_Baseline_V3(PCGrad):
         objectives.backward()
         self._optim.step()
         return
+'''
+    ### START CODE HERE
+    #(≈ 4 lines)
+    # Step 1: Compute the (encoding) distance between the anchor and the positive
+    pos_dist = tf.reduce_sum(tf.square(tf.subtract(anchor,positive)),axis=-1)
+    # Step 2: Compute the (encoding) distance between the anchor and the negative
+    neg_dist = tf.reduce_sum(tf.square(tf.subtract(anchor,negative)),axis=-1)
+    # Step 3: subtract the two previous distances and add alpha.
+    basic_loss = tf.add(tf.subtract(pos_dist,neg_dist),alpha)
+    # Step 4: Take the maximum of basic_loss and 0.0. Sum over the training examples.
+    loss = tf.maximum(tf.reduce_sum(basic_loss),0)
+    ### END CODE HERE
+
+'''

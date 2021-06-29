@@ -71,7 +71,7 @@ class MOOLearner(BaseLearner):
             current_len_data+=target.size()[0]
             if idx % self.log_interval == 0:
                 print('\r Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch, current_len_data, total_len_data ,
-                                                                                100.0 * float(current_len_data) / float(total_len_data), loss.mean().item()), end='')
+                                                                                100.0 * float(current_len_data) / float(total_len_data), running_loss/(idx+1)), end='')
 
         tok=time.time()
         if self.configs['log_extraction']=='true':
@@ -98,7 +98,7 @@ class MOOLearner(BaseLearner):
             class_correct_dict[i]=0
             class_total_dict[i]=0
         with torch.no_grad():
-            for data, target in self.test_loader:
+            for batch_idx,(data, target) in enumerate(self.test_loader):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
@@ -110,7 +110,7 @@ class MOOLearner(BaseLearner):
                     class_correct_dict[int(label)]+=pred.eq(target.view_as(pred))[target==label].sum().item()
                     class_total_dict[int(label)]+=(target==label).sum().item()
 
-        eval_loss = eval_loss / len(self.test_loader.dataset)
+        eval_loss = eval_loss / (batch_idx+1)
 
         correct=0
         print("=================Eval=================")
@@ -130,13 +130,13 @@ class MOOLearner(BaseLearner):
 
     def _show_conflicting_grad(self,epoch):
         if self.optimizer.conflict_list != None or self.optimizer.layer_conflict_list != None:
-            if self.configs['mode']=='baseline_v2':
+            if self.configs['mode']=='baseline_moo_v2':
                 for i,i_grad_conflict in enumerate(self.optimizer.conflict_list):
                     for i_j,i_j_conflict in enumerate(i_grad_conflict):
                         if epoch ==1:
                             self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor([-1.0,1.0]),0)
                         self.logWriter.add_histogram('conflict/{}_{}_CosineSimiarity'.format(i,i_j),torch.tensor(i_j_conflict),epoch)
-            elif self.configs['mode']=='baseline_v3':
+            elif self.configs['mode']=='baseline_moo_v3':
                 for s_l,layer_conflict_list in zip(self.optimizer.searching_layer,self.optimizer.layer_conflict_list):
                     for i,i_grad_conflict in enumerate(layer_conflict_list):
                         for i_j,i_j_conflict in enumerate(i_grad_conflict):
