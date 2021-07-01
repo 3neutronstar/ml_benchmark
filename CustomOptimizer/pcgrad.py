@@ -281,7 +281,7 @@ class PCGrad_MOO_Baseline_V2(PCGrad_v2):
 class PCGrad_MOO_Baseline_V3(PCGrad):
     def __init__(self,optimizer):
         super().__init__(optimizer)
-        self.searching_layer=[0,-2,-4]
+        self.searching_layer=[0,-1,-2,-3,-4,-5]
     
     def pc_backward(self, objectives, labels, epoch):
         self.layer_conflict_list=list()

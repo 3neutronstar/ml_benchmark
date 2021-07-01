@@ -146,5 +146,6 @@ class MOOLearner(BaseLearner):
                                 self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor([-1.0,1.0]),0)
                             self.logWriter.add_histogram('{}l_conflict/{}_{}_CosineSimiarity'.format(s_l,i,i_j),torch.tensor(i_j_conflict),epoch)
                 self.optimizer.layer_conflict_list=list()
+                self.logWriter.flush()
 
         self.optimizer.conflict_list=None
