@@ -65,7 +65,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                     if labels[label_idx] not in extracting_list or labels[j] not in extracting_list:
                         continue
                 cosine_similarity=torch.dot(g_i, g_j) / (g_i.norm()*g_j.norm())
-                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity)
+                self.conflict_list[labels[label_idx]][labels[j]].append(cosine_similarity.detach())
 
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
@@ -297,7 +297,7 @@ class PCGrad_MOO_Baseline_V3(PCGrad):
                     layer_grads[order].append(group['params'][s_l].grad.flatten())
         for grads in layer_grads:
             self._check_cosine_similarity(grads,labels,extracting_list=[1,3,5,7,9])
-            self.layer_conflict_list.append(self.conflict_list)
+            self.layer_conflict_list.append(copy.deepcopy(self.conflict_list))
             self.conflict_list=None
         objectives=objectives.mean()
         self._optim.zero_grad()
