@@ -2,7 +2,7 @@ import torch
 import copy
 import random
 import numpy as np
-
+import math
 class LayerByLayerOptimizer():
     def __init__(self, model,optimizer):
         self._optim = optimizer
@@ -27,22 +27,25 @@ class LayerByLayerOptimizer():
 
         return self._optim.step()
 
-    def backward(self,objectives,labels):
+    def backward(self,objectives,labels,epoch=None):
 
         pc_objectives=list()
-        for idx in labels.unique():
-            pc_objectives.append(objectives[labels==idx].mean().view(1))
-        # pc_objectives=torch.cat(pc_objectives,dim=0)
-        # pc_objectives.backward(retain_graph=True)
-        #for i,(fhook,bhook) in enumerate(reversed(zip(self.hookForward,self.hookBackward))):
-        #    if i==0:
-        #        for pc_obj in pc_objectives:
-        #            self._optim.zero_grad()
-        #            pc_obj.backward(retain_graph=True)
-        grads, shapes = self._pack_grad(pc_objectives)
-        pc_grad = self._project_conflicting(grads)
-        pc_grad = self._unflatten_grad(pc_grad, shapes[0])
-        self._set_grad(pc_grad)
+        if epoch>10:
+            for idx in labels.unique():
+                pc_objectives.append(objectives[labels==idx].mean().view(1))
+            # pc_objectives=torch.cat(pc_objectives,dim=0)
+            # pc_objectives.backward(retain_graph=True)
+            #for i,(fhook,bhook) in enumerate(reversed(zip(self.hookForward,self.hookBackward))):
+            #    if i==0:
+            #        for pc_obj in pc_objectives:
+            #            self._optim.zero_grad()
+            #            pc_obj.backward(retain_graph=True)
+            grads, shapes = self._pack_grad(pc_objectives)
+            pc_grad = self._project_conflicting(grads)
+            pc_grad = self._unflatten_grad(pc_grad, shapes[0])
+            self._set_grad(pc_grad)
+        else:
+            objectives.mean().backward()
                
 
         return
@@ -99,7 +102,6 @@ class LayerByLayerOptimizer():
 
     def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
-
         for g_i in pc_grad:
             random.shuffle(grads)
             for g_j in grads:
@@ -177,14 +179,14 @@ class LayerByLayerOptimizer_V2(LayerByLayerOptimizer):
 
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
-
-
+        threshold=3.0/4.0
         # original
         for g_i in pc_grad:
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j<-(1e-20):
+                cos_i_j=g_i_g_j/(g_i.norm()*g_j.norm())
+                if cos_i_j<-threshold:
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                     g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 

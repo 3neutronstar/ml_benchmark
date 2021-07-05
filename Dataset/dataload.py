@@ -219,7 +219,7 @@ def base_data_loader(train_data,test_data,configs):
 
 def data_loader(configs):
     train_data, test_data = load_dataset(configs)
-    if configs['mode'] in ['train','train_weight_prune','train_mtl','train_mtl_v2','test','train_cvx']:
+    if configs['mode'] in ['train','train_weight_prune','train_mtl','train_mtl_v2','test','train_cvx','train_lbl','train_lbl_v2']:
         train_data_loader, test_data_loader=base_data_loader(train_data, test_data,configs)
     elif configs['mode']=='train_grad_prune':
         train_data_loader, test_data_loader=split_class_data_loader(train_data, test_data,configs)

@@ -67,7 +67,7 @@ class LBLLearner(BaseLearner):
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
             self.optimizer.zero_grad()  # optimizer zero로 초기화
-            self.optimizer.backward(loss,target)  # 역전파
+            self.optimizer.backward(loss,target,epoch)  # 역전파
             self.optimizer.step()
             for class_idx in target.unique():
                 class_correct_dict[int(class_idx)]+=pred.eq(target.view_as(pred))[target==class_idx].sum().item()
