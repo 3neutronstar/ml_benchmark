@@ -90,8 +90,12 @@ class LayerByLayerOptimizer():
                     shape.append(p.shape)
                     grad.append(torch.zeros_like(p).to(p.device))
                     continue
-                shape.append(p.grad.shape)
-                grad.append(p.grad.clone())
+                if torch.equal(group['params'][-1],p) or torch.equal(group['params'][-2],p):
+                    shape.append(p.grad.shape)
+                    grad.append(p.grad.clone())
+                # # original lbl
+                # shape.append(p.grad.shape)
+                # grad.append(p.grad.clone())
         return grad, shape
 
 
@@ -109,7 +113,7 @@ class LayerByLayerOptimizer():
                     g_i_g_j = torch.dot(g_l_i, g_l_j)
                     g_l_j_norm=(g_l_j.norm()**2)
                     if g_l_j_norm>1e-10 and g_i_g_j<-(1e-10): #g_i_g_j<0:
-                            g_l_i -= (g_i_g_j) * g_l_j / g_l_j_norm
+                        g_l_i -= (g_i_g_j) * g_l_j / g_l_j_norm
         merged_grad=[]
         for layer_idx,g_l_i in enumerate(pc_grad[0]):
             merged_grad.append(torch.cat([grad[layer_idx] for grad in pc_grad],dim=0).view(num_task,-1).mean(dim=0))
@@ -132,8 +136,9 @@ class LayerByLayerOptimizer():
         for group in self._optim.param_groups:
             for p in group['params']:
                 # if p.grad is None: continue
-                p.grad = grads[idx]
-                idx += 1
+                if torch.equal(group['params'][-1],p) or torch.equal(group['params'][-2],p):
+                    p.grad = grads[idx]
+                    idx += 1
         return
 
 

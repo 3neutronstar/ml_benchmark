@@ -86,7 +86,7 @@ class LBLLearner(BaseLearner):
             class_accur=100.0*float(class_correct_dict[class_correct_key])/float(len_data[class_correct_key])
             print('{} class :{}/{} {:2f}%'.format(class_correct_key,class_correct_dict[class_correct_key],len_data[class_correct_key],class_accur))
             total_correct+=class_correct_dict[class_correct_key]
-        running_loss /= num_training_data
+        running_loss /= (batch_idx+1)
         tok = time.time()
         running_accuracy = 100.0 * correct / float(num_training_data)
         print('\nTrain Loss: {:.6f}'.format(running_loss), 'Learning Time: {:.1f}s'.format(
@@ -103,7 +103,7 @@ class LBLLearner(BaseLearner):
             class_correct_dict[i]=0
             class_total_dict[i]=0
         with torch.no_grad():
-            for data, target in self.test_loader:
+            for batch_idx,( data, target) in enumerate(self.test_loader):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
                 loss = self.criterion(output, target)
@@ -119,7 +119,7 @@ class LBLLearner(BaseLearner):
             if class_total_dict[keys] ==0:
                 continue
             print('{} class : {}/{} [{:.2f}%]'.format(keys,class_correct_dict[keys],class_total_dict[keys],100.0*class_correct_dict[keys]/class_total_dict[keys]))
-        eval_loss = eval_loss / len(self.test_loader.dataset)
+        eval_loss = eval_loss / (batch_idx+1)
 
         print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.2f}%)\n'.format(
             eval_loss, correct, len(self.test_loader.dataset),
