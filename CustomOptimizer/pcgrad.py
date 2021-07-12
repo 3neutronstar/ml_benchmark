@@ -85,9 +85,9 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
            random.shuffle(grads)
            for g_j in grads:
                g_i_g_j = torch.dot(g_i, g_j)
-               if  g_i_g_j>-(1e-20):
+               if  g_i_g_j<-(1e-20):
                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                   g_i += (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
+                   g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
         merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
         

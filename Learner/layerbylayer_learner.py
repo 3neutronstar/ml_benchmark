@@ -10,10 +10,7 @@ import sys
 class LBLLearner(BaseLearner):
     def __init__(self, model, time_data,file_path, configs):
         super(LBLLearner,self).__init__(model,time_data,file_path,configs)
-        if configs['mode']=='train_lbl_v2':
-            self.optimizer=LayerByLayerOptimizer_V2(self.model,self.optimizer)
-        else:
-            self.optimizer=LayerByLayerOptimizer(self.model,self.optimizer)
+        self.optimizer=LayerByLayerOptimizer(self.model,self.optimizer)
         self.criterion=self.criterion.__class__(reduction='none')
 
     def run(self):
