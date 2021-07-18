@@ -53,7 +53,7 @@ def load_dataset(configs):
                                      std=[0.2023, 0.1994, 0.2010])
         train_transform=transforms.Compose([
             transforms.Pad(4),
-            transforms.RandomCrop(32, 4),
+            transforms.RandomCrop(32),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
