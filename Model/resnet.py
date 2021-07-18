@@ -75,7 +75,7 @@ class ResNet(nn.Module):
         'resnet32':([5,5,5],16,BasicBlock),
         'resnet44':([7,7,7],16,BasicBlock),
         'resnet56':([9,9,9],16,BasicBlock),
-        'resnet110':([18,18,18],16,BasicBlock),
+        'resnet110':([18,18,18],16,Bottleneck),
         'resnet1202':([200,200,200],16,BasicBlock)
         }
         resnet_type=configs['model']
