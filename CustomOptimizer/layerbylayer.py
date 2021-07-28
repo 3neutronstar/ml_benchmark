@@ -30,9 +30,12 @@ class LayerByLayerOptimizer():
     def backward(self,objectives,labels,epoch=None):
 
         pc_objectives=list()
-        if epoch>10:
-            for idx in labels.unique():
-                pc_objectives.append(objectives[labels==idx].mean().view(1))
+        if epoch>=0:
+            self._optim.zero_grad()
+            before_scale=self._pack_grad(objectives.mean().view(-1))[0][0].norm()
+            # print("Before",self._pack_grad(objectives.mean().view(-1))[0][0].norm())
+            # for idx in labels.unique():
+            #     pc_objectives.append(objectives[labels==idx].mean().view(1))
             # pc_objectives=torch.cat(pc_objectives,dim=0)
             # pc_objectives.backward(retain_graph=True)
             #for i,(fhook,bhook) in enumerate(reversed(zip(self.hookForward,self.hookBackward))):
@@ -40,9 +43,11 @@ class LayerByLayerOptimizer():
             #        for pc_obj in pc_objectives:
             #            self._optim.zero_grad()
             #            pc_obj.backward(retain_graph=True)
-            grads, shapes = self._pack_grad(pc_objectives)
+            #grads, shapes = self._pack_grad(pc_objectives)
+            grads, shapes = self._pack_grad(objectives)
             pc_grad = self._project_conflicting(grads)
-            pc_grad = self._unflatten_grad(pc_grad, shapes[0])
+            # print("after",pc_grad.norm())
+            pc_grad = self._unflatten_grad(pc_grad*before_scale/pc_grad.norm(), shapes[0])
             self._set_grad(pc_grad)
         else:
             objectives.mean().backward()
@@ -156,7 +161,8 @@ class LayerByLayerOptimizer_V2(LayerByLayerOptimizer):
                     shape.append(p.shape)
                     grad.append(torch.zeros_like(p).to(p.device))
                     continue
-                if torch.equal(group['params'][-1],p) or torch.equal(group['params'][-2],p):# classifier만
+                # if torch.equal(group['params'][-1],p) or torch.equal(group['params'][-2],p):# classifier만
+                if torch.equal(group['params'][3],p) or  torch.equal(group['params'][4],p):# classifier만
                     shape.append(p.grad.shape)
                     grad.append(p.grad.clone())
         return grad,shape
@@ -164,13 +170,17 @@ class LayerByLayerOptimizer_V2(LayerByLayerOptimizer):
     def _set_grad(self, grads):
         idx = 0
         for group in self._optim.param_groups:
-            for p in group['params']:
+            for i,p in enumerate(group['params']):
                 # if p.grad is None: continue
-                if torch.equal(group['params'][-1],p):
-                    p.grad = grads[1]
-                if torch.equal(group['params'][-2],p):
-                    p.grad = grads[0]
-                idx += 1
+                # if torch.equal(group['params'][-1],p):
+                #     p.grad = grads[1]
+                if torch.equal(group['params'][3],p):
+                    p.grad = grads[idx].clone()
+                    idx += 1
+                    # print(grads[0].norm(),'after',p.size())
+                if torch.equal(group['params'][4],p):
+                    p.grad = grads[idx].clone()
+                    idx += 1
         return
 
     def _unflatten_grad(self, grads, shapes):
@@ -184,19 +194,16 @@ class LayerByLayerOptimizer_V2(LayerByLayerOptimizer):
 
     def _project_conflicting(self, grads, shapes=None,labels=None,epoch=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
-        threshold=3.0/4.0
         # original
         for g_i in pc_grad:
             random.shuffle(grads)
             for g_j in grads:
                 g_i_g_j = torch.dot(g_i, g_j)
-                cos_i_j=g_i_g_j/(g_i.norm()*g_j.norm())
-                if cos_i_j<-threshold:
+                if g_i_g_j<-1e-15:
                     # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
                     g_i -= (g_i_g_j) * g_j / torch.matmul(g_j,g_j)
 
         merged_grad = torch.cat(pc_grad,dim=0).view(num_task,-1).mean(dim=0)
-        
         return merged_grad
 
     def _flatten_grad(self, grads, shapes):
