@@ -31,7 +31,29 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         '''
 
         return self._optim.step()
-
+    
+    def _gradvac(self, grads, has_grads, s_grads, s_has_grads, k_grads, k_has_grads, shapes=None):
+            shared = torch.stack(has_grads+s_has_grads+k_has_grads).prod(0).bool()
+            grads_sh = [g[shared] for g in grads+s_grads] # including student’s gradient except for KD’s gradient
+            gradvac_sh = copy.deepcopy(grads_sh)
+            idx = list(range(len(grads)+1))
+            for i, g_i in enumerate(gradvac_sh):
+                random.shuffle(idx)
+                for j in idx:
+                    g_j = grads_sh[j]
+                    phi_ij = torch.dot(g_i, g_j) / (g_i.norm() * g_j.norm())
+                    if phi_ij < self.phi_hat_ij[i,j]:
+                        g_i = g_i + \
+                            g_j*(g_i.norm()*(self.phi_hat_ij[i,j]*torch.sqrt(1-phi_ij**2)-phi_ij*torch.sqrt(1-self.phi_hat_ij[i,j]**2))\
+                                /(g_j.norm()*torch.sqrt(1-self.phi_hat_ij[i,j]**2)))
+                    self.phi_hat_ij[i,j] = (1-self.beta)*self.phi_hat_ij[i,j] + self.beta*phi_ij
+                    self.phi_hat_ij[j,i] = self.phi_hat_ij[i,j]
+            merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
+            subnet_tot_sh = torch.stack([g for g in gradvac_sh]).sum(dim=0)
+            merged_grad[shared] = torch.stack([subnet_tot_sh+k_grads[0][shared]]).sum(dim=0)
+            merged_grad[~shared] = torch.stack([g[~shared] for g in grads+s_grads+k_grads]).sum(dim=0)
+            return merged_grad
+        
     def pc_backward(self, objectives,labels,epoch=None):
         '''
         calculate the gradient of the parameters
