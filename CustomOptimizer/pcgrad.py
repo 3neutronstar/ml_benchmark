@@ -61,7 +61,8 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         '''
 
         grads, shapes = self._pack_grad(objectives)
-        pc_grad = self._project_conflicting(grads, labels=labels, epoch=epoch)
+        # pc_grad = self._project_conflicting(grads, labels=labels, epoch=epoch)
+        pc_grad = self._gradvac(grads)
         pc_grad = self._unflatten_grad(pc_grad, shapes[0])
         self._set_grad(pc_grad)
         return
