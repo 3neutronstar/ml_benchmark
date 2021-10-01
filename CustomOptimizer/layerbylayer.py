@@ -32,8 +32,8 @@ class LayerByLayerOptimizer():
         pc_objectives=list()
         if epoch>=0:
             self._optim.zero_grad()
-            before_grad=self._pack_grad(objectives.mean().view(-1))[0][0]
-            before_scale=before_grad.norm()
+            # before_grad=self._pack_grad(objectives.mean().view(-1))[0][0]
+            # before_scale=before_grad.norm()
             # print("Before",self._pack_grad(objectives.mean().view(-1))[0][0].norm())
             # for idx in labels.unique():
             #     pc_objectives.append(objectives[labels==idx].mean().view(1))
@@ -48,8 +48,8 @@ class LayerByLayerOptimizer():
             grads, shapes = self._pack_grad(objectives)
             pc_grad = self._project_conflicting(grads)
             # print("after",pc_grad.norm())
-            print("cosine_similarity",torch.dot(before_grad,pc_grad)/(pc_grad.norm()*before_grad.norm()))
-            pc_grad = self._unflatten_grad(pc_grad*before_scale/pc_grad.norm(), shapes[0])
+            # print("cosine_similarity",torch.dot(before_grad,pc_grad)/(pc_grad.norm()*before_grad.norm()))
+            pc_grad = self._unflatten_grad(pc_grad, shapes[0])
             self._set_grad(pc_grad)
         else:
             objectives.mean().backward()
@@ -126,6 +126,8 @@ class LayerByLayerOptimizer():
             merged_grad.append(torch.cat([grad[layer_idx] for grad in pc_grad],dim=0).view(num_task,-1).mean(dim=0))
         return merged_grad
 
+    
+            
     def _unflatten_grad(self, grads, shapes):
         unflatten_grad, idx = [], 0
         for grad,shape in zip(grads,shapes):
