@@ -7,6 +7,7 @@ class LayerByLayerOptimizer():
     def __init__(self, model,optimizer):
         self._optim = optimizer
         self._model=model
+        self.phi_hat_ij=None
         return
 
     @property
@@ -126,7 +127,23 @@ class LayerByLayerOptimizer():
             merged_grad.append(torch.cat([grad[layer_idx] for grad in pc_grad],dim=0).view(num_task,-1).mean(dim=0))
         return merged_grad
 
-    
+    def _gradvac(self, grads, shapes=None):
+            gradvac = copy.deepcopy(grads)
+            idx = list(range(len(grads)+1))
+            for i, g_i in enumerate(gradvac):
+                random.shuffle(idx)
+                for j in idx:
+                    g_j = grads[j]
+                    phi_ij = torch.dot(g_i, g_j) / (g_i.norm() * g_j.norm())
+                    if phi_ij < self.phi_hat_ij[i,j]:
+                        g_i = g_i + \
+                            g_j*(g_i.norm()*(self.phi_hat_ij[i,j]*torch.sqrt(1-phi_ij**2)-phi_ij*torch.sqrt(1-self.phi_hat_ij[i,j]**2))\
+                                /(g_j.norm()*torch.sqrt(1-self.phi_hat_ij[i,j]**2)))
+                    self.phi_hat_ij[i,j] = (1-self.beta)*self.phi_hat_ij[i,j] + self.beta*phi_ij
+                    self.phi_hat_ij[j,i] = self.phi_hat_ij[i,j]
+            merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
+            subnet_tot_sh = torch.stack([g for g in gradvac]).sum(dim=0)
+            return merged_grad
             
     def _unflatten_grad(self, grads, shapes):
         unflatten_grad, idx = [], 0
