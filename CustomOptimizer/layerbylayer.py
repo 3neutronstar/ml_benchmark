@@ -8,6 +8,7 @@ class LayerByLayerOptimizer():
         self._optim = optimizer
         self._model=model
         self.phi_hat_ijk=None
+        self.beta=1e-2
         return
 
     @property
@@ -47,7 +48,8 @@ class LayerByLayerOptimizer():
             #            pc_obj.backward(retain_graph=True)
             #grads, shapes = self._pack_grad(pc_objectives)
             grads, shapes = self._pack_grad(objectives)
-            pc_grad = self._project_conflicting(grads)
+            # pc_grad = self._project_conflicting(grads)
+            pc_grad = self._gradvac(grads)
             # print("after",pc_grad.norm())
             # print("cosine_similarity",torch.dot(before_grad,pc_grad)/(pc_grad.norm()*before_grad.norm()))
             pc_grad = self._unflatten_grad(pc_grad, shapes[0])
@@ -131,14 +133,14 @@ class LayerByLayerOptimizer():
         gradvac = copy.deepcopy(grads)
         idx =np.arange(len(grads))
         if self.phi_hat_ijk==None:
-            self.phi_hat_ijk=torch.zeros((len(grads),len(grads),len(grads[0])),device=grads[0][0].device)
+            self.phi_hat_ijk=torch.zeros((len(grads),len(grads),len(grads[0])),dtype=torch.float,device=grads[0][0].device)
         for i, g_i in enumerate(gradvac):
-            np.random.shuffle(idx)
+            random.shuffle(idx)
             for j in idx:
                 g_j = grads[j]
                 for k,(g_ik,g_jk) in enumerate(zip(g_i,g_j)):
                     phi_ijk = torch.dot(g_ik, g_jk) / (g_ik.norm() * g_jk.norm())
-                    if phi_ijk < self.phi_hat_ijk[i,j]:
+                    if phi_ijk < self.phi_hat_ijk[i,j,k]:
                         g_ik = g_ik + \
                             g_j*(g_ik.norm()*(self.phi_hat_ijk[i,j,k]*torch.sqrt(1-phi_ijk**2)-phi_ijk*torch.sqrt(1-self.phi_hat_ijk[i,j,k]**2))\
                                 /(g_jk.norm()*torch.sqrt(1-self.phi_hat_ijk[i,j,k]**2)))
