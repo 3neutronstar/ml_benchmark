@@ -35,12 +35,12 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
         return self._optim.step()
     
     def _gradvac(self, grads, shapes=None):
-        gradvac_sh = copy.deepcopy(grads)
-        idx = list(range(len(grads)+1))
+        gradvac = copy.deepcopy(grads)
+        idx =np.arange(len(grads))
         if self.phi_hat_ij==None:
             self.phi_hat_ij=torch.zeros((len(grads),len(grads)),device=grads[0].device)
-        for i, g_i in enumerate(gradvac_sh):
-            random.shuffle(idx)
+        for i, g_i in enumerate(gradvac):
+            np.random.shuffle(idx)
             for j in idx:
                 g_j = grads[j]
                 phi_ij = torch.dot(g_i, g_j) / (g_i.norm() * g_j.norm())
@@ -50,7 +50,7 @@ class PCGrad(): # mtl_v2 only# cpu 안내리기
                             /(g_j.norm()*torch.sqrt(1-self.phi_hat_ij[i,j]**2)))
                 self.phi_hat_ij[i,j] = (1-self.beta)*self.phi_hat_ij[i,j] + self.beta*phi_ij
                 self.phi_hat_ij[j,i] = self.phi_hat_ij[i,j]
-        merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
+        merged_grad = torch.stack([g for g in gradvac]).mean(dim=0)
         return merged_grad
         
     def pc_backward(self, objectives,labels,epoch=None):

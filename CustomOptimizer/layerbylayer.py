@@ -7,7 +7,7 @@ class LayerByLayerOptimizer():
     def __init__(self, model,optimizer):
         self._optim = optimizer
         self._model=model
-        self.phi_hat_ij=None
+        self.phi_hat_ijk=None
         return
 
     @property
@@ -54,9 +54,9 @@ class LayerByLayerOptimizer():
             self._set_grad(pc_grad)
         else:
             objectives.mean().backward()
-               
-
         return
+
+
 
     def _pack_grad(self, objectives):
         '''
@@ -111,7 +111,6 @@ class LayerByLayerOptimizer():
         flatten_grad = [g.flatten() for g in grads]
         return flatten_grad
 
-
     def _project_conflicting(self, grads, shapes=None,epoch=None,batch_idx=None):
         pc_grad, num_task = copy.deepcopy(grads), len(grads)
         for g_i in pc_grad:
@@ -128,22 +127,27 @@ class LayerByLayerOptimizer():
         return merged_grad
 
     def _gradvac(self, grads, shapes=None):
-            gradvac = copy.deepcopy(grads)
-            idx = list(range(len(grads)+1))
-            for i, g_i in enumerate(gradvac):
-                random.shuffle(idx)
-                for j in idx:
-                    g_j = grads[j]
-                    phi_ij = torch.dot(g_i, g_j) / (g_i.norm() * g_j.norm())
-                    if phi_ij < self.phi_hat_ij[i,j]:
-                        g_i = g_i + \
-                            g_j*(g_i.norm()*(self.phi_hat_ij[i,j]*torch.sqrt(1-phi_ij**2)-phi_ij*torch.sqrt(1-self.phi_hat_ij[i,j]**2))\
-                                /(g_j.norm()*torch.sqrt(1-self.phi_hat_ij[i,j]**2)))
-                    self.phi_hat_ij[i,j] = (1-self.beta)*self.phi_hat_ij[i,j] + self.beta*phi_ij
-                    self.phi_hat_ij[j,i] = self.phi_hat_ij[i,j]
-            merged_grad = torch.zeros_like(grads[0]).to(grads[0].device)
-            subnet_tot_sh = torch.stack([g for g in gradvac]).sum(dim=0)
-            return merged_grad
+        num_task=len(grads)
+        gradvac = copy.deepcopy(grads)
+        idx =np.arange(len(grads))
+        if self.phi_hat_ijk==None:
+            self.phi_hat_ijk=torch.zeros((len(grads),len(grads),len(grads[0])),device=grads[0][0].device)
+        for i, g_i in enumerate(gradvac):
+            np.random.shuffle(idx)
+            for j in idx:
+                g_j = grads[j]
+                for k,(g_ik,g_jk) in enumerate(zip(g_i,g_j)):
+                    phi_ijk = torch.dot(g_ik, g_jk) / (g_ik.norm() * g_jk.norm())
+                    if phi_ijk < self.phi_hat_ijk[i,j]:
+                        g_ik = g_ik + \
+                            g_j*(g_ik.norm()*(self.phi_hat_ijk[i,j,k]*torch.sqrt(1-phi_ijk**2)-phi_ijk*torch.sqrt(1-self.phi_hat_ijk[i,j,k]**2))\
+                                /(g_jk.norm()*torch.sqrt(1-self.phi_hat_ijk[i,j,k]**2)))
+                self.phi_hat_ijk[i,j,k] = (1-self.beta)*self.phi_hat_ijk[i,j,k] + self.beta*phi_ijk
+                # self.phi_hat_ijk[j,i,k] = self.phi_hat_ijk[i,j,k]
+        merged_grad=[]
+        for layer_idx, _ in enumerate(gradvac):
+            merged_grad.append(torch.cat([grad[layer_idx] for grad in gradvac],dim=0).view(num_task,-1).mean(dim=0))
+        return merged_grad
             
     def _unflatten_grad(self, grads, shapes):
         unflatten_grad, idx = [], 0
