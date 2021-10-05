@@ -131,9 +131,10 @@ class LayerByLayerOptimizer():
     def _gradvac(self, grads, shapes=None):
         num_task=len(grads)
         gradvac = copy.deepcopy(grads)
-        idx =np.arange(len(grads))
+        idx =np.arange(num_task)
         if self.phi_hat_ijk==None:
-            self.phi_hat_ijk=torch.zeros((len(grads),len(grads),len(grads[0])),dtype=torch.float,device=grads[0][0].device)
+            self.phi_hat_ijk=torch.zeros((num_task,num_task,len(grads[0])),dtype=torch.float,device=grads[0][0].device)
+        # print(torch.cat([torch.cat(g,dim=0) for g in gradvac],dim=0).view(num_task,-1).mean(dim=0).mean(),'b')
         for i, g_i in enumerate(gradvac):
             random.shuffle(idx)
             for j in idx:
@@ -141,14 +142,14 @@ class LayerByLayerOptimizer():
                 for k,(g_ik,g_jk) in enumerate(zip(g_i,g_j)):
                     phi_ijk = torch.dot(g_ik, g_jk) / (g_ik.norm() * g_jk.norm())
                     if phi_ijk < self.phi_hat_ijk[i,j,k]:
-                        g_ik = g_ik + \
-                            g_j*(g_ik.norm()*(self.phi_hat_ijk[i,j,k]*torch.sqrt(1-phi_ijk**2)-phi_ijk*torch.sqrt(1-self.phi_hat_ijk[i,j,k]**2))\
-                                /(g_jk.norm()*torch.sqrt(1-self.phi_hat_ijk[i,j,k]**2)))
-                self.phi_hat_ijk[i,j,k] = (1-self.beta)*self.phi_hat_ijk[i,j,k] + self.beta*phi_ijk
+                        phi_hat_ijk=self.phi_hat_ijk[i,j,k]
+                        gradvac[i][k] = g_ik + g_jk*(g_ik.norm()*(phi_hat_ijk*torch.sqrt(1-phi_ijk**2)-phi_ijk*torch.sqrt(1-phi_hat_ijk**2)) /(g_jk.norm()*torch.sqrt(1-phi_hat_ijk**2)))
+                    self.phi_hat_ijk[i,j,k] = (1-self.beta)*self.phi_hat_ijk[i,j,k] + self.beta*phi_ijk
                 # self.phi_hat_ijk[j,i,k] = self.phi_hat_ijk[i,j,k]
         merged_grad=[]
-        for layer_idx, _ in enumerate(gradvac):
-            merged_grad.append(torch.cat([grad[layer_idx] for grad in gradvac],dim=0).view(num_task,-1).mean(dim=0))
+        for layer_idx, _ in enumerate(gradvac[0]):
+            merged_grad.append(torch.cat([g[layer_idx] for g in gradvac],dim=0).view(num_task,-1).mean(dim=0))
+        # print(torch.cat(merged_grad,dim=0).mean(),'a')
         return merged_grad
             
     def _unflatten_grad(self, grads, shapes):

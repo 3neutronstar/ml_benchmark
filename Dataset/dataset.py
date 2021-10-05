@@ -43,9 +43,9 @@ def load_dataset(configs):
             transforms.ToTensor(),
             normalize,
         ])
-        train_data = datasets.CIFAR100(root=dataset_path, train=True,
+        train_data = datasets.CIFAR100(root=dataset_path+'\cifar100', train=True,
                                        download=True, transform=train_transform)
-        test_data = datasets.CIFAR100(root=dataset_path, train=False,
+        test_data = datasets.CIFAR100(root=dataset_path+'\cifar100', train=False,
                                       download=False, transform=test_transform)
 
     elif configs['dataset'] == 'cifar10':
@@ -63,9 +63,9 @@ def load_dataset(configs):
             normalize,
         ])
         
-        train_data = datasets.CIFAR10(root=dataset_path, train=True,
+        train_data = datasets.CIFAR10(root=dataset_path+'\cifar10', train=True,
                                       download=True, transform=train_transform)
-        test_data = datasets.CIFAR10(root=dataset_path, train=False,
+        test_data = datasets.CIFAR10(root=dataset_path+'\cifar10', train=False,
                                      download=False, transform=test_transform)
     
     elif configs['dataset']=='fashionmnist':
