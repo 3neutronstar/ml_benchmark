@@ -194,27 +194,35 @@ class PCGrad_v2(PCGrad):
     def __init__(self,optimizer):
         super(PCGrad_v2,self).__init__(optimizer)
 
-    def _flatten_grad(self, grads, shapes):
-        flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
-        return flatten_grad
+    def pc_backward(self, objectives, labels, epoch):
+        pc_objectives=list()
+        for idx in torch.unique(labels):
+            pc_objectives.append(objectives[labels==idx].mean().view(1))
+        super().pc_backward(pc_objectives, labels, epoch=epoch)
 
-    def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
+        return torch.cat(pc_objectives,dim=0)
+
+    # def _flatten_grad(self, grads, shapes):
+    #     flatten_grad = torch.cat([g.flatten() for g in grads])#.view(1,-1)
+    #     return flatten_grad
+
+    # def _project_conflicting(self, grads, shapes=None, labels=None, epoch=None):
         
-        num_task = len(grads)
-        pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
-        self._check_cosine_similarity(grads,labels)
-        #check the confliction
-        for label_idx,g_i in enumerate(pc_grad):
-            random.shuffle(grads)
-            for j,g_j in enumerate(grads):
-                g_i_g_j = torch.dot(g_i, g_j)
-                if g_i_g_j<-(1e-20):
-                    # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
-                    g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
+    #     num_task = len(grads)
+    #     pc_grad=torch.cat(grads,dim=0).view(num_task,-1)
+    #     self._check_cosine_similarity(grads,labels)
+    #     #check the confliction
+    #     for label_idx,g_i in enumerate(pc_grad):
+    #         random.shuffle(grads)
+    #         for j,g_j in enumerate(grads):
+    #             g_i_g_j = torch.dot(g_i, g_j)
+    #             if g_i_g_j<-(1e-20):
+    #                 # g_i -= (g_i_g_j) * g_j / (g_j.norm()**2)
+    #                 g_i -= (g_i_g_j) / torch.matmul(g_j,g_j) * g_j
 
 
-        merged_grad=pc_grad.mean(dim=0)
-        return merged_grad
+    #     merged_grad=pc_grad.mean(dim=0)
+    #     return merged_grad
 
 
 class PCGrad_MOO(PCGrad_v2):
